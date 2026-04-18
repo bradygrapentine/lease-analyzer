@@ -37,15 +37,17 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 - [x] Rule pack versioning + provenance on each finding (`rulePackVersion`)
 
 ## Phase 3 — UI
-- [ ] Upload dropzone, disables network, accepts `application/pdf`
-- [ ] PDF viewer pane using pdf.js canvas renderer
-- [ ] Findings panel: grouped by severity, collapsible by category
-- [ ] Click finding → scroll-to + highlight span in viewer
+- [x] Upload control, accepts `application/pdf`
+- [ ] PDF viewer pane using pdf.js canvas renderer (deferred — needs browser-side render)
+- [x] Findings panel: grouped by severity
+- [ ] Collapsible category groups
+- [ ] Click finding → scroll-to + highlight span in viewer (needs PDF viewer)
+- [x] Click finding → show selected snippet + page number
 - [ ] In-document search (Cmd/Ctrl-F)
 - [ ] Severity + category filter chips
-- [ ] Loading / empty / parse-error states
+- [x] Loading / empty / parse-error states (idle/loading/analyzed/error)
 - [ ] Keyboard navigation across findings (↑/↓/Enter)
-- [ ] A11y pass: labels, focus ring, contrast, ARIA roles
+- [ ] A11y pass: labels, focus ring, contrast, ARIA roles (basic labels in place)
 
 ## Phase 4 — Local Storage
 - [ ] IndexedDB wrapper (idb) with versioned migrations
