@@ -28,13 +28,13 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 - [x] Handle password-protected PDFs with a clear error
 
 ## Phase 2 — Rules Engine
-- [ ] Define `Rule` type + JSON schema (id, severity, category, pattern, explain, cite)
-- [ ] Implement matchers: `regex`, `keywordProximity`, `sectionAnchored`, `negated`
-- [ ] `analyze(doc, rules) → Finding[]` with stable ordering
-- [ ] Ship rule pack v1 (10 rules listed in roadmap)
-- [ ] Per-rule snapshot tests with positive + negative fixtures
-- [ ] Confidence scoring (exact match vs. fuzzy)
-- [ ] Rule pack versioning + provenance on each finding
+- [x] Define `Rule` type + JSON schema (id, severity, category, pattern, explain, cite)
+- [x] Implement matchers: `regex`, `keywordProximity`, `sectionAnchored`; negation as post-filter
+- [x] `analyze(doc, rules) → Finding[]` with stable ordering
+- [x] Ship rule pack v1 (10 rules)
+- [x] Per-rule positive tests + benign negative
+- [x] Confidence scoring (regex 0.9, proximity 0.75, ×0.5 when negated)
+- [x] Rule pack versioning + provenance on each finding (`rulePackVersion`)
 
 ## Phase 3 — UI
 - [ ] Upload dropzone, disables network, accepts `application/pdf`
