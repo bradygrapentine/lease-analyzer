@@ -8,24 +8,24 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 ---
 
 ## Phase 0 — Foundations
-- [ ] Scaffold Vite + React + TS app in `app/`
-- [ ] Add strict `tsconfig.json` (`strict`, `noUncheckedIndexedAccess`)
-- [ ] Add ESLint + Prettier + `lint-staged` pre-commit
-- [ ] Add Vitest with a sample test; wire `pnpm test`
+- [x] Scaffold Vite + React + TS app in `app/`
+- [x] Add strict `tsconfig.json` (`strict`, `noUncheckedIndexedAccess`)
+- [x] Add ESLint + Prettier + `lint-staged` pre-commit
+- [x] Add Vitest with a sample test; wire `npm test`
 - [ ] Add Playwright smoke test (app boots, shows upload)
-- [ ] GitHub Actions: typecheck + lint + test on PR
+- [x] GitHub Actions: typecheck + lint + test on PR
 - [ ] Commit sample lease fixtures to `fixtures/` (residential, commercial, scanned)
-- [ ] CSP meta tag: `default-src 'self'`; document the no-egress contract
+- [x] CSP meta tag: `default-src 'self'`; document the no-egress contract
 
 ## Phase 1 — PDF Parser
-- [ ] Integrate `pdfjs-dist`; bundle worker locally (no CDN)
-- [ ] `extractPages(file) → PageText[]` with positions + font sizes
-- [ ] Paragraph reconstruction (line joining, hyphen repair, header/footer strip)
-- [ ] Heading/section detection (numbered, bold, ALL CAPS heuristics)
-- [ ] Define `LeaseDocument` type + parser output contract
-- [ ] Golden-file tests against 3+ fixture leases
+- [x] Integrate `pdfjs-dist`; bundle worker locally (no CDN)
+- [x] `extractPages(file) → PageText[]` with positions + font sizes
+- [x] Paragraph reconstruction (line joining, hyphen repair, header/footer strip)
+- [x] Heading/section detection (numbered, bold, ALL CAPS heuristics)
+- [x] Define `LeaseDocument` type + parser output contract
+- [~] Golden-file tests (have synthetic fixtures; real residential/commercial/scanned pending)
 - [ ] Benchmark: 50-page lease parses < 1.5s on M1
-- [ ] Handle password-protected PDFs with a clear error
+- [x] Handle password-protected PDFs with a clear error
 
 ## Phase 2 — Rules Engine
 - [ ] Define `Rule` type + JSON schema (id, severity, category, pattern, explain, cite)
