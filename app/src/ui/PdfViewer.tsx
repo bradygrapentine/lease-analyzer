@@ -13,10 +13,18 @@ export function PdfViewer({ bytes, pageCount, selectedPage }: PdfViewerProps): J
   useEffect(() => {
     if (!bytes || pageCount === 0) return;
     const canvases = canvasRefs.current.slice(0, pageCount);
-    renderPdfPages(bytes, canvases).catch(() => {
-      // Rendering failures are surfaced to the user via empty canvases;
-      // we don't crash the app if pdfjs can't render in this environment.
+    // pdf.js detaches the ArrayBuffer during load, so each render call
+    // gets its own copy.
+    const copy = new Uint8Array(bytes);
+    const handle = renderPdfPages(copy, canvases);
+    handle.done.catch((err: unknown) => {
+      const name = (err as { name?: string })?.name;
+      if (name === 'RenderingCancelledException') return;
+      console.error('[PdfViewer] render failed:', err);
     });
+    return (): void => {
+      handle.cancel();
+    };
   }, [bytes, pageCount]);
 
   useEffect(() => {

@@ -49,7 +49,9 @@ export function App(): JSX.Element {
     setSelected(null);
     try {
       const bytes = await readFileBytes(file);
-      const result = await analyzeFile(bytes);
+      // pdf.js transfers ownership of the ArrayBuffer during parse, so we
+      // hand it a copy and keep the original for the viewer.
+      const result = await analyzeFile(new Uint8Array(bytes));
       await saveLease({ name: file.name, doc: result.doc, findings: result.findings });
       await refreshLibrary();
       setStatus({ kind: 'analyzed', fileName: file.name, result, bytes });
