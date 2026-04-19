@@ -1,11 +1,15 @@
 import type { LeaseDocument, Paragraph, Section } from '../parser/types';
+import { similarity } from './similarity';
 
-export type ParagraphStatus = 'unchanged' | 'added' | 'removed';
+export type ParagraphStatus = 'unchanged' | 'added' | 'removed' | 'changed';
+
+const FUZZY_MATCH_THRESHOLD = 0.6;
 
 export interface ParagraphDiff {
   status: ParagraphStatus;
   text: string;
   page: number;
+  previousText?: string;
 }
 
 export type SectionStatus = 'matched' | 'added' | 'removed';
@@ -39,13 +43,21 @@ export function diffLeases(a: LeaseDocument, b: LeaseDocument): LeaseDiff {
       out.push({
         heading: aSec.heading,
         status: 'removed',
-        paragraphs: aSec.paragraphs.map((p) => paraDiff(p, 'removed')),
+        paragraphs: aSec.paragraphs.map((p) => ({
+          status: 'removed' as const,
+          text: p.text,
+          page: p.page,
+        })),
       });
     } else if (bSec) {
       out.push({
         heading: bSec.heading,
         status: 'added',
-        paragraphs: bSec.paragraphs.map((p) => paraDiff(p, 'added')),
+        paragraphs: bSec.paragraphs.map((p) => ({
+          status: 'added' as const,
+          text: p.text,
+          page: p.page,
+        })),
       });
     }
   }
@@ -80,18 +92,50 @@ function normalizeHeading(heading: string): string {
 }
 
 function diffParagraphs(aParas: Paragraph[], bParas: Paragraph[]): ParagraphDiff[] {
-  const aSet = new Set(aParas.map((p) => p.text.trim()));
-  const bSet = new Set(bParas.map((p) => p.text.trim()));
+  const usedA = new Set<number>();
   const out: ParagraphDiff[] = [];
-  for (const p of aParas) {
-    if (!bSet.has(p.text.trim())) out.push(paraDiff(p, 'removed'));
+
+  // For each B paragraph, find the best unused A paragraph.
+  for (const b of bParas) {
+    const match = bestMatch(b, aParas, usedA);
+    if (!match) {
+      out.push({ status: 'added', text: b.text, page: b.page });
+      continue;
+    }
+    usedA.add(match.index);
+    if (match.score === 1) {
+      out.push({ status: 'unchanged', text: b.text, page: b.page });
+    } else {
+      out.push({
+        status: 'changed',
+        text: b.text,
+        page: b.page,
+        previousText: match.paragraph.text,
+      });
+    }
   }
-  for (const p of bParas) {
-    out.push(paraDiff(p, aSet.has(p.text.trim()) ? 'unchanged' : 'added'));
-  }
+
+  // Any A paragraph not claimed by a B is "removed".
+  aParas.forEach((a, i) => {
+    if (!usedA.has(i)) out.push({ status: 'removed', text: a.text, page: a.page });
+  });
+
   return out;
 }
 
-function paraDiff(p: Paragraph, status: ParagraphStatus): ParagraphDiff {
-  return { status, text: p.text, page: p.page };
+function bestMatch(
+  target: Paragraph,
+  candidates: Paragraph[],
+  used: Set<number>,
+): { index: number; paragraph: Paragraph; score: number } | null {
+  let best: { index: number; paragraph: Paragraph; score: number } | null = null;
+  candidates.forEach((candidate, index) => {
+    if (used.has(index)) return;
+    const score = similarity(target.text, candidate.text);
+    if (score < FUZZY_MATCH_THRESHOLD) return;
+    if (!best || score > best.score) {
+      best = { index, paragraph: candidate, score };
+    }
+  });
+  return best;
 }

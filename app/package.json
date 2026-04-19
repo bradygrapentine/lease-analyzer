@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "build:sample": "node scripts/build-sample-pdf.mjs"
+    "build:sample": "node scripts/build-sample-pdf.mjs",
+    "check:budget": "node scripts/check-bundle-budget.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",

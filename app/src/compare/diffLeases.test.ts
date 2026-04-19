@@ -66,4 +66,31 @@ describe('diffLeases', () => {
     expect(result.sections).toHaveLength(1);
     expect(result.sections[0]?.status).toBe('matched');
   });
+
+  it('flags a near-identical paragraph with a numeric change as "changed" instead of add+remove', () => {
+    const a = doc([section('Rent', [para('Rent is $1000 per month.')])]);
+    const b = doc([section('Rent', [para('Rent is $1200 per month.')])]);
+    const result = diffLeases(a, b);
+    const statuses = result.sections[0]!.paragraphs.map((p) => p.status);
+    expect(statuses).toContain('changed');
+    expect(statuses).not.toContain('added');
+    expect(statuses).not.toContain('removed');
+  });
+
+  it('returns both previous and new text for a "changed" paragraph', () => {
+    const a = doc([section('Rent', [para('Rent is $1000.')])]);
+    const b = doc([section('Rent', [para('Rent is $1200.')])]);
+    const result = diffLeases(a, b);
+    const changed = result.sections[0]!.paragraphs.find((p) => p.status === 'changed');
+    expect(changed?.text).toBe('Rent is $1200.');
+    expect(changed?.previousText).toBe('Rent is $1000.');
+  });
+
+  it('still treats very different paragraphs as add+remove', () => {
+    const a = doc([section('Rent', [para('Rent is $1000 per month.')])]);
+    const b = doc([section('Rent', [para('Tenant shall paint the walls annually.')])]);
+    const result = diffLeases(a, b);
+    const statuses = result.sections[0]!.paragraphs.map((p) => p.status).sort();
+    expect(statuses).toEqual(['added', 'removed']);
+  });
 });

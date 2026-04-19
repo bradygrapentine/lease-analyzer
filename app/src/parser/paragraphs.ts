@@ -1,4 +1,4 @@
-import type { PageText, Paragraph, TextItem } from './types';
+import type { BoundingBox, PageText, Paragraph, TextItem } from './types';
 
 interface Line {
   page: number;
@@ -6,6 +6,7 @@ interface Line {
   fontSize: number;
   leftX: number;
   text: string;
+  bbox: BoundingBox;
 }
 
 const Y_TOLERANCE = 2;
@@ -44,8 +45,23 @@ function pageToLines(page: PageText): Line[] {
       fontSize: avgFont,
       leftX: first.x,
       text,
+      bbox: lineBbox(items, page.pageNumber),
     };
   });
+}
+
+function lineBbox(items: TextItem[], page: number): BoundingBox {
+  let xLeft = Infinity;
+  let xRight = -Infinity;
+  let yBottom = Infinity;
+  let yTop = -Infinity;
+  for (const item of items) {
+    xLeft = Math.min(xLeft, item.x);
+    xRight = Math.max(xRight, item.x + item.width);
+    yBottom = Math.min(yBottom, item.y);
+    yTop = Math.max(yTop, item.y + (item.height || item.fontSize));
+  }
+  return { page, xLeft, xRight, yTop, yBottom };
 }
 
 function stripHeadersAndFooters(lines: Line[], pageCount: number): Line[] {
@@ -62,9 +78,17 @@ function fingerprint(line: Line): string {
   return `${Math.round(line.y / 10)}|${line.text}`;
 }
 
+interface Building {
+  page: number;
+  text: string;
+  lastFont: number;
+  lastY: number;
+  bbox: BoundingBox;
+}
+
 function mergeLinesIntoParagraphs(lines: Line[]): Paragraph[] {
   const paragraphs: Paragraph[] = [];
-  let current: { page: number; text: string; lastFont: number; lastY: number } | null = null;
+  let current: Building | null = null;
 
   for (const line of lines) {
     if (!line.text) continue;
@@ -77,13 +101,30 @@ function mergeLinesIntoParagraphs(lines: Line[]): Paragraph[] {
       current.text = joinWithHyphenRepair(current.text, line.text);
       current.lastFont = line.fontSize;
       current.lastY = line.y;
+      current.bbox = extendBbox(current.bbox, line.bbox);
     } else {
-      if (current) paragraphs.push({ page: current.page, text: current.text });
-      current = { page: line.page, text: line.text, lastFont: line.fontSize, lastY: line.y };
+      if (current) paragraphs.push({ page: current.page, text: current.text, bbox: current.bbox });
+      current = {
+        page: line.page,
+        text: line.text,
+        lastFont: line.fontSize,
+        lastY: line.y,
+        bbox: line.bbox,
+      };
     }
   }
-  if (current) paragraphs.push({ page: current.page, text: current.text });
+  if (current) paragraphs.push({ page: current.page, text: current.text, bbox: current.bbox });
   return paragraphs;
+}
+
+function extendBbox(a: BoundingBox, b: BoundingBox): BoundingBox {
+  return {
+    page: a.page,
+    xLeft: Math.min(a.xLeft, b.xLeft),
+    xRight: Math.max(a.xRight, b.xRight),
+    yTop: Math.max(a.yTop, b.yTop),
+    yBottom: Math.min(a.yBottom, b.yBottom),
+  };
 }
 
 function joinWithHyphenRepair(left: string, right: string): string {

@@ -329,6 +329,10 @@ export function App(): JSX.Element {
               bytes={status.bytes}
               pageCount={status.result.doc.pages.length}
               selectedPage={selectedPage}
+              pages={status.result.doc.pages}
+              highlight={
+                selected ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null) : null
+              }
             />
           </div>
           {selected && (

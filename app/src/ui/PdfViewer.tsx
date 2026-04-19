@@ -1,13 +1,23 @@
 import { useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import { renderPdfPages } from './renderPdfPages';
+import type { BoundingBox, PageText } from '../parser/types';
 
 interface PdfViewerProps {
   bytes: Uint8Array | null;
   pageCount: number;
   selectedPage: number | null;
+  pages?: PageText[];
+  highlight?: BoundingBox | null;
 }
 
-export function PdfViewer({ bytes, pageCount, selectedPage }: PdfViewerProps): JSX.Element {
+export function PdfViewer({
+  bytes,
+  pageCount,
+  selectedPage,
+  pages,
+  highlight,
+}: PdfViewerProps): JSX.Element {
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([]);
 
   useEffect(() => {
@@ -43,10 +53,30 @@ export function PdfViewer({ bytes, pageCount, selectedPage }: PdfViewerProps): J
     );
   }
 
+  function overlayStyle(bbox: BoundingBox, page: PageText): CSSProperties {
+    // PDF coords: y increases upward. Canvas CSS coords: top-left origin.
+    const left = bbox.xLeft;
+    const width = Math.max(1, bbox.xRight - bbox.xLeft);
+    const top = page.height - bbox.yTop;
+    const height = Math.max(1, bbox.yTop - bbox.yBottom);
+    return {
+      position: 'absolute',
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+      background: 'rgba(255, 235, 59, 0.35)',
+      border: '1px solid rgba(255, 193, 7, 0.9)',
+      pointerEvents: 'none',
+    };
+  }
+
   return (
     <section aria-label="pdf viewer" className="pdf-viewer">
       {Array.from({ length: pageCount }, (_, i) => {
         const pageNum = i + 1;
+        const overlay = highlight?.page === pageNum ? highlight : null;
+        const page = pages?.[i] ?? null;
         return (
           <div key={pageNum} id={`pdf-page-${pageNum}`} className="pdf-page">
             <canvas
@@ -55,6 +85,13 @@ export function PdfViewer({ bytes, pageCount, selectedPage }: PdfViewerProps): J
               }}
               aria-label={`page ${pageNum}`}
             />
+            {overlay && page && (
+              <div
+                aria-hidden="true"
+                className="pdf-highlight"
+                style={overlayStyle(overlay, page)}
+              />
+            )}
             <small>Page {pageNum}</small>
           </div>
         );

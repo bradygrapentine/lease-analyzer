@@ -58,7 +58,7 @@ enforced by CI via `npm run test:coverage`.
 - [x] Keyboard nav (↑/↓/Enter) across finding buttons
 - [x] Loading / empty / parse-error states
 - [x] PDF viewer canvas per page via pdf.js
-- [ ] Span-level highlight overlay (needs pdf.js text layer)
+- [x] Span-level highlight overlay (paragraph bbox + absolute div over canvas)
 - [ ] Full a11y audit (basic labels in place)
 
 ## Phase 4 — Local Storage
@@ -72,11 +72,10 @@ enforced by CI via `npm run test:coverage`.
 
 ## Phase 5 — V2: Compare & OCR
 - [x] Rule-aware findings diff (added/removed/changed/unchanged)
-- [x] Paragraph-level `diffLeases` (exact-text match; fuzzy deferred)
+- [x] Paragraph-level `diffLeases` with fuzzy Levenshtein matching (threshold 0.6; adds "changed" status with previousText)
 - [x] Compare picker + ComparePanel UI
 - [x] `needsOcr` heuristic + warning banner
 - [ ] Tesseract.js OCR engine (heavy dep; detection in place)
-- [ ] Fuzzy paragraph matching (Levenshtein / token-set)
 - [ ] Per-clause "my standard" template library
 
 ## Phase 6 — Polish & Distribution
@@ -89,15 +88,15 @@ enforced by CI via `npm run test:coverage`.
 - [ ] Tauri desktop wrapper with local library folder
 - [ ] Onboarding tour (sample lease button exists; full walkthrough pending)
 
-## Phase 7 — Observability & hygiene (proposed)
+## Phase 7 — Observability & hygiene
 
 Local-only, CSP-compatible.
 
-- [ ] Error boundary + in-memory crash log (no telemetry leaves device)
-- [ ] Optional "Download diagnostics" button that bundles last N errors
+- [x] Error boundary with in-memory crash log (ring buffer, capacity 20)
+- [x] "Download diagnostics" JSON export (schema `leaseguard.diagnostics.v1`)
+- [x] Bundle-size budget in CI via `scripts/check-bundle-budget.mjs`
 - [ ] Rule-authoring guide (`docs/RULES.md`) with matcher cookbook
 - [ ] Storybook for viewer + findings components
-- [ ] Bundle-size budget in CI (warn if pdf.worker + app exceeds threshold)
 - [ ] Code-split pdf.worker via dynamic import (first paint budget)
 
 ## Cross-cutting tech debt

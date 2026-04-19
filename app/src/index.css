@@ -35,8 +35,13 @@ main {
 }
 
 .pdf-viewer .pdf-page {
+  position: relative;
   border: 1px solid #ccc;
   margin-bottom: 0.5rem;
+}
+
+.pdf-highlight {
+  transition: opacity 150ms ease;
 }
 
 .pdf-viewer canvas {

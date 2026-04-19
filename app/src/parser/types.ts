@@ -14,9 +14,18 @@ export interface PageText {
   items: TextItem[];
 }
 
+export interface BoundingBox {
+  page: number;
+  xLeft: number;
+  xRight: number;
+  yTop: number; // PDF coords: larger y is higher on the page
+  yBottom: number;
+}
+
 export interface Paragraph {
   text: string;
   page: number;
+  bbox?: BoundingBox;
 }
 
 export interface Section {

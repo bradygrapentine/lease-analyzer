@@ -46,6 +46,19 @@ describe('reconstructParagraphs', () => {
     expect(at(paras, 0).text).toBe('example word');
   });
 
+  it('computes a bounding box that encloses all source items in a merged paragraph', () => {
+    const pages = [page([item('First line of body', 700), item('second line here', 685)])];
+    const paras = reconstructParagraphs(pages);
+    expect(paras).toHaveLength(1);
+    const bbox = at(paras, 0).bbox;
+    expect(bbox).toBeDefined();
+    expect(bbox!.page).toBe(1);
+    expect(bbox!.xLeft).toBeLessThanOrEqual(72);
+    expect(bbox!.xRight).toBeGreaterThan(72);
+    expect(bbox!.yTop).toBeGreaterThanOrEqual(700);
+    expect(bbox!.yBottom).toBeLessThanOrEqual(685);
+  });
+
   it('strips repeating page-header lines', () => {
     const makePage = (n: number): PageText =>
       page(
