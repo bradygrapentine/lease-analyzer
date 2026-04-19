@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { compileRules, type CompiledRule } from './compileRules';
 import type { RulePackFile } from './packSchema';
-import type { Severity } from './types';
+import type { Rule, Severity } from './types';
 
 // Intentionally separate from the leases DB. Schema lives in its own
 // database so the Phase 10 pack work can never migrate the lease store.
@@ -34,8 +35,67 @@ interface PacksSchema extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<PacksSchema>> | null = null;
 
+// ─── Phase 13: pre-compiled rule cache ──────────────────────────────
+// Two layers:
+//   1. `packCompileCache`  — keyed by pack id; invalidated whenever a pack
+//      is saved / deleted / enabled / disabled so a re-analyze after a
+//      pack mutation picks up the new patterns.
+//   2. `activeRulesCache`  — keyed by the *identity* of the caller's
+//      `activeRules` array. `usePipeline` already memoizes that array,
+//      so a WeakMap keyed on it gives us "compile once per React render
+//      cycle, re-use across every doc the user opens in that cycle".
+const packCompileCache = new Map<string, CompiledRule[]>();
+const activeRulesCache = new WeakMap<Rule[], CompiledRule[]>();
+
+function invalidateCompileCaches(packId?: string): void {
+  if (packId !== undefined) packCompileCache.delete(packId);
+  else packCompileCache.clear();
+  // WeakMap: entries disappear when the key array is GC'd; we don't
+  // enumerate, but stale compiled rules are harmless — `compileRules`
+  // is idempotent, so the next call just produces a fresh cache when
+  // the caller passes a new `activeRules` identity.
+}
+
+export function _resetCompileCachesForTests(): void {
+  packCompileCache.clear();
+  // Cannot clear a WeakMap; tests should simply hand a fresh `activeRules`
+  // array, which is the real-world pattern anyway.
+}
+
 export function _resetPacksDbForTests(): void {
   dbPromise = null;
+  _resetCompileCachesForTests();
+}
+
+/**
+ * Return compiled-rule form of an installed pack, cached by pack id. The
+ * cache is invalidated on save / delete / enable / disable so subsequent
+ * `analyze` calls pick up the new patterns automatically.
+ */
+export function getCompiledRulesForPack(pack: RulePackFile): CompiledRule[] {
+  const cached = packCompileCache.get(pack.id);
+  if (cached) return cached;
+  const compiled = compileRules(pack.rules);
+  packCompileCache.set(pack.id, compiled);
+  return compiled;
+}
+
+/**
+ * Memoize `compileRules(activeRules)` by the identity of `activeRules`.
+ * Callers (`usePipeline`) already stabilise the array reference across
+ * renders, so repeated `analyze` calls inside a single session skip the
+ * RegExp / keyword-lowercase step entirely.
+ *
+ * Plain-`Rule[]` consumers keep working without change — this helper is
+ * opt-in, and `analyze` itself falls back to inline compilation when the
+ * caller hasn't pre-compiled.
+ */
+export function getActiveCompiledRules(activeRules: Rule[]): CompiledRule[] {
+  const cached = activeRulesCache.get(activeRules);
+  if (cached) return cached;
+  const compiled = compileRules(activeRules);
+  activeRulesCache.set(activeRules, compiled);
+  return compiled;
 }
 
 export async function openPacksDb(): Promise<IDBPDatabase<PacksSchema>> {
@@ -64,6 +124,7 @@ export async function openPacksDb(): Promise<IDBPDatabase<PacksSchema>> {
 export async function saveInstalledPack(pack: RulePackFile): Promise<void> {
   const db = await openPacksDb();
   await db.put(PACKS, pack);
+  invalidateCompileCaches(pack.id);
 }
 
 export async function listInstalledPacks(): Promise<RulePackFile[]> {
@@ -80,6 +141,7 @@ export async function getPackEnabled(id: string): Promise<boolean> {
 export async function setPackEnabled(id: string, enabled: boolean): Promise<void> {
   const db = await openPacksDb();
   await db.put(ENABLED, enabled, id);
+  invalidateCompileCaches(id);
 }
 
 export async function deleteInstalledPack(id: string): Promise<void> {
@@ -88,6 +150,7 @@ export async function deleteInstalledPack(id: string): Promise<void> {
   await tx.objectStore(PACKS).delete(id);
   await tx.objectStore(ENABLED).delete(id);
   await tx.done;
+  invalidateCompileCaches(id);
 }
 
 // ─── Phase 10b settings (jurisdictions + severity overrides) ────────
