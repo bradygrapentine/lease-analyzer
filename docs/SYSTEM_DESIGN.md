@@ -1,183 +1,273 @@
 # System Design
 
-LeaseGuard is a single-page PWA. The entire pipeline — parsing, rule
-evaluation, persistence, comparison, export — runs in the browser. There is
-no backend.
+LeaseGuard is a single-page PWA. Parsing, rule evaluation, persistence,
+comparison, redlining, signing, and audit all run in the browser. There
+is no backend and no network egress after load.
 
-## High-level flow
+## Layering
 
 ```
-  ┌───────┐   pdf.js    ┌──────────────┐   rules    ┌──────────┐
-  │  PDF  │ ─────────▶ │ LeaseDocument │ ─────────▶ │ Finding[] │
-  └───────┘            └──────────────┘            └──────────┘
-       │                       │                         │
-       │                       ▼                         ▼
-       │                ┌──────────────┐         ┌──────────────┐
-       │                │   sections   │         │ FindingsPanel │
-       │                └──────────────┘         └──────────────┘
-       │                                                 │
-       ▼                                                 ▼
-  ┌──────────┐         IndexedDB              ┌───────────────────┐
-  │ PdfViewer │ ◀───  LeaseRecord     ──▶   │  ComparePanel      │
-  └──────────┘        { doc, findings }      └───────────────────┘
+   ┌───────────────────────────────────────────────────────────┐
+   │                     React UI layer                        │
+   │  App.tsx · usePipeline · panels (Findings / Portfolio /   │
+   │  Redline / Pack / Audit / Facts / CounterOffer / Sign…)   │
+   └────────────┬──────────────────────────────────────────────┘
+                │ dispatches
+                ▼
+   ┌───────────────────────────────────────────────────────────┐
+   │   Pipeline client (worker or inline fallback)             │
+   │   parse-analyze request ⇄ LeaseDocument + Finding[]       │
+   └────────────┬──────────────────────────────────────────────┘
+                │
+  ┌─────────────┼──────────────┐     ┌──────────────────────┐
+  ▼             ▼              ▼     ▼                      │
+ parser/     rules/          compare/   facts/              │
+ parseLease  analyze         diffLeases extractFacts        │
+              + compileRules  needsOcr  rentSchedule        │
+                                                            │
+ ┌──────────────────────────────────────────────────────────┤
+ │   Persistence — 9 IndexedDB databases (see table below)  │
+ │   storage/  rules/packStorage  annotations/  redline/…   │
+ └──────────────────────────────────────────────────────────┤
+                                                            │
+ ┌──────────────────────────────────────────────────────────┤
+ │   Cross-cutting: security/signingKeys (Ed25519)          │
+ │                  rules/packSigning                       │
+ │                  audit/auditLog (hash-chained)           │
+ └──────────────────────────────────────────────────────────┘
 ```
+
+Imports only reach "upward" or "leftward" in this diagram: `parser/` has
+no `rules/` dependency, `rules/` has no `storage/` dependency, and
+`audit/` is a leaf — everything may write to it, but it imports nothing
+outside its own module.
+
+## usePipeline state machine
+
+`src/App/usePipeline.ts` owns the upload/analyze/save lifecycle. Status
+transitions:
+
+```
+       ┌──────────┐
+       │   idle   │◀───── reset() ─────┐
+       └────┬─────┘                    │
+            │ upload(bytes, name)      │
+            ▼                          │
+     ┌────────────┐   failure   ┌───────┴────┐
+     │  loading   │────────────▶│   error    │
+     └────┬───────┘             └────────────┘
+          │ ok          ▲
+          ▼             │
+     ┌────────────┐  reanalyze()/ocr()
+     │  analyzed  │──────┘
+     │  + optional│    open(record)  ─▶ analyzed
+     │  comparison│
+     └────────────┘
+```
+
+Side effects on the `loading → analyzed` edge: the pipeline client's
+`parseAndAnalyze` runs, `saveLease` persists the result, `onLibraryChange`
+refreshes the caller's library view, and if a standard-lease pointer is
+set to a different lease, the hook populates `comparison`. `reanalyze()`
+re-runs `analyze(doc, rules)` over the currently-loaded document without
+re-parsing; the jurisdiction picker and severity-override flows use this.
+
+## Worker boundary
+
+`src/worker/leaseWorker.ts` is a dedicated ES module Web Worker (Vite
+emits it as a separate chunk; `worker: { format: 'es' }` in
+`vite.config.ts`). The request protocol lives in `src/worker/types.ts`:
+
+- `parse-analyze` — `{ id, bytes: Uint8Array, rules: Rule[],
+  rulePackVersion? }`. Posted with `bytes.buffer` in the `transfer`
+  list.
+- Response — `{ id, ok: true, doc, findings }` or `{ id, ok: false,
+  error, errorName? }`.
+
+`createLeaseWorkerClient()` in `src/worker/leaseWorkerClient.ts` auto-
+selects: real `Worker` when available, `createInlinePipelineClient()`
+(the pre-Phase-13 main-thread path) otherwise. Tests inject a stub
+through `usePipeline`'s `pipelineClient` option.
+
+**Serialization contract.** `LeaseDocument`, `Rule`, and `Finding` are
+plain data — structured-clone safe. `CompiledRule.__compiled` is a
+runtime-only cache and is stripped / recomputed inside the worker.
 
 ## Data model
 
 ```ts
 // parser/types.ts
 TextItem { text, x, y, width, height, fontSize }
-PageText { pageNumber, width, height, items: TextItem[] }
+PageText { pageNumber, width, height, items }
 Paragraph { text, page }
 Section { heading, number, paragraphs, startPage }
 LeaseDocument { pages, paragraphs, sections, raw }
 
 // rules/types.ts
 Rule {
-  id, severity, category, title, explanation, citation,
-  match: Matcher
+  id, severity, category, title, explanation, citation, match,
+  jurisdictions?, plainEnglish?, suggestedEdit?
 }
 Matcher = RegexMatcher | KeywordProximityMatcher | SectionAnchoredMatcher
-Finding {
-  ruleId, severity, category, title, explanation, citation,
-  page, paragraphIndex, snippet, span, confidence, negated,
-  rulePackVersion
-}
+Finding { ruleId, severity, category, title, explanation, citation,
+          page, paragraphIndex, snippet, span, confidence, negated,
+          rulePackVersion }
 
 // storage/storage.ts
-LeaseRecord {
-  id, name, createdAt, updatedAt, rulePackVersion,
-  pageCount, findingCount, doc, findings
-}
+LeaseRecord { id, name, createdAt, updatedAt, rulePackVersion,
+              pageCount, findingCount, doc, findings }
 ```
-
-## Modules
-
-### `parser/`
-
-| File                  | Role                                              |
-|-----------------------|---------------------------------------------------|
-| `extractPages.ts`     | pdf.js wrapper → `PageText[]` with positions + fontSize |
-| `paragraphs.ts`       | Line grouping (Y-tolerance), hyphen repair, header/footer stripping |
-| `sections.ts`         | Heading detection (numbered + ALL CAPS), preamble fallback |
-| `parseLease.ts`       | Composes extract → paragraphs → sections → `LeaseDocument` |
-| `errors.ts`           | Maps pdf.js errors to typed app errors (PasswordProtectedPdfError) |
-| `testFixtures.ts`     | pdf-lib-based synthetic PDFs for tests (excluded from coverage) |
-
-### `rules/`
-
-| File              | Role                                             |
-|-------------------|--------------------------------------------------|
-| `matchers.ts`     | `runRegex`, `runKeywordProximity`, `runSectionAnchored`, dispatcher `runMatcher` |
-| `analyze.ts`      | Composes matchers into findings, applies negation post-filter, stable sort, stamps rule-pack version |
-| `packV1.ts`       | 10 built-in rules (auto-renewal, early-termination, assignment, late-fees, attorney-fees, jury-waiver, arbitration, indemnification, rent-escalation, personal-guaranty) |
 
 Matcher semantics:
 
-- **regex** — one hit per paragraph on first match, confidence 0.9.
-- **keywordProximity** — all keywords must appear within a character window;
-  confidence 0.75.
-- **sectionAnchored** — runs a leaf matcher only on paragraphs whose
-  section heading matches a pattern.
-- **negation-aware** — any finding whose snippet lives within 30 chars of a
-  negation token (`not`, `shall not`, `without`, …) is emitted with
-  `negated: true` and confidence × 0.5.
+| Type               | Confidence | Notes                                      |
+|--------------------|-----------:|--------------------------------------------|
+| `regex`            | 0.9        | First hit per paragraph; `g` flag forced.  |
+| `keywordProximity` | 0.75       | All keywords in one paragraph within `window` chars. |
+| `sectionAnchored`  | child's    | Child matcher run only under heading regex. |
+| negation post-filter | × 0.5    | Snippet within 30 chars of `not`/`shall not`/etc. |
 
-### `templates/`
+## Rule compilation + pack cache
 
-| File                  | Role                                              |
-|-----------------------|---------------------------------------------------|
-| `types.ts`            | `ClauseTemplate` (user's canonical clause text) and `ClauseTemplateMatch` (per-template best-paragraph similarity result) |
-| `matchTemplates.ts`   | Scores every (template, paragraph) pair via `similarity()` and picks the best match per template; consumer decides visual treatment by `bestScore` |
+`src/rules/compileRules.ts` turns a `Rule[]` into a `CompiledRule[]`
+with a `__compiled` cache (pre-built RegExp, lower-cased keyword
+lists). `analyze(doc, rules)` accepts either shape — plain rules get
+compiled inline, already-compiled arrays skip the step.
 
-### `compare/`
+`src/rules/packStorage.ts` keeps two memo layers:
 
-- `diffFindings(a, b)` — classifies rule hits as added / removed /
-  changed / unchanged (material equality on severity + negated).
-- `diffLeases(a, b)` — aligns sections by case-insensitive heading and
-  classifies each paragraph as added / removed / unchanged.
-- `needsOcr(doc)` — flags likely-scanned PDFs via avg-chars-per-page < 100.
+- `packCompileCache` (`Map<packId, CompiledRule[]>`) — invalidated on
+  `saveInstalledPack`, `setPackEnabled`, `deleteInstalledPack`. A
+  re-analyze after a pack mutation picks up the new patterns on the
+  next call.
+- `activeRulesCache` (`WeakMap<Rule[], CompiledRule[]>`) — keyed on
+  the identity of the caller's array (`usePipeline` memoizes its
+  `activeRules`), so repeated analyses inside one render cycle reuse
+  the same compiled form.
 
-### `storage/`
+## IndexedDB landscape
 
-| File                | Role                                               |
-|---------------------|----------------------------------------------------|
-| `storage.ts`        | idb wrapper, schema v2 (leases + settings stores), CRUD, standard-lease pointer |
-| `exportReport.ts`   | JSON export (schema `leaseguard.findings.v1`)       |
-| `exportHtml.ts`     | Printable HTML with `@media print` and XSS escape  |
-| `archive.ts`        | Encrypted archive: AES-GCM + 200k-iter PBKDF2/SHA-256, 4-byte "LGv1" magic + 16-byte salt + 12-byte IV + ciphertext |
+Nine databases, each with an independent migration history and an
+`_reset<Name>DbForTests` hook. Separation is deliberate: a schema bump
+in one concern never forces a migration on another.
 
-### `ui/`
+| DB name                    | Version | Stores                                     | Purpose |
+|----------------------------|--------:|--------------------------------------------|---------|
+| `leaseguard`               | v3      | `leases`, `settings`, `clauseTemplates`    | Primary lease library + standard-lease pointer + clause templates |
+| `leaseguard-packs`         | v3      | `packs`, `enabled`, `settings`, `signatures` | Installed rule packs, enabled flags, jurisdiction / severity settings, signed-envelope records |
+| `leaseguard-annotations`   | v1      | `annotations`                              | Per-paragraph user annotations |
+| `leaseguard-counters`      | v1      | `counters`                                 | User's counter-offer library |
+| `leaseguard-redlines`      | v1      | `edits`                                    | Redline paragraph replacements |
+| `leaseguard-versions`      | v1      | `versions`                                 | Lease version snapshots |
+| `leaseguard-audit`         | v1      | `entries`                                  | Append-only hash-chained audit log |
+| `leaseguard-signing`       | v1      | `keypair`                                  | Ed25519 keypair; private key passphrase-wrapped |
+| `leaseguard-bulk-dedup`    | v1      | `hashes`                                   | SHA-256 content hashes for bulk-import dedup |
 
-| Component             | Role                                           |
-|-----------------------|------------------------------------------------|
-| `FindingsPanel`       | Grouped severity list, search, chips (severity + category), collapsible groups, keyboard nav |
-| `PdfViewer`           | Canvas per page via `renderPdfPages`; scrollIntoView on selectedPage |
-| `LibraryPanel`        | Saved leases, open / rename / delete, standard-lease badge |
-| `ComparePanel`        | Rule-diff summary (added / removed / changed) |
-| `LibraryCompareForm`  | Two-select picker for ad-hoc compares          |
-| `TemplatesPanel`      | CRUD UI for the user's clause-text templates (list + add form + inline edit) |
-| `TemplateMatchesPanel`| After analyze, shows each template with a matched/weak/missing badge + snippet |
+## Signing
 
-### `App.tsx`
+`src/security/signingKeys.ts` manages a local Ed25519 keypair via
+WebCrypto. The private key is wrapped at rest with AES-GCM + 200k
+PBKDF2/SHA-256 keyed by the user's passphrase. Public key is stored
+unwrapped.
 
-A state machine:
-```
-idle ──upload──▶ loading ──ok──▶ analyzed
-             └─error──▶ error
-```
-On transition to `analyzed` the lease is persisted; if a standard lease is
-set (and isn't the new one), the app auto-renders a `ComparePanel`.
+Two consumers:
+
+1. **Signed findings export** (`storage/exportReport.ts`) — JSON with
+   `leaseguard.findings.v1` schema, accompanied by an Ed25519
+   signature over canonical JSON of the payload.
+2. **Signed pack envelopes** (`rules/packSigning.ts`) — `SignedPackEnvelope
+   { payload, signature, publicKey, algorithm: 'Ed25519' }`. `payload`
+   is canonical JSON of the `RulePackFile`. Imported `.lgpack.json`
+   files may be plain-JSON packs or envelopes; envelopes route through
+   `packStorage.saveSignedPack(env, pack)`, which verifies before
+   writing and records the verify status in the `signatures` store.
+
+Canonical JSON (sorted keys at every depth, no whitespace) is shared
+with the audit log — see `canonicalJsonStringify` in `audit/auditLog.ts`.
+
+## Audit log
+
+`src/audit/auditLog.ts` — append-only, hash-chained.
+
+Each `AuditEntry` = `{ seq, timestamp, kind, payload, prevHash,
+entryHash }`. `entryHash` = SHA-256 of canonical JSON over
+`{seq, timestamp, kind, payload, prevHash}`. `prevHash` links to the
+tail of the chain. `verifyAuditChain()` re-hashes every row and
+reports the first gap or mismatch.
+
+Writes fan out from `App.tsx`'s `safeAudit()` wrapper (try/catch;
+console.warn on failure; never aborts the caller). Known event kinds:
+
+`analyze`, `save-lease`, `delete-lease`, `export`, `import-pack`,
+`pack-signature-verified`, `pack-signature-invalid`, `bulk-import`,
+`version-save`, `version-restore`, `version-delete`, `redline-edit`,
+`custom-rule-save`. `kind` is a free-form string; new call sites may
+add more.
+
+IDB + WebCrypto contract: don't `await subtle.digest` inside an open
+IDB transaction (the microtask tick auto-commits). `appendAuditEntry`
+reads the tail, hashes outside any tx, then writes in a short tx.
+
+## Redline mode
+
+Third view-toggle in `App.tsx` (`current` / `portfolio` / `redline`).
+When active, the following panels render together:
+
+- `RedlinePanel` — per-paragraph redline editor backed by
+  `leaseguard-redlines`.
+- `VersionHistoryPanel` — snapshot / restore / delete against
+  `leaseguard-versions`.
+- `SideLetterPanel` — collects negotiated deltas into a side letter.
+
+Suggested-edit flow: a finding's rule may carry `suggestedEdit`.
+`FindingsPanel` renders an "Apply suggestion" button when the parent
+provides both `suggestedTextByRuleId` and `onApplySuggestion`. App
+wires this to `redlineStorage.saveEdit` and fires a `redline-edit`
+audit entry.
+
+## Facts + plain English
+
+- `src/facts/extractFacts.ts` — heuristic extraction of rent, term,
+  notice periods, defined terms. Powers `LeaseFactsPanel`.
+- `Rule.plainEnglish` (optional, ≤ 500 chars) — reader-friendly
+  clause summary shown under the legal explanation.
+- `Rule.suggestedEdit` (optional) — safe, neutral replacement text
+  used by the counter-offer library.
+
+## Bundle layout
+
+Production build emits (rough sizes; see `BACKLOG.md`'s footprint
+table for the authoritative figures):
+
+- `index-*.js` — app shell + React + panels.
+- `pdfjsApi-*.js` — pdf.js API chunk (lazy-loaded).
+- `pdf.worker.*.js` — pdf.js worker; same-origin (no CDN).
+- `leaseWorker-*.js` — dedicated parse+analyze worker chunk.
+- `tesseract/*` — OCR runtime, copied from `node_modules` on
+  `postinstall`, served same-origin. `eng.traineddata.gz` (language
+  data) must be placed manually in `public/tesseract/` — we don't
+  fetch it at install time.
 
 ## Privacy contract
 
-- `index.html` ships with a strict Content-Security-Policy meta tag:
-  `default-src 'self'; script-src 'self'; connect-src 'self' blob:;
-  worker-src 'self' blob:; object-src 'none'; form-action 'none';
-  frame-ancestors 'none'`.
-- `pdf.worker` is bundled locally (no CDN).
-- `vite-plugin-pwa` service worker precaches all assets for offline use and
-  cannot reach the network for anything not already cached.
-- Encrypted archive export/import uses WebCrypto — no server handshake.
+- Strict CSP in `index.html`: `default-src 'self'; script-src 'self';
+  connect-src 'self' blob:; worker-src 'self' blob:; object-src 'none';
+  form-action 'none'; frame-ancestors 'none'`.
+- `vite-plugin-pwa` service worker precaches assets for offline use.
+- Archive export/import uses WebCrypto AES-GCM. No handshake ever
+  leaves the device.
 
-## OCR (opt-in)
+## Performance
 
-`src/ocr/runOcr.ts` is the entry point. It is triggered by the user clicking
-"Attempt OCR" on the banner that appears when `needsOcr()` flags a likely-
-scanned PDF.
-
-- tesseract.js is **lazy-imported** from inside `runOcr` so non-OCR users
-  never download it.
-- Assets are served **same-origin** from `/tesseract/` to satisfy CSP.
-  `scripts/build-tesseract-assets.mjs` copies `worker.min.js`,
-  `tesseract-core.wasm.js`, and `tesseract-core.wasm` out of
-  `node_modules/tesseract.js{,-core}` into `public/tesseract/` on
-  `postinstall`.
-- `eng.traineddata.gz` (language data, ~10 MB for the fast model) must be
-  placed in `public/tesseract/` manually — we do not download it at install
-  time because that would violate the no-CDN contract.
-- `runOcr` passes explicit `workerPath`, `corePath`, `langPath` options so
-  tesseract never reaches jsdelivr.
-- Rendering uses the shared `renderPageToCanvas()` helper in
-  `src/ui/renderPdfPages.ts`. Each PDF page → `<canvas>` →
-  `Tesseract.recognize(canvas, 'eng')`. The resulting `LeaseDocument` runs
-  through the normal `detectSections` → `analyze(doc, RULE_PACK_V1)` path.
-- Paragraphs in the OCR-derived document carry `bbox: undefined` — we do
-  not reconstruct geometry from tesseract words, so highlight overlays are
-  suppressed on OCR output.
+- 50-page parse budget 3s (CI measures ~210ms on the synthetic fixture).
+- Virtualized `FindingsPanel` via `useInViewport` (IntersectionObserver
+  with `rootMargin: '200px'`); placeholders pinned to measured height
+  so scroll position stays stable.
+- `renderPdfPages` accepts an `AbortSignal` so stale renders cancel
+  when the viewer unmounts or switches documents.
 
 ## Known non-goals (for now)
 
 Cloud sync, accounts, team collaboration, jurisdiction-specific legal
-reasoning, LLM-based summarization.
-
-## Performance budget
-
-- 50-page parse < 3s (measured ~210ms in CI on the synthetic fixture).
-- Coverage floor: 90% statements / functions / lines, 85% branches.
-
-## Testing model
-
-Tests colocate with code (`foo.ts` + `foo.test.ts`). pdf-lib generates
-reproducible fixture PDFs at test time. `fake-indexeddb/auto` is registered
-in the global test setup so storage tests run without a browser.
+reasoning, LLM-based summarization. Tauri desktop wrapper has a `src-
+tauri/` stub dir but no code.
