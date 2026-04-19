@@ -4,6 +4,10 @@ import { analyzeFile, type AnalysisResult } from './ui/analyzeFile';
 import { FindingsPanel } from './ui/FindingsPanel';
 import { LibraryPanel } from './ui/LibraryPanel';
 import { PdfViewer } from './ui/PdfViewer';
+import { ComparePanel } from './ui/ComparePanel';
+import { LibraryCompareForm } from './ui/LibraryCompareForm';
+import { needsOcr } from './compare/needsOcr';
+import type { LeaseRecord } from './storage/storage';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
 import {
@@ -27,6 +31,7 @@ export function App(): JSX.Element {
   const [selected, setSelected] = useState<Finding | null>(null);
   const [library, setLibrary] = useState<LeaseMetadata[]>([]);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
+  const [comparison, setComparison] = useState<{ a: LeaseRecord; b: LeaseRecord } | null>(null);
 
   const refreshLibrary = useCallback(async () => {
     setLibrary(await listLeases());
@@ -67,6 +72,12 @@ export function App(): JSX.Element {
   async function onDeleteLibrary(id: string): Promise<void> {
     await deleteLease(id);
     await refreshLibrary();
+  }
+
+  async function onCompare(aId: string, bId: string): Promise<void> {
+    const [a, b] = await Promise.all([getLease(aId), getLease(bId)]);
+    if (!a || !b) return;
+    setComparison({ a, b });
   }
 
   async function onClearAll(): Promise<void> {
@@ -120,6 +131,16 @@ export function App(): JSX.Element {
               Export findings (JSON)
             </button>
           </div>
+          {(() => {
+            const ocr = needsOcr(status.result.doc);
+            if (!ocr.likelyScanned) return null;
+            return (
+              <p role="status" className="ocr-banner">
+                This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page).
+                Text extraction may be incomplete; OCR support is not enabled in this build.
+              </p>
+            );
+          })()}
           <div className="split">
             <FindingsPanel
               findings={status.result.findings}
@@ -154,6 +175,22 @@ export function App(): JSX.Element {
           void onDeleteLibrary(id);
         }}
       />
+
+      <LibraryCompareForm
+        leases={library}
+        onCompare={(a, b) => {
+          void onCompare(a, b);
+        }}
+      />
+
+      {comparison && (
+        <ComparePanel
+          aName={comparison.a.name}
+          bName={comparison.b.name}
+          aFindings={comparison.a.findings}
+          bFindings={comparison.b.findings}
+        />
+      )}
 
       <footer>
         <button type="button" onClick={() => void onClearAll()}>

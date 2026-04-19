@@ -61,10 +61,11 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 - [x] "Clear all data" control with confirmation
 
 ## Phase 5 — V2: Compare & OCR
-- [ ] Two-lease diff view; align sections, highlight clause-level deltas
-- [ ] Rule-aware diff: flag when a risky clause is added/removed/softened
-- [ ] OCR fallback (tesseract.js) when page text density < threshold
-- [ ] OCR quality indicator + re-run option
+- [x] Rule-aware diff: added/removed/changed findings between two leases
+- [x] Compare picker in library + ComparePanel render
+- [ ] Text-level diff within aligned sections (paragraph diff)
+- [x] OCR detection banner when avg chars/page below threshold
+- [ ] Actual OCR via tesseract.js (deferred — heavy dep; detection in place)
 - [ ] "My standard clauses" library + compare-against-standard mode
 
 ## Phase 6 — Polish & Distribution
