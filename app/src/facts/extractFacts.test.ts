@@ -307,6 +307,74 @@ describe('extractLeaseFacts — integrated end-to-end', () => {
     expect(refTexts).toContain('Exhibit A');
   });
 
+  it('extracts a rent schedule from a commercial-lease table alongside other facts', async () => {
+    // The schedule lives on page 2 as a 4x4 grid. Column x-coordinates
+    // are chosen to sit well outside the prose column on page 1 so
+    // the table detector doesn't false-match the paragraph layout.
+    const bytes = await makePdf([
+      {
+        blocks: [
+          { text: 'COMMERCIAL LEASE AGREEMENT', x: 72, y: 72 },
+          { text: '"Premises" shall mean Suite 300 at 500 Elm Ave.', x: 72, y: 108 },
+          { text: '1. Term', x: 72, y: 144 },
+          { text: 'The term shall commence on January 1, 2026.', x: 72, y: 162 },
+          { text: 'This lease shall expire on December 31, 2028.', x: 72, y: 180 },
+          { text: '2. Base Rent', x: 72, y: 216 },
+          { text: 'Base rent is $1,000 per month, as set forth in Schedule 1.', x: 72, y: 234 },
+          { text: '3. Notice', x: 72, y: 270 },
+          { text: 'Either party may terminate upon 60-day prior written notice.', x: 72, y: 288 },
+          { text: 'See Section 2 and Exhibit A for details.', x: 72, y: 306 },
+        ],
+      },
+      {
+        blocks: [
+          { text: 'Schedule 1 — Rent Schedule', x: 72, y: 72 },
+          // Header row (y=120)
+          { text: 'Period', x: 72, y: 120 },
+          { text: 'Monthly Rent', x: 260, y: 120 },
+          { text: 'Escalator', x: 440, y: 120 },
+          // Row 1 (y=150)
+          { text: '2026-01-01 to 2026-12-31', x: 72, y: 150 },
+          { text: '$1,000.00', x: 260, y: 150 },
+          { text: '3%', x: 440, y: 150 },
+          // Row 2 (y=180)
+          { text: '2027-01-01 to 2027-12-31', x: 72, y: 180 },
+          { text: '$1,030.00', x: 260, y: 180 },
+          { text: '3%', x: 440, y: 180 },
+          // Row 3 (y=210)
+          { text: '2028-01-01 to 2028-12-31', x: 72, y: 210 },
+          { text: '$1,060.90', x: 260, y: 210 },
+          { text: '3%', x: 440, y: 210 },
+        ],
+      },
+    ]);
+
+    const doc = await parseLease(bytes);
+    const facts = extractLeaseFacts(doc);
+
+    // Primitives from page 1.
+    expect(facts.baseRent?.amount).toBe(1000);
+    expect(facts.noticePeriodDays).toBe(60);
+    expect(facts.commencementDate).toBe('2026-01-01');
+    expect(facts.expirationDate).toBe('2028-12-31');
+    expect(facts.definitions.map((d) => d.term)).toContain('Premises');
+    const refTexts = facts.crossReferences.map((r) => r.text);
+    expect(refTexts).toContain('Section 2');
+    expect(refTexts).toContain('Exhibit A');
+    expect(refTexts).toContain('Schedule 1');
+
+    // Rent schedule from page 2.
+    expect(facts.rentSchedule).toBeDefined();
+    expect(facts.rentSchedule).toHaveLength(3);
+    expect(facts.rentSchedule?.[0]).toEqual({
+      from: '2026-01-01',
+      to: '2026-12-31',
+      amount: 1000,
+      escalator: 3,
+    });
+    expect(facts.rentSchedule?.[2]?.amount).toBeCloseTo(1060.9);
+  });
+
   it('returns all-null primitives for a lease with no matchable phrasing', async () => {
     const bytes = await makePdf([
       pageFromLines(['GENERIC AGREEMENT', 'This document is short and unremarkable.']),
@@ -323,5 +391,6 @@ describe('extractLeaseFacts — integrated end-to-end', () => {
       definitions: [],
       crossReferences: [],
     });
+    expect(facts.rentSchedule).toBeUndefined();
   });
 });

@@ -28,6 +28,11 @@ const populated: LeaseFacts = {
     { text: 'Exhibit A', target: 'exhibit:Exhibit A', page: 2, paragraphIndex: 5 },
     { text: 'Schedule 1', target: 'schedule:Schedule 1', page: 2, paragraphIndex: 5 },
   ],
+  rentSchedule: [
+    { from: '2026-01-01', to: '2026-12-31', amount: 1000, escalator: 3 },
+    { from: '2027-01-01', to: '2027-12-31', amount: 1030, escalator: 3 },
+    { from: '2028-01-01', to: '2028-12-31', amount: 1060.9, escalator: 3 },
+  ],
 };
 
 const empty: LeaseFacts = {

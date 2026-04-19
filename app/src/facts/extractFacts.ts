@@ -1,4 +1,6 @@
+import { detectTables } from '../parser/tables';
 import type { LeaseDocument, Paragraph } from '../parser/types';
+import { extractRentSchedule } from './rentSchedule';
 import type {
   CrossReference,
   DefinitionEntry,
@@ -42,8 +44,10 @@ export function extractLeaseFacts(doc: LeaseDocument): LeaseFacts {
   const { commencementDate, expirationDate } = extractDates(doc.paragraphs);
   const definitions = extractDefinitions(doc.paragraphs);
   const crossReferences = extractCrossReferences(doc.paragraphs);
+  const tables = detectTables(doc.pages);
+  const rentSchedule = extractRentSchedule(tables);
 
-  return {
+  const facts: LeaseFacts = {
     baseRent,
     securityDeposit,
     termMonths,
@@ -53,6 +57,8 @@ export function extractLeaseFacts(doc: LeaseDocument): LeaseFacts {
     definitions,
     crossReferences,
   };
+  if (rentSchedule.length > 0) facts.rentSchedule = rentSchedule;
+  return facts;
 }
 
 // ---------- Money ----------
