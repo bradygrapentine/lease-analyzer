@@ -386,7 +386,8 @@ export function App(): JSX.Element {
   }
 
   async function onImportPack(file: File): Promise<void> {
-    const text = await file.text();
+    const bytes = await readFileBytes(file);
+    const text = new TextDecoder().decode(bytes);
     const parsed: unknown = JSON.parse(text);
     const result = validatePackFile(parsed);
     if (!result.ok) {
