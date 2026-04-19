@@ -16,8 +16,8 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Tests | 196 passing | `npm test` |
-| Coverage | 97.04% stmt · 86.35% branch · 93.37% func · 97.04% line | `npm run test:coverage` (thresholds 90/85/90/90) |
+| Tests | 241 passing | `npm test` |
+| Coverage | 97.43% stmt · 86.60% branch · 94.05% func · 97.43% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell 197 KiB · pdf.js api 400 KiB · pdf.worker 1.3 MiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
 | IndexedDB | schema v3 (`leases` + `settings` + `clauseTemplates`) | migrations tested |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js` | `npm run build` |
@@ -125,12 +125,19 @@ Local-only, CSP-compatible.
       `Table { rows: Cell[][], page, bbox }` model.
 - [ ] Rent-schedule extraction as the first use case; typed
       `RentSchedulePeriod[]` (from/to dates, amount, escalator).
-- [ ] Definition detection: regex anchors for `"X" shall mean Y` /
-      `X means Y`; populate a doc-wide `definitions: Map<Term, Span>`.
-- [ ] Cross-reference resolver: find `\bSection \d+(\.\d+)*\b`,
-      `\bExhibit [A-Z]\b`, `\bSchedule \d+\b`; link to the section.
-- [ ] `LeaseFacts` object: base rent, deposit, term length, notice
-      periods, commencement/expiration dates.
+- [x] Definition detection: regex anchors for `"X" shall mean Y` /
+      `X means Y`; populated as `DefinitionEntry[]`
+      (term / definition / page / paragraphIndex) by
+      `src/facts/extractFacts.ts`.
+- [x] Cross-reference resolver: find `\bSection \d+(\.\d+)*\b`,
+      `\bExhibit [A-Z]\b`, `\bSchedule \d+\b`; emitted as
+      `CrossReference[]` with namespaced `target`
+      (`section:` / `exhibit:` / `schedule:`).
+- [x] `LeaseFacts` object: base rent, deposit, term length, notice
+      periods, commencement/expiration dates. Pure
+      `extractLeaseFacts(doc: LeaseDocument): LeaseFacts`. Rendered by
+      the new `LeaseFactsPanel` (populated + empty stories). App wiring
+      left to follow-up PR.
 - [ ] Hover-glossary in the findings panel (tooltip on defined terms).
 - [ ] Golden tests: a commercial lease fixture exercising table +
       definitions + references simultaneously.
