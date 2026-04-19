@@ -140,6 +140,32 @@ set (and isn't the new one), the app auto-renders a `ComparePanel`.
   cannot reach the network for anything not already cached.
 - Encrypted archive export/import uses WebCrypto — no server handshake.
 
+## OCR (opt-in)
+
+`src/ocr/runOcr.ts` is the entry point. It is triggered by the user clicking
+"Attempt OCR" on the banner that appears when `needsOcr()` flags a likely-
+scanned PDF.
+
+- tesseract.js is **lazy-imported** from inside `runOcr` so non-OCR users
+  never download it.
+- Assets are served **same-origin** from `/tesseract/` to satisfy CSP.
+  `scripts/build-tesseract-assets.mjs` copies `worker.min.js`,
+  `tesseract-core.wasm.js`, and `tesseract-core.wasm` out of
+  `node_modules/tesseract.js{,-core}` into `public/tesseract/` on
+  `postinstall`.
+- `eng.traineddata.gz` (language data, ~10 MB for the fast model) must be
+  placed in `public/tesseract/` manually — we do not download it at install
+  time because that would violate the no-CDN contract.
+- `runOcr` passes explicit `workerPath`, `corePath`, `langPath` options so
+  tesseract never reaches jsdelivr.
+- Rendering uses the shared `renderPageToCanvas()` helper in
+  `src/ui/renderPdfPages.ts`. Each PDF page → `<canvas>` →
+  `Tesseract.recognize(canvas, 'eng')`. The resulting `LeaseDocument` runs
+  through the normal `detectSections` → `analyze(doc, RULE_PACK_V1)` path.
+- Paragraphs in the OCR-derived document carry `bbox: undefined` — we do
+  not reconstruct geometry from tesseract words, so highlight overlays are
+  suppressed on OCR output.
+
 ## Known non-goals (for now)
 
 Cloud sync, accounts, team collaboration, jurisdiction-specific legal

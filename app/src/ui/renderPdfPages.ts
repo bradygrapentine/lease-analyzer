@@ -1,7 +1,7 @@
 type PdfjsModule = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
 let pdfjsPromise: Promise<PdfjsModule> | null = null;
 
-async function loadPdfjs(): Promise<PdfjsModule> {
+export async function loadPdfjs(): Promise<PdfjsModule> {
   if (!pdfjsPromise) {
     pdfjsPromise = (async () => {
       await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
@@ -13,6 +13,23 @@ async function loadPdfjs(): Promise<PdfjsModule> {
     })();
   }
   return pdfjsPromise;
+}
+
+// Render a single pdf.js page to a canvas at the given scale. Shared between
+// the viewer (on-screen) and the OCR pipeline (off-screen canvases).
+export async function renderPageToCanvas(
+  page: import('pdfjs-dist/legacy/build/pdf.mjs').PDFPageProxy,
+  canvas: HTMLCanvasElement,
+  scale: number,
+): Promise<void> {
+  const viewport = page.getViewport({ scale });
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = `${viewport.width / scale}px`;
+  canvas.style.height = `${viewport.height / scale}px`;
+  await page.render({ canvasContext: ctx, viewport }).promise;
 }
 
 export interface RenderHandle {

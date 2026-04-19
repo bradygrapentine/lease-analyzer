@@ -75,7 +75,13 @@ enforced by CI via `npm run test:coverage`.
 - [x] Paragraph-level `diffLeases` with fuzzy Levenshtein matching (threshold 0.6; adds "changed" status with previousText)
 - [x] Compare picker + ComparePanel UI
 - [x] `needsOcr` heuristic + warning banner
-- [ ] Tesseract.js OCR engine (heavy dep; detection in place)
+- [x] Tesseract.js OCR engine — opt-in "Attempt OCR" button on the
+  needsOcr banner; tesseract.js is lazy-imported so non-OCR users skip
+  the ~8 MB runtime. Assets served same-origin from `/tesseract/` to
+  satisfy CSP (`build:tesseract-assets` script copies worker + core wasm
+  at postinstall). `eng.traineddata.gz` (~10 MB) is a one-time manual
+  drop into `public/tesseract/`; Workbox precaches everything so offline
+  OCR works, at a cost of ~18 MB to the offline download.
 - [x] Per-clause "my standard" template library
 
 ## Phase 6 — Polish & Distribution

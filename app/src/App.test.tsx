@@ -1,6 +1,21 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+vi.mock('./ocr/runOcr', () => ({
+  runOcr: vi.fn(async (_bytes: Uint8Array, opts?: { onProgress?: (p: { pct: number; stage: string }) => void }) => {
+    opts?.onProgress?.({ pct: 0, stage: 'starting' });
+    opts?.onProgress?.({ pct: 1, stage: 'done' });
+    return {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [
+        { page: 1, text: 'Any dispute shall be resolved by binding arbitration, not court.' },
+        { page: 1, text: 'Tenant waives any right to a jury trial.' },
+      ],
+      sections: [],
+      raw: '',
+    };
+  }),
+}));
 import { App } from './App';
 import { makePdf } from './parser/testFixtures';
 import {
@@ -239,6 +254,20 @@ describe('App', () => {
     expect(document.activeElement).toBe(
       screen.getByRole('searchbox', { name: /search findings/i }),
     );
+  });
+
+  it('Attempt OCR button runs OCR and replaces findings with the OCR-derived ones', async () => {
+    render(<App />);
+    await uploadLease('Scanned.pdf');
+    // The sample lease fixture has short blocks (<100 chars/page), so the
+    // needsOcr heuristic flags it and the "Attempt OCR" button appears.
+    const ocrButton = await screen.findByRole('button', { name: /attempt ocr/i });
+    await userEvent.click(ocrButton);
+    // Progress text transitions through at least one running state.
+    await waitFor(() =>
+      expect(screen.getByText(/mandatory arbitration/i)).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/waiver of jury trial/i)).toBeInTheDocument();
   });
 
   it('importing an encrypted archive replaces the library on confirm', async () => {

@@ -14,6 +14,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "build:sample": "node scripts/build-sample-pdf.mjs",
+    "build:tesseract-assets": "node scripts/build-tesseract-assets.mjs",
+    "postinstall": "node scripts/build-tesseract-assets.mjs",
     "check:budget": "node scripts/check-bundle-budget.mjs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
@@ -22,7 +24,8 @@
     "idb": "^8.0.3",
     "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@storybook/addon-essentials": "^8.6.14",
