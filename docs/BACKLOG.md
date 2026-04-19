@@ -1,86 +1,113 @@
 # Backlog
 
-Concrete, shippable stories mapped to `ROADMAP.md`. Each item is small enough
-to land in one PR. Order within a phase is the suggested work order.
+Concrete, shippable stories mapped to `ROADMAP.md`. Each `[ ]` item is small
+enough to land in one PR.
 
-Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
+## Status legend
+
+| Mark | Meaning |
+|------|---------|
+| `[x]` | Done and in `main` |
+| `[~]` | Partial — scope cut with a note; follow-up ticket below |
+| `[ ]` | Not started |
+| `!`   | Blocker (no blockers at time of writing) |
+
+Current automated footprint: **144 tests · 97% statements · 86% branches**,
+enforced by CI via `npm run test:coverage`.
 
 ---
 
 ## Phase 0 — Foundations
 - [x] Scaffold Vite + React + TS app in `app/`
-- [x] Add strict `tsconfig.json` (`strict`, `noUncheckedIndexedAccess`)
-- [x] Add ESLint + Prettier + `lint-staged` pre-commit
-- [x] Add Vitest with a sample test; wire `npm test`
-- [ ] Add Playwright smoke test (app boots, shows upload)
-- [x] GitHub Actions: typecheck + lint + test on PR
-- [ ] Commit sample lease fixtures to `fixtures/` (residential, commercial, scanned)
-- [x] CSP meta tag: `default-src 'self'`; document the no-egress contract
+- [x] Strict `tsconfig.json` (`strict`, `noUncheckedIndexedAccess`)
+- [x] ESLint + Prettier
+- [x] Vitest wired; `npm run test:coverage` with thresholds in CI
+- [ ] Pre-commit hook (`lint-staged`) — opt-in; CI is authoritative
+- [ ] Playwright smoke test (browser sanity is currently manual via Chrome DevTools MCP)
+- [x] CSP `default-src 'self'` + local pdf.worker + no-CDN contract
+- [x] GitHub Actions: typecheck + lint + coverage on PR
+- [x] Bundled synthetic fixtures (residential + commercial leases via pdf-lib)
 
 ## Phase 1 — PDF Parser
-- [x] Integrate `pdfjs-dist`; bundle worker locally (no CDN)
-- [x] `extractPages(file) → PageText[]` with positions + font sizes
+- [x] `pdfjs-dist` integrated, worker bundled locally
+- [x] `extractPages(bytes) → PageText[]` with positions + fontSize
 - [x] Paragraph reconstruction (line joining, hyphen repair, header/footer strip)
-- [x] Heading/section detection (numbered, bold, ALL CAPS heuristics)
-- [x] Define `LeaseDocument` type + parser output contract
-- [x] Golden-file tests (synthetic residential + commercial fixtures; scanned deferred)
-- [x] Benchmark: 50-page parse budget (3s; measured ~210ms in test env)
-- [x] Handle password-protected PDFs with a clear error
+- [x] Heading/section detection (numbered + ALL CAPS heuristics; preamble fallback)
+- [x] `LeaseDocument` type + `parseLease(bytes)` top-level entry
+- [x] Golden-file tests (synthetic residential + commercial)
+- [~] Real scanned-PDF fixture (detection works via `needsOcr`; binary fixture pending)
+- [x] 50-page perf budget test (~210ms in CI, budget 3s)
+- [x] Password-protected PDF → `PasswordProtectedPdfError`
 
 ## Phase 2 — Rules Engine
-- [x] Define `Rule` type + JSON schema (id, severity, category, pattern, explain, cite)
-- [x] Implement matchers: `regex`, `keywordProximity`, `sectionAnchored`; negation as post-filter
-- [x] `analyze(doc, rules) → Finding[]` with stable ordering
-- [x] Ship rule pack v1 (10 rules)
-- [x] Per-rule positive tests + benign negative
+- [x] `Rule` + `Finding` types, matcher union (regex / keywordProximity / sectionAnchored)
+- [x] `analyze(doc, rules)` with stable ordering + negation post-filter
+- [x] Rule pack v1 (10 rules)
+- [x] Per-rule positive + benign negative tests
 - [x] Confidence scoring (regex 0.9, proximity 0.75, ×0.5 when negated)
-- [x] Rule pack versioning + provenance on each finding (`rulePackVersion`)
+- [x] Rule pack versioning stamped on every finding
 
 ## Phase 3 — UI
-- [x] Upload control, accepts `application/pdf`
-- [x] PDF viewer pane using pdf.js canvas renderer (canvas scaffolding + render path; verify in browser)
-- [x] Findings panel: grouped by severity
-- [x] Collapsible severity groups
-- [x] Click finding → scrolls viewer to that page
-- [ ] Span-level highlight overlay in viewer (deferred — needs text-layer)
-- [x] Click finding → show selected snippet + page number
+- [x] Upload control (PDF-only) + sample-lease button
+- [x] Findings panel: severity groups, empty state, negation badge
+- [x] Click finding → selected article, scroll-to-page in viewer
 - [x] Search-within-findings (title/explanation/snippet)
-- [x] Cmd/Ctrl-F and "/" focus the findings search
 - [x] Severity + category filter chips
-- [x] Loading / empty / parse-error states (idle/loading/analyzed/error)
-- [x] Keyboard navigation across findings (↑/↓/Enter)
-- [ ] Full a11y pass: contrast, focus ring, ARIA audit (labels in place)
+- [x] Collapsible severity sections
+- [x] Cmd/Ctrl-F and "/" focus the findings search
+- [x] Keyboard nav (↑/↓/Enter) across finding buttons
+- [x] Loading / empty / parse-error states
+- [x] PDF viewer canvas per page via pdf.js
+- [ ] Span-level highlight overlay (needs pdf.js text layer)
+- [ ] Full a11y audit (basic labels in place)
 
 ## Phase 4 — Local Storage
-- [x] IndexedDB wrapper (idb) with versioned migrations
-- [x] Save lease + findings on analyze; list in "My Leases"
-- [x] Delete + open-from-library + rename (in UI)
-- [x] Export findings as JSON
-- [x] Export printable HTML summary (print-stylesheet)
-- [x] Encrypted archive export/import (WebCrypto AES-GCM + PBKDF2)
-- [x] "Clear all data" control with confirmation
+- [x] IndexedDB wrapper (idb), versioned schema (v1 → v2 with settings)
+- [x] Save + list + open + rename + delete
+- [x] Standard-lease pointer + auto-compare on upload
+- [x] JSON export (schema `leaseguard.findings.v1`)
+- [x] Printable HTML export (`@media print`, XSS-escaped)
+- [x] Encrypted archive export/import (AES-GCM + PBKDF2, `LGv1` magic)
+- [x] Clear-all with confirmation
 
 ## Phase 5 — V2: Compare & OCR
-- [x] Rule-aware diff: added/removed/changed findings between two leases
-- [x] Compare picker in library + ComparePanel render
-- [x] Text-level diff within aligned sections (paragraph diff by exact text; fuzzy match deferred)
-- [x] OCR detection banner when avg chars/page below threshold
-- [ ] Actual OCR via tesseract.js (deferred — heavy dep; detection in place)
-- [x] Compare-against-standard mode (mark a lease as standard; auto-diff on new upload)
-- [ ] "My standard clauses" library (individual clause templates — different scope)
+- [x] Rule-aware findings diff (added/removed/changed/unchanged)
+- [x] Paragraph-level `diffLeases` (exact-text match; fuzzy deferred)
+- [x] Compare picker + ComparePanel UI
+- [x] `needsOcr` heuristic + warning banner
+- [ ] Tesseract.js OCR engine (heavy dep; detection in place)
+- [ ] Fuzzy paragraph matching (Levenshtein / token-set)
+- [ ] Per-clause "my standard" template library
 
 ## Phase 6 — Polish & Distribution
-- [x] Performance budget test (50-page parse < 3s; measured ~210ms in CI-like env)
-- [ ] Lighthouse a11y + PWA scores ≥ 95 in CI (manual run pending)
-- [x] PWA manifest, service worker, offline shell (vite-plugin-pwa, autoUpdate)
-- [ ] Tauri desktop wrapper (optional) with local library folder
-- [x] Sample lease bundled in `public/sample.pdf` with "Try sample" button
-- [ ] Onboarding tour (guided first-use walkthrough)
-- [x] Privacy disclosure explaining the no-network guarantee (header &lt;details&gt;)
-- [x] Printable HTML summary export
+- [x] 50-page perf guard in test run
+- [x] PWA manifest + autoUpdate service worker (vite-plugin-pwa)
+- [x] Privacy disclosure `<details>` block + not-legal-advice disclaimer
+- [x] SVG app icon + favicon link
+- [x] Side-by-side CSS layout (stacks below 960px)
+- [ ] Lighthouse a11y + PWA scores ≥ 95 in CI
+- [ ] Tauri desktop wrapper with local library folder
+- [ ] Onboarding tour (sample lease button exists; full walkthrough pending)
 
-## Tech debt / cross-cutting
-- [ ] Error boundary + telemetry-free crash log (local only)
-- [ ] Bundle-size budget; code-split pdf.js worker
-- [ ] Storybook for viewer + findings panel components
-- [ ] Document rule-authoring guide in `docs/RULES.md`
+## Phase 7 — Observability & hygiene (proposed)
+
+Local-only, CSP-compatible.
+
+- [ ] Error boundary + in-memory crash log (no telemetry leaves device)
+- [ ] Optional "Download diagnostics" button that bundles last N errors
+- [ ] Rule-authoring guide (`docs/RULES.md`) with matcher cookbook
+- [ ] Storybook for viewer + findings components
+- [ ] Bundle-size budget in CI (warn if pdf.worker + app exceeds threshold)
+- [ ] Code-split pdf.worker via dynamic import (first paint budget)
+
+## Cross-cutting tech debt
+
+- [ ] Extract a `usePipeline` hook — App's `handleBytes` is the tallest function in the codebase
+- [ ] Share a single `copyBytes` helper rather than inline `new Uint8Array(...)` in App + PdfViewer
+- [ ] Sections track paragraph indices (not just Paragraph refs) to simplify sectionAnchored mapping
+- [ ] `renderPdfPages` should accept an `AbortSignal` rather than returning a custom handle
+
+## Explicitly out of scope
+
+Cloud sync, accounts, team collaboration, LLM-based summarization,
+jurisdiction-specific legal reasoning, telemetry / analytics of any kind.

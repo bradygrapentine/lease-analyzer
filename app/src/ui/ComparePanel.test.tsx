@@ -45,4 +45,31 @@ describe('ComparePanel', () => {
     );
     expect(screen.getByText(/no differences/i)).toBeInTheDocument();
   });
+
+  it('renders only the Removed section when rules disappeared', () => {
+    render(
+      <ComparePanel
+        aName="Old"
+        bName="New"
+        aFindings={[f({ ruleId: 'gone', title: 'Old clause' })]}
+        bFindings={[]}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: /removed/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /added/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /changed/i })).not.toBeInTheDocument();
+  });
+
+  it('surfaces a negation flip in the Changed section', () => {
+    render(
+      <ComparePanel
+        aName="Old"
+        bName="New"
+        aFindings={[f({ ruleId: 'n', title: 'Arb', negated: true })]}
+        bFindings={[f({ ruleId: 'n', title: 'Arb', negated: false })]}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: /changed/i })).toBeInTheDocument();
+    expect(screen.getByText(/negated yes→no/i)).toBeInTheDocument();
+  });
 });

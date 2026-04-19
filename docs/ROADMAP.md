@@ -59,6 +59,14 @@ Stretch features from original roadmap.
 - PWA install, offline-first, cached assets
 - Optional desktop wrapper (Tauri) for file-system library mode
 
+## Phase 7 — Observability & hygiene
+Local-only, CSP-compatible guardrails for long-term maintainability.
+- Error boundary + in-memory crash log (no telemetry leaves device)
+- "Download diagnostics" bundle of the last N errors
+- Rule-authoring guide (`docs/RULES.md`) with matcher cookbook
+- Storybook for viewer + findings components
+- Bundle-size budget in CI, pdf.worker code-split
+
 ## Out of scope (for now)
 Cloud sync, accounts, team collaboration, LLM-based summarization,
-jurisdiction-specific legal advice.
+jurisdiction-specific legal advice, telemetry.

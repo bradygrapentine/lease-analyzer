@@ -30,7 +30,9 @@ export function PdfViewer({ bytes, pageCount, selectedPage }: PdfViewerProps): J
   useEffect(() => {
     if (selectedPage == null) return;
     const el = document.getElementById(`pdf-page-${selectedPage}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }, [selectedPage]);
 
   if (pageCount === 0) {

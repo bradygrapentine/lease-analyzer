@@ -38,5 +38,25 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.bench.test.{ts,tsx}',
+        'src/**/index.ts', // barrel re-exports
+        'src/test/**',
+        'src/main.tsx',
+        'src/parser/env.d.ts',
+        'src/parser/testFixtures.ts',
+      ],
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 90,
+        lines: 90,
+      },
+    },
   },
 });

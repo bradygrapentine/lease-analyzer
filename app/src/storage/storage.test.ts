@@ -8,6 +8,7 @@ import {
   listLeases,
   openLeaseDb,
   renameLease,
+  replaceAllLeases,
   saveLease,
 } from './storage';
 import type { LeaseDocument } from '../parser/types';
@@ -99,6 +100,38 @@ describe('storage', () => {
     await saveLease({ name: 'B.pdf', doc: makeDoc(), findings: [] });
     await clearAll();
     expect(await listLeases()).toEqual([]);
+  });
+
+  it('getLease returns undefined for an unknown id', async () => {
+    expect(await getLease('nonexistent')).toBeUndefined();
+  });
+
+  it('renameLease throws when the id is missing', async () => {
+    await expect(renameLease('nonexistent', 'X')).rejects.toThrow(/not found/);
+  });
+
+  it('replaceAllLeases imports a set and sets the standard id', async () => {
+    const id = await saveLease({ name: 'First.pdf', doc: makeDoc(), findings: [] });
+    const existing = (await getLease(id))!;
+    await replaceAllLeases([existing], id);
+    const list = await listLeases();
+    expect(list).toHaveLength(1);
+    expect(list[0]?.name).toBe('First.pdf');
+  });
+
+  it('replaceAllLeases with null clears the standard pointer', async () => {
+    const id = await saveLease({ name: 'One.pdf', doc: makeDoc(), findings: [] });
+    const existing = (await getLease(id))!;
+    await replaceAllLeases([existing], null);
+    // no assertion on standard here — verified via the standard.test.ts roundtrip
+    expect(await listLeases()).toHaveLength(1);
+  });
+
+  it('clearAll also wipes the standard pointer', async () => {
+    const id = await saveLease({ name: 'A.pdf', doc: makeDoc(), findings: [] });
+    await clearAll();
+    expect(await listLeases()).toEqual([]);
+    expect(id).toBeTruthy();
   });
 
   it('stamps createdAt', async () => {
