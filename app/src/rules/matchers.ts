@@ -1,4 +1,5 @@
 import type { LeaseDocument, Paragraph } from '../parser/types';
+import type { CompiledMatcherCache } from './compileRules';
 import type {
   KeywordProximityMatcher,
   LeafMatcher,
@@ -8,9 +9,12 @@ import type {
   SectionAnchoredMatcher,
 } from './types';
 
-export function runRegex(matcher: RegexMatcher, paragraphs: Paragraph[]): RuleMatch[] {
-  const flags = matcher.flags ?? '';
-  const re = new RegExp(matcher.pattern, flags.includes('g') ? flags : `${flags}g`);
+export function runRegex(
+  matcher: RegexMatcher,
+  paragraphs: Paragraph[],
+  compiled?: CompiledMatcherCache,
+): RuleMatch[] {
+  const re = compiled?.regex ?? buildRegex(matcher);
   const hits: RuleMatch[] = [];
   paragraphs.forEach((para, idx) => {
     re.lastIndex = 0;
@@ -28,13 +32,21 @@ export function runRegex(matcher: RegexMatcher, paragraphs: Paragraph[]): RuleMa
   return hits;
 }
 
+function buildRegex(matcher: RegexMatcher): RegExp {
+  const flags = matcher.flags ?? '';
+  return new RegExp(matcher.pattern, flags.includes('g') ? flags : `${flags}g`);
+}
+
 export function runKeywordProximity(
   matcher: KeywordProximityMatcher,
   paragraphs: Paragraph[],
+  compiled?: CompiledMatcherCache,
 ): RuleMatch[] {
+  const keywordsLower =
+    compiled?.keywordsLower ?? matcher.keywords.map((k) => k.toLowerCase());
   const hits: RuleMatch[] = [];
   paragraphs.forEach((para, idx) => {
-    const match = findProximity(para.text, matcher.keywords, matcher.window);
+    const match = findProximity(para.text, keywordsLower, matcher.window);
     if (match) hits.push({ paragraphIndex: idx, ...match });
   });
   return hits;
@@ -42,11 +54,11 @@ export function runKeywordProximity(
 
 function findProximity(
   text: string,
-  keywords: string[],
+  keywordsLower: string[],
   window: number,
 ): { span: { start: number; end: number }; snippet: string; confidence: number } | null {
   const lower = text.toLowerCase();
-  const positions = keywords.map((k) => findAll(lower, k.toLowerCase()));
+  const positions = keywordsLower.map((k) => findAll(lower, k));
   if (positions.some((p) => p.length === 0)) return null;
 
   let best: { start: number; end: number } | null = null;
@@ -63,14 +75,14 @@ function findProximity(
     if (!slots) return;
     for (const pos of slots) {
       const start = Math.min(current.start, pos);
-      const end = Math.max(current.end, pos + (keywords[depth]?.length ?? 0));
+      const end = Math.max(current.end, pos + (keywordsLower[depth]?.length ?? 0));
       if (end - start > window) continue;
       walk(depth + 1, { start, end });
     }
   };
 
   const firstSlots = positions[0];
-  const firstKeyword = keywords[0];
+  const firstKeyword = keywordsLower[0];
   if (!firstSlots || firstKeyword === undefined) return null;
   for (const pos of firstSlots) {
     walk(1, { start: pos, end: pos + firstKeyword.length });
@@ -85,20 +97,32 @@ function findProximity(
   };
 }
 
-export function runMatcher(matcher: Matcher, doc: LeaseDocument): RuleMatch[] {
+export function runMatcher(
+  matcher: Matcher,
+  doc: LeaseDocument,
+  compiled?: CompiledMatcherCache,
+): RuleMatch[] {
   if (matcher.type === 'sectionAnchored') {
-    return runSectionAnchored(matcher, doc);
+    return runSectionAnchored(matcher, doc, compiled);
   }
-  return runLeaf(matcher, doc.paragraphs);
+  return runLeaf(matcher, doc.paragraphs, compiled);
 }
 
-function runLeaf(matcher: LeafMatcher, paragraphs: Paragraph[]): RuleMatch[] {
-  if (matcher.type === 'regex') return runRegex(matcher, paragraphs);
-  return runKeywordProximity(matcher, paragraphs);
+function runLeaf(
+  matcher: LeafMatcher,
+  paragraphs: Paragraph[],
+  compiled?: CompiledMatcherCache,
+): RuleMatch[] {
+  if (matcher.type === 'regex') return runRegex(matcher, paragraphs, compiled);
+  return runKeywordProximity(matcher, paragraphs, compiled);
 }
 
-function runSectionAnchored(matcher: SectionAnchoredMatcher, doc: LeaseDocument): RuleMatch[] {
-  const heading = new RegExp(matcher.headingPattern, 'i');
+function runSectionAnchored(
+  matcher: SectionAnchoredMatcher,
+  doc: LeaseDocument,
+  compiled?: CompiledMatcherCache,
+): RuleMatch[] {
+  const heading = compiled?.headingRegex ?? new RegExp(matcher.headingPattern, 'i');
   const allowed = new Set<Paragraph>();
   for (const section of doc.sections) {
     if (heading.test(section.heading)) {
@@ -107,7 +131,7 @@ function runSectionAnchored(matcher: SectionAnchoredMatcher, doc: LeaseDocument)
   }
   const filtered = doc.paragraphs.filter((p) => allowed.has(p));
   if (filtered.length === 0) return [];
-  const leafHits = runLeaf(matcher.child, filtered);
+  const leafHits = runLeaf(matcher.child, filtered, compiled?.child);
   return leafHits.map((hit) => {
     const para = filtered[hit.paragraphIndex];
     const originalIndex = para ? doc.paragraphs.indexOf(para) : hit.paragraphIndex;

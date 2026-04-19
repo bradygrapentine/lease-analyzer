@@ -1,8 +1,11 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, it, expect } from 'vitest';
 import {
+  _resetCompileCachesForTests,
   _resetPacksDbForTests,
   deleteInstalledPack,
+  getActiveCompiledRules,
+  getCompiledRulesForPack,
   getPackEnabled,
   getSelectedJurisdictions,
   getSeverityOverrides,
@@ -158,5 +161,59 @@ describe('packStorage', () => {
     db.close();
     _resetPacksDbForTests();
     expect(await getSeverityOverrides()).toEqual({ 'rule-a': 'medium' });
+  });
+
+  describe('compile-rule cache', () => {
+    beforeEach(() => {
+      _resetCompileCachesForTests();
+    });
+
+    it('getCompiledRulesForPack returns the same reference on repeat calls (cache hit)', () => {
+      const p = pack('cached');
+      const first = getCompiledRulesForPack(p);
+      const second = getCompiledRulesForPack(p);
+      expect(second).toBe(first);
+      expect(first).toHaveLength(1);
+      expect(first[0]?.__compiled?.regex).toBeInstanceOf(RegExp);
+    });
+
+    it('saveInstalledPack invalidates the compiled-rules cache for that pack', async () => {
+      const p = pack('inv');
+      const before = getCompiledRulesForPack(p);
+      await saveInstalledPack(p);
+      const after = getCompiledRulesForPack(p);
+      expect(after).not.toBe(before);
+    });
+
+    it('deleteInstalledPack invalidates the compiled-rules cache for that pack', async () => {
+      const p = pack('inv2');
+      await saveInstalledPack(p);
+      const first = getCompiledRulesForPack(p);
+      await deleteInstalledPack('inv2');
+      const second = getCompiledRulesForPack(p);
+      expect(second).not.toBe(first);
+    });
+
+    it('setPackEnabled invalidates the compiled-rules cache for that pack', async () => {
+      const p = pack('inv3');
+      await saveInstalledPack(p);
+      const first = getCompiledRulesForPack(p);
+      await setPackEnabled('inv3', true);
+      const second = getCompiledRulesForPack(p);
+      expect(second).not.toBe(first);
+    });
+
+    it('getActiveCompiledRules memoizes by array identity', () => {
+      const rules = pack('mem').rules;
+      const first = getActiveCompiledRules(rules);
+      const second = getActiveCompiledRules(rules);
+      expect(second).toBe(first);
+    });
+
+    it('getActiveCompiledRules recomputes when handed a fresh array', () => {
+      const a = pack('mem-a').rules;
+      const b = pack('mem-b').rules;
+      expect(getActiveCompiledRules(a)).not.toBe(getActiveCompiledRules(b));
+    });
   });
 });

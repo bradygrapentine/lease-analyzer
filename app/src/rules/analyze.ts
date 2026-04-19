@@ -1,4 +1,5 @@
 import type { LeaseDocument } from '../parser/types';
+import { compileRules, isCompiledRules, type CompiledRule } from './compileRules';
 import { runMatcher } from './matchers';
 import type { Finding, Rule } from './types';
 
@@ -18,10 +19,22 @@ const NEGATION_TOKENS = [
   'except',
 ];
 
-export function analyze(doc: LeaseDocument, rules: Rule[]): Finding[] {
+/**
+ * Run every rule's matcher against `doc` and return sorted findings.
+ *
+ * Accepts both plain `Rule[]` (callers that build rules on the fly) and
+ * `CompiledRule[]` (produced by `compileRules` — reused across calls to
+ * skip RegExp / keyword re-allocation). When handed plain rules we
+ * compile them once locally so the hot per-rule loop always sees
+ * pre-built matcher caches.
+ */
+export function analyze(doc: LeaseDocument, rules: Rule[] | CompiledRule[]): Finding[] {
+  const compiled: CompiledRule[] = isCompiledRules(rules)
+    ? rules
+    : compileRules(rules as Rule[]);
   const findings: Finding[] = [];
-  for (const rule of rules) {
-    const matches = runMatcher(rule.match, doc);
+  for (const rule of compiled) {
+    const matches = runMatcher(rule.match, doc, rule.__compiled);
     for (const match of matches) {
       const para = doc.paragraphs[match.paragraphIndex];
       if (!para) continue;
