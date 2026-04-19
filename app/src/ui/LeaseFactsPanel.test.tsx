@@ -141,4 +141,45 @@ describe('LeaseFactsPanel', () => {
     render(<LeaseFactsPanel facts={makeFacts()} />);
     expect(screen.getByRole('region', { name: /lease facts/i })).toBeInTheDocument();
   });
+
+  it('renders a rent schedule table when periods are present', () => {
+    render(
+      <LeaseFactsPanel
+        facts={makeFacts({
+          rentSchedule: [
+            { from: '2026-01-01', to: '2026-12-31', amount: 1000, escalator: 3 },
+            { from: '2027-01-01', to: '2027-12-31', amount: 1030, escalator: 3 },
+          ],
+        })}
+      />,
+    );
+    expect(
+      screen.getByRole('heading', { name: /rent schedule \(2\)/i }),
+    ).toBeInTheDocument();
+    const scheduleTable = screen.getByRole('table', { name: /rent schedule/i });
+    expect(within(scheduleTable).getByText('2026-01-01')).toBeInTheDocument();
+    expect(within(scheduleTable).getByText('$1,030')).toBeInTheDocument();
+    // Two 3% cells; just confirm at least one renders.
+    expect(within(scheduleTable).getAllByText('3%').length).toBeGreaterThan(0);
+  });
+
+  it('renders em-dash for periods without an escalator', () => {
+    render(
+      <LeaseFactsPanel
+        facts={makeFacts({
+          rentSchedule: [{ from: '2026-01-01', to: '2026-12-31', amount: 2000 }],
+        })}
+      />,
+    );
+    const scheduleTable = screen.getByRole('table', { name: /rent schedule/i });
+    expect(within(scheduleTable).getByText('$2,000')).toBeInTheDocument();
+    expect(within(scheduleTable).getByText('—')).toBeInTheDocument();
+  });
+
+  it('does not render the rent-schedule section when the list is missing or empty', () => {
+    render(<LeaseFactsPanel facts={makeFacts({ termMonths: 12 })} />);
+    expect(
+      screen.queryByRole('heading', { name: /rent schedule/i }),
+    ).not.toBeInTheDocument();
+  });
 });

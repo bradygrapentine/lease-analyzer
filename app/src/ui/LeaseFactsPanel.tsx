@@ -3,6 +3,7 @@ import type {
   DefinitionEntry,
   LeaseFacts,
   MoneyValue,
+  RentSchedulePeriod,
 } from '../facts/types';
 
 interface LeaseFactsPanelProps {
@@ -10,6 +11,7 @@ interface LeaseFactsPanelProps {
 }
 
 export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
+  const rentSchedule = facts.rentSchedule ?? [];
   const isEmpty =
     facts.baseRent === null &&
     facts.securityDeposit === null &&
@@ -18,7 +20,8 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
     facts.commencementDate === null &&
     facts.expirationDate === null &&
     facts.definitions.length === 0 &&
-    facts.crossReferences.length === 0;
+    facts.crossReferences.length === 0 &&
+    rentSchedule.length === 0;
 
   if (isEmpty) {
     return (
@@ -65,8 +68,44 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
           </ul>
         </div>
       )}
+
+      {rentSchedule.length > 0 && (
+        <div>
+          <h3>Rent schedule ({rentSchedule.length})</h3>
+          <table aria-label="rent schedule">
+            <thead>
+              <tr>
+                <th scope="col">From</th>
+                <th scope="col">To</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Escalator</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rentSchedule.map((period, i) => (
+                <RentScheduleRow key={`${period.from}-${period.to}-${i}`} period={period} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
+}
+
+function RentScheduleRow({ period }: { period: RentSchedulePeriod }): JSX.Element {
+  return (
+    <tr>
+      <td>{period.from}</td>
+      <td>{period.to}</td>
+      <td>{formatAmount(period.amount)}</td>
+      <td>{period.escalator !== undefined ? `${period.escalator}%` : '—'}</td>
+    </tr>
+  );
+}
+
+function formatAmount(amount: number): string {
+  return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
 interface FactRowProps {

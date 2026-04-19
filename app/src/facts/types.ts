@@ -19,6 +19,14 @@ export interface CrossReference {
   paragraphIndex: number;
 }
 
+export interface RentSchedulePeriod {
+  from: string; // ISO YYYY-MM-DD
+  to: string; // ISO YYYY-MM-DD
+  amount: number;
+  /** Percent escalator, e.g. 3 for "3%". Optional. */
+  escalator?: number;
+}
+
 export interface LeaseFacts {
   baseRent: MoneyValue | null;
   securityDeposit: MoneyValue | null;
@@ -28,4 +36,9 @@ export interface LeaseFacts {
   expirationDate: string | null; // ISO YYYY-MM-DD
   definitions: DefinitionEntry[];
   crossReferences: CrossReference[];
+  /**
+   * Optional: populated when a rent-schedule table is detected in the
+   * document. Absent when there's nothing table-like to parse.
+   */
+  rentSchedule?: RentSchedulePeriod[];
 }
