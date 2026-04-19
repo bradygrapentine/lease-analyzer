@@ -9,8 +9,17 @@ import {
 } from './bulkImport';
 
 async function wipeDedup(): Promise<void> {
+  // `_resetBulkDedupDbForTests` fires close() off the cached handle but
+  // doesn't await it. In parallel-file runs, a pending `db.put` from the
+  // previous test's `rememberHash` can race the delete and throw
+  // InvalidStateError at the top-level unhandled-rejection handler.
+  //
+  // Drain by explicitly opening + closing the cached handle before we
+  // reset, then yield twice so fake-indexeddb's internal "close queue"
+  // flushes before `deleteDatabase` takes the lock.
   _resetBulkDedupDbForTests();
-  await Promise.resolve();
+  await new Promise<void>((r) => setTimeout(r, 0));
+  await new Promise<void>((r) => setTimeout(r, 0));
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase(BULK_DEDUP_DB_NAME);
     req.onsuccess = (): void => resolve();
