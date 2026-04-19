@@ -16,10 +16,12 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Tests | 765 passing | `npm test` |
+| Source | 117 non-test files (~13.0k LOC) + 89 test files (~11.9k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
+| Tests | 765 passing across 89 files | `npm test` |
 | Coverage | 97.02% stmt · 88.06% branch · 93.21% func · 97.02% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
-| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); side dbs `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1, `leaseguard-versions` v1 | migrations tested |
+| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); 8 side dbs: `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1 | migrations tested |
+| App.tsx | ~1540 lines (panels + handlers inline); see "Cross-cutting tech debt" for the decomposition ticket | — |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze | `npm run build` |
 | Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings) | `npm run typecheck && npm run lint` |
 
@@ -188,6 +190,15 @@ Local-only, CSP-compatible.
       App wire-up in `wave4-wireup` uses `doc.sections` to resolve
       paragraph → section labels and provides preview (popup window with
       download fallback) + download actions.
+- [ ] Side-letter: add PDF export alongside the HTML artifact (today
+      `buildSideLetterHtml` is the only renderer). Likely path: re-use
+      the redlined-HTML print stylesheet + a canvas-to-PDF pass (or a
+      tiny hand-rolled PDF writer in the spirit of `buildHandoffZip`).
+- [ ] Side-letter preview: replace the popup-window preview with an
+      inline iframe. Popup blockers silently trip the current fallback
+      ladder (`App.tsx` ~line 979), so users can't preview without
+      allow-listing. Inline iframe keeps the fallback for a known-good
+      path.
 
 ## Phase 10 — Rule ecosystem
 
@@ -236,8 +247,12 @@ Local-only, CSP-compatible.
 - [~] Bundle a small offline marketplace of curated packs as static
       JSON under `/public/packs/`. Seeded with
       `example-starter.lgpack.json` produced by
-      `scripts/build-example-pack.mjs`; full curated marketplace
+      `app/scripts/build-example-pack.mjs`; full curated marketplace
       still open.
+- [ ] Marketplace UI: surface `public/packs/*.lgpack.json` in
+      `PackManagerPanel` with a "Browse included packs" list +
+      one-click install. Today the seed pack exists on disk but has no
+      in-app entry point.
 
 ## Phase 11 — Workflow & integrations
 
@@ -255,12 +270,20 @@ Local-only, CSP-compatible.
 - [x] Portfolio view: grid of leases across the library with counts
       per rule id; filterable. `src/ui/PortfolioPanel.tsx` mounted
       behind a Current-lease / Portfolio view toggle in `wire-panels`.
-- [~] Bulk import: drop a zip/folder of PDFs; progress bar; per-file
-      status; deduplicate by content hash. `src/workflow/bulkImport.ts`
-      primitive landed; App wire-up still open.
+- [x] Bulk import: multi-file PDF upload with progress bar, per-file
+      status, and content-hash dedup via `leaseguard-bulk-dedup` IDB.
+      Primitive in `src/workflow/bulkImport.ts`; panel in
+      `src/ui/BulkImportPanel.tsx`; App wire-up at
+      `App.tsx#onBulkImportFiles` (wave2-wireup). Zip/folder drop still
+      open (see Phase 11 follow-up ticket below).
 - [x] `WorkflowPanel` UI primitive (`src/ui/WorkflowPanel.tsx` +
       stories) with three action buttons and status. App wire-up landed
       in `wire-panels`.
+- [ ] Bulk import: accept a zipped folder of PDFs (extend the existing
+      multi-file path). Today users must multi-select PDFs from the file
+      picker. Also: `bulkImport.test.ts` is flaky on IDB teardown under
+      Vitest parallelism — add an explicit `beforeEach` `deleteDatabase`
+      step keyed on a fresh test-scoped DB name.
 
 ## Phase 12 — Trust & verification
 
@@ -271,12 +294,14 @@ Local-only, CSP-compatible.
 - [x] Signing keypair: generate + store via WebCrypto, unlocked with a
       passphrase (reuse the archive-export passphrase pattern).
       Ed25519; private key PBKDF2+AES-GCM-wrapped in a separate
-      `leaseguard-signing` IndexedDB.
+      `leaseguard-signing` IndexedDB. Lives at
+      `src/security/signingKeys.ts` (alongside `inputHash.ts`).
 - [x] Signed JSON export: add `signature` field; include `inputHash`
-      (SHA-256 of the PDF), `rulePackVersion`, `findings`.
-      Schema pinned at `leaseguard.findings.v1`; `signature` is an
-      optional extension. App wire-up (SigningKeyPanel + gated
-      "Export findings (signed JSON)" button) landed in `wire-panels`.
+      (SHA-256 of the PDF), `rulePackVersion`, `findings`. Schema pinned
+      at `leaseguard.findings.v1`; `signature` is an optional extension.
+      `src/storage/exportReport.ts` emits the envelope; SigningKeyPanel +
+      gated "Export findings (signed JSON)" button landed in
+      `wire-panels`.
 - [x] Append-only audit log in IndexedDB; hash-chained entries
       (`prevHash`); "Download audit log" button. Module landed in
       wave2-audit (`src/audit/auditLog.ts`,
@@ -303,12 +328,20 @@ Local-only, CSP-compatible.
       real browsers and an inline fallback for jsdom.
 - [ ] Streaming render: PdfViewer renders page N as soon as
       `getPage(N)` resolves, rather than waiting on the whole doc.
+      Today `renderPdfPages` loops sequentially through every page
+      before the viewer can show anything (`src/ui/renderPdfPages.ts`
+      line ~87). Emit per-page progress and hand canvases back as they
+      complete.
 - [x] Virtualized `<ul>` in FindingsPanel using IntersectionObserver.
       Landed wave 4 (`wave4-virtualized`) via `src/ui/useInViewport.ts`
       + FindingsPanel viewport-gated rendering so long finding lists
       stay cheap to scroll.
 - [ ] Secondary IndexedDB index on `LeaseRecord.findingCount` +
       `rulePackVersion` so `listLeases` can filter cheaply.
+      `src/storage/storage.ts` today only indexes `by-createdAt`; a
+      compound index unlocks portfolio-view filtering without a full
+      table scan. Bump the `leaseguard` DB version and add a v4
+      migration gate.
 - [x] Compile + cache regex instances at rule-pack import time. Landed
       wave 4 (`wave4-compileRules`) as `src/rules/compileRules.ts` plus
       a two-layer cache in `src/rules/packStorage.ts`
@@ -337,29 +370,49 @@ Local-only, CSP-compatible.
       counter-offer flow. Landed wave 2 — field in
       `src/rules/types.ts`; CounterOfferPanel pre-fills its textarea
       with `rule.suggestedEdit` (wave2-wireup).
-- [ ] Static legal-term glossary at `public/glossary/v1.json`;
-      consumed by the definitions tooltip.
+- [ ] Static legal-term glossary at `app/public/glossary/v1.json`;
+      consumed by the defined-terms tooltip in
+      `src/ui/highlightDefinedTerms.ts`. Directory does not yet exist.
 - [ ] i18n scaffold: lift UI strings to a typed `messages` object;
-      locale picker; pilot with en + one other locale.
-- [ ] OCR language picker once a second `*.traineddata.gz` lands.
+      locale picker; pilot with en + one other locale. Today the app
+      has no `i18n/` module; only `toLocaleDateString` sprinkled
+      through panels.
+- [ ] OCR language picker once a second `*.traineddata.gz` lands —
+      today `runOcr` is hard-coded to English.
 
 ## Cross-cutting tech debt
 
-- [x] Extract a `usePipeline` hook — App's `handleBytes` is the tallest
-      function in the codebase and now juggles OCR + auto-compare +
-      save; promoting it to a hook would cut App.tsx by ~100 lines and
-      free up branch coverage we're currently shoring up with App tests.
-      Landed in `wire-panels` as `src/App/usePipeline.ts` with a
-      dedicated test suite. Pre-wire-up App.tsx dropped from 527 to 452
-      lines; post-wire-up (seven panels mounted + their handlers) lands
-      around 835, which is still a win in per-concern clarity because
-      the pipeline + comparison + OCR state no longer live inline.
+- [x] Extract a `usePipeline` hook — App's `handleBytes` was the
+      tallest function in the codebase and now juggles OCR +
+      auto-compare + save. Landed in `wire-panels` as
+      `src/App/usePipeline.ts` with a dedicated test suite; exposes a
+      `reanalyze()` imperative for callers to re-run analysis after a
+      rule-set change.
 - [ ] Sections track paragraph indices (not just `Paragraph` object
-      refs) so `sectionAnchored` doesn't need `Array.indexOf`.
+      refs) so `sectionAnchored` doesn't need `Array.indexOf`. See
+      `src/rules/matchers.ts#L137` (`doc.paragraphs.indexOf(para)`) —
+      O(n) per section-anchored hit.
 - [x] Fix the one react-refresh ESLint warning in
       `TemplateMatchesPanel.tsx` (move `classifyMatch` helper to its
       own file or mark it a pure helper). Landed in wave3-perf —
       lint is now clean at 0 warnings.
+- [ ] **Reanalyze-staleness guard**: wire a `useEffect` keyed on
+      `activeRules` (plus jurisdictions + severity overrides) that
+      fires `pipeline.reanalyze()` automatically. Today every caller
+      that mutates rules (custom rule save, jurisdiction toggle,
+      severity override, pack enable/disable) has to remember to call
+      `pipeline.reanalyze()` by hand — missing call = stale findings
+      panel.
+- [ ] **App.tsx decomposition** — currently ~1540 lines (was ~835 at
+      the last footprint refresh) because every panel mounts its own
+      handlers inline. Split into child hooks:
+      `usePackManager`, `useAnnotations`, `useRedlineState`,
+      `useVersionHistory`, `useSideLetter`, `useCounterOffers`,
+      `useSigningKey`. Target: App.tsx under ~600 lines.
+- [ ] `App.panels.test.tsx` intermittently times out under coverage
+      instrumentation (v8 + jsdom). Add a per-test timeout bump or
+      split the panel-mount smoke tests into a smaller file so
+      `npm run test:coverage` stays green without `--testTimeout` hacks.
 
 ## Known unknowns & risk register
 
