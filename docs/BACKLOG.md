@@ -12,9 +12,20 @@ enough to land in one PR.
 | `[ ]` | Not started |
 | `!`   | Blocker (no blockers at time of writing) |
 
-Current automated footprint: **196 tests · 97% statements · 86% branches**,
-enforced by CI via `npm run test:coverage`. Bundle-size budgets enforced by
-`npm run check:budget`.
+## Current footprint
+
+| Axis | Value | Gate |
+|------|-------|------|
+| Tests | 196 passing | `npm test` |
+| Coverage | 97.04% stmt · 86.35% branch · 93.37% func · 97.04% line | `npm run test:coverage` (thresholds 90/85/90/90) |
+| Bundles | app shell 197 KiB · pdf.js api 400 KiB · pdf.worker 1.3 MiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
+| IndexedDB | schema v3 (`leases` + `settings` + `clauseTemplates`) | migrations tested |
+| Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js` | `npm run build` |
+| Lint / types | `tsc -b --noEmit` + ESLint clean (1 pre-existing react-refresh warn) | `npm run typecheck && npm run lint` |
+
+Rough size context: the PWA ships ~2 MB precache without OCR; +8 MB runtime
+and +10 MB of language data once `eng.traineddata.gz` is dropped into
+`public/tesseract/`.
 
 ---
 
@@ -63,13 +74,14 @@ enforced by CI via `npm run test:coverage`. Bundle-size budgets enforced by
 - [ ] Full a11y audit (basic labels in place)
 
 ## Phase 4 — Local Storage
-- [x] IndexedDB wrapper (idb), versioned schema (v1 → v2 with settings)
+- [x] IndexedDB wrapper (idb), versioned schema (v1 leases → v2 settings → v3 clauseTemplates); cumulative `if (oldVersion < N)` migration gates
 - [x] Save + list + open + rename + delete
 - [x] Standard-lease pointer + auto-compare on upload
 - [x] JSON export (schema `leaseguard.findings.v1`)
 - [x] Printable HTML export (`@media print`, XSS-escaped)
 - [x] Encrypted archive export/import (AES-GCM + PBKDF2, `LGv1` magic)
 - [x] Clear-all with confirmation
+- [x] Clause-template CRUD (see Phase 5)
 
 ## Phase 5 — V2: Compare & OCR
 - [x] Rule-aware findings diff (added/removed/changed/unchanged)
@@ -195,6 +207,11 @@ Local-only, CSP-compatible.
 - [ ] Compile + cache regex instances at rule-pack import time.
 - [ ] Perf benchmark grows to 200-page documents; budget scales by
       pages (e.g., ≤ 8s on 200 pages).
+- [ ] `renderPdfPages` accepts an `AbortSignal` rather than returning a
+      custom `{done, cancel}` handle (moved from tech debt).
+- [ ] Share a single `copyBytes(bytes): Uint8Array` helper rather than
+      inline `new Uint8Array(...)` at every pdf.js hand-off site
+      (moved from tech debt).
 
 ## Phase 14 — Content depth (optional)
 
@@ -210,10 +227,40 @@ Local-only, CSP-compatible.
 
 ## Cross-cutting tech debt
 
-- [ ] Extract a `usePipeline` hook — App's `handleBytes` is the tallest function in the codebase
-- [ ] Share a single `copyBytes` helper rather than inline `new Uint8Array(...)` in App + PdfViewer
-- [ ] Sections track paragraph indices (not just Paragraph refs) to simplify sectionAnchored mapping
-- [ ] `renderPdfPages` should accept an `AbortSignal` rather than returning a custom handle
+- [ ] Extract a `usePipeline` hook — App's `handleBytes` is the tallest
+      function in the codebase and now juggles OCR + auto-compare +
+      save; promoting it to a hook would cut App.tsx by ~100 lines and
+      free up branch coverage we're currently shoring up with App tests.
+- [ ] Sections track paragraph indices (not just `Paragraph` object
+      refs) so `sectionAnchored` doesn't need `Array.indexOf`.
+- [ ] Fix the one react-refresh ESLint warning in
+      `TemplateMatchesPanel.tsx` (move `classifyMatch` helper to its
+      own file or mark it a pure helper).
+
+## Known unknowns & risk register
+
+Things worth a deliberate decision before they surprise us.
+
+- [ ] **Licensing audit of tesseract assets** — we ship
+      `tesseract-core.wasm` (Apache-2.0) and the worker script
+      (Apache-2.0). `eng.traineddata` is Apache-2.0 per the
+      tessdata-fast repo, but redistributing it inside the PWA needs
+      an explicit NOTICE file and attribution page.
+- [ ] **Security review of the encrypted archive format** — confirm
+      200k PBKDF2 iterations are still adequate in 2026; consider
+      Argon2id via WASM; document threat model explicitly.
+- [ ] **Release & versioning policy** — no version bumps yet; decide
+      when rule-pack changes bump `RULE_PACK_VERSION` vs the package
+      version. Tie to the signed-export format.
+- [ ] **Crash-log privacy review** — `diagnosticsReport` today bundles
+      `navigator.userAgent` and stack traces; if a user shares the
+      JSON, what might leak? Add a user-visible "what's in this file"
+      summary before download.
+- [ ] **CSP regression tests** — an automated check that `index.html`
+      and `sw.js` don't pick up CDN URLs across dependency upgrades.
+- [ ] **Rule-pack rot** — the v1 rules were hand-authored; schedule a
+      review pass now that golden leases and the jurisdiction tag
+      scheme from Phase 10 exist.
 
 ## Explicitly out of scope
 
