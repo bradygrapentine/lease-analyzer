@@ -96,3 +96,22 @@ export const MixedSeverities: Story = {
     findings: mixed,
   },
 };
+
+export const WithPlainEnglishAndGlossary: Story = {
+  args: {
+    findings: mixed,
+    plainEnglishByRuleId: {
+      'r-auto-renew':
+        'If you do nothing, the lease keeps going. Put the notice deadline on your calendar.',
+      'r-late-fee':
+        'Missed rent adds an extra fee. Compounding monthly can make the total grow quickly.',
+      'r-arbitration':
+        'A private decision-maker hears the dispute instead of a court, and the decision usually cannot be appealed.',
+    },
+    definitions: [
+      { term: 'Lease', definition: 'this rental agreement.', page: 1, paragraphIndex: 0 },
+      { term: 'Premises', definition: 'the leased space.', page: 1, paragraphIndex: 1 },
+      { term: 'Tenant', definition: 'the party renting the premises.', page: 1, paragraphIndex: 2 },
+    ],
+  },
+};
