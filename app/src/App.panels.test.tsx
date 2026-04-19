@@ -1,5 +1,5 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, it, expect, vi } from 'vitest';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('./ocr/runOcr', () => ({
@@ -9,6 +9,18 @@ vi.mock('./ocr/runOcr', () => ({
     sections: [],
     raw: '',
   })),
+}));
+
+// jsdom has no canvas/worker, so the real pdf.js render path throws +
+// stalls every test that mounts <PdfViewer>. This mock collapses the page
+// render to a microtask so the 5s per-test timeout under coverage isn't
+// exhausted by pdf.js worker bootstrapping on each mount. The logic in
+// renderPdfPages is separately covered by `src/ui/renderPdfPages.test.ts`
+// via a stubbed pdf.js API.
+vi.mock('./ui/renderPdfPages', () => ({
+  loadPdfjs: vi.fn(async () => ({})),
+  renderPageToCanvas: vi.fn(async () => {}),
+  renderPdfPages: vi.fn(async () => {}),
 }));
 
 import { App } from './App';
@@ -73,7 +85,42 @@ async function closeIfOpen(opener: () => Promise<{ close(): void }>): Promise<vo
   }
 }
 
+// Suppress unhandled `InvalidStateError` rejections that fire when a
+// fire-and-forget IDB call (e.g. App's `refreshAuditLog`) resolves after
+// its DB cache was nulled by the next test's `beforeEach`. These are
+// benign (the promise would update an unmounted component's state) but
+// pollute vitest output and can flip reported-pass tests into runtime
+// failures on slow CI hosts.
+function isBenignIdbTeardownError(err: unknown): boolean {
+  const e = err as { name?: string; code?: number } | null;
+  if (!e) return false;
+  if (e.name === 'InvalidStateError') return true;
+  if (e.code === 11) return true;
+  return false;
+}
+const onUnhandled = (err: unknown): void => {
+  if (!isBenignIdbTeardownError(err)) throw err as Error;
+};
+beforeAll(() => {
+  process.on('unhandledRejection', onUnhandled);
+});
+afterAll(() => {
+  process.off('unhandledRejection', onUnhandled);
+});
+
+afterEach(() => {
+  // RTL auto-cleanup normally runs, but we explicitly unmount here so
+  // any in-flight `refreshLibrary / refreshAuditLog` effects tied to
+  // the rendered <App /> see their parents torn down BEFORE the next
+  // `beforeEach` nulls the cached db promises.
+  cleanup();
+});
+
 beforeEach(async () => {
+  // Let any pending IDB calls on the previous test's App settle before
+  // we yank the underlying handles out from under them.
+  await new Promise<void>((r) => setTimeout(r, 0));
+  await new Promise<void>((r) => setTimeout(r, 0));
   await closeIfOpen(() => openLeaseDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openPacksDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openAnnotationsDb() as Promise<{ close(): void }>);
