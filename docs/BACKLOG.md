@@ -16,8 +16,8 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Tests | 196 passing | `npm test` |
-| Coverage | 97.04% stmt · 86.35% branch · 93.37% func · 97.04% line | `npm run test:coverage` (thresholds 90/85/90/90) |
+| Tests | 237 passing | `npm test` |
+| Coverage | 96.83% stmt · 86.65% branch · 94.05% func · 96.83% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell 197 KiB · pdf.js api 400 KiB · pdf.worker 1.3 MiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
 | IndexedDB | schema v3 (`leases` + `settings` + `clauseTemplates`) | migrations tested |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js` | `npm run build` |
@@ -153,11 +153,18 @@ Local-only, CSP-compatible.
 
 ## Phase 10 — Rule ecosystem
 
-- [ ] JSON Schema for rule packs (`leaseguard.rulepack.v1`). Validate
-      on import, reject malformed, show a diff of what changed from
-      the currently loaded pack.
-- [ ] Import/export UI: drag a `.lgpack.json` file; list installed
-      packs; disable/enable per pack.
+- [~] JSON Schema for rule packs (`leaseguard.rulepack.v1`). Validate
+      on import, reject malformed. Implemented as a hand-rolled
+      validator in `src/rules/packSchema.ts` (no ajv dep); covers
+      matcher-type / severity / category enums + regex compileability.
+      Diff-vs-currently-loaded UI still open.
+- [~] Import/export UI: list installed packs; disable/enable per
+      pack; accept `.lgpack.json`. Implemented in
+      `src/ui/PackManagerPanel.tsx`, backed by
+      `src/rules/packStorage.ts` (separate `leaseguard-packs`
+      IndexedDB database). Drag-and-drop, export-to-disk, and
+      App.tsx wiring still open — panel shipped as a pure
+      props-driven component pending wire-up ticket.
 - [ ] Custom-rule authoring UI: form-driven matcher builder with live
       "does this fire on the current lease?" preview.
 - [ ] `Rule.jurisdictions?: string[]` field (ISO-like codes, e.g.
@@ -165,8 +172,11 @@ Local-only, CSP-compatible.
 - [ ] Per-user severity overrides persisted in settings.
 - [ ] Ed25519 signature support via WebCrypto; "verified" vs
       "community" badge in the pack list.
-- [ ] Bundle a small offline marketplace of curated packs as static
-      JSON under `/public/packs/`.
+- [~] Bundle a small offline marketplace of curated packs as static
+      JSON under `/public/packs/`. Seeded with
+      `example-starter.lgpack.json` produced by
+      `scripts/build-example-pack.mjs`; full curated marketplace
+      still open.
 
 ## Phase 11 — Workflow & integrations
 
