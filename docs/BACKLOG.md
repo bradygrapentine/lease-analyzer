@@ -16,12 +16,12 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Tests | 474 passing | `npm test` |
-| Coverage | 96.47% stmt · 88.2% branch · 92.04% func · 96.47% line | `npm run test:coverage` (thresholds 90/85/90/90) |
-| Bundles | app shell 222 KiB · pdf.js api 400 KiB · pdf.worker 1.3 MiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
-| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); side dbs `leaseguard-packs` v2, `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1 | migrations tested |
-| Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js` | `npm run build` |
-| Lint / types | `tsc -b --noEmit` + ESLint clean (1 pre-existing react-refresh warn) | `npm run typecheck && npm run lint` |
+| Tests | 664 passing | `npm test` |
+| Coverage | 96.86% stmt · 88.56% branch · 92.09% func · 96.86% line | `npm run test:coverage` (thresholds 90/85/90/90) |
+| Bundles | app shell 246 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~6 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
+| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); side dbs `leaseguard-packs` v2, `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1 | migrations tested |
+| Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze | `npm run build` |
+| Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings) | `npm run typecheck && npm run lint` |
 
 Rough size context: the PWA ships ~2 MB precache without OCR; +8 MB runtime
 and +10 MB of language data once `eng.traineddata.gz` is dropped into
@@ -154,15 +154,27 @@ Local-only, CSP-compatible.
       add/edit/delete UI anchored to the findings panel.
       `src/annotations/annotations.ts` + `src/ui/AnnotationsPanel.tsx`;
       App wire-up landed in `wire-panels`.
-- [ ] Redline edit mode: contentEditable paragraph rendering with
-      tracked-changes diff, stored separately from the original.
-- [ ] Export redlined HTML with `<ins>`/`<del>` tags + print stylesheet.
+- [x] Redline edit mode: per-paragraph editor with word-level LCS diff,
+      stored separately from the original. Landed in wave3-redline as
+      `src/redline/redline.ts` + `src/redline/redlineStorage.ts` +
+      `src/ui/RedlinePanel.tsx`; App wire-up landed in `wave3-wireup`
+      as a third view-toggle option next to Current / Portfolio.
+- [x] Export redlined HTML with `<ins>`/`<del>` tags + print stylesheet.
+      `buildRedlineHtml` in `src/redline/redline.ts`; App wire-up in
+      `wave3-wireup` downloads the blob from the RedlinePanel export
+      button.
 - [x] Counter-offer library (extends Phase 5 clause templates):
       per-rule "suggested replacement" field, editable per user.
       `src/negotiation/counterOffers.ts` + `src/ui/CounterOfferPanel.tsx`;
       App wire-up landed in `wire-panels`.
-- [ ] "Apply suggestion" button on a finding → inserts template text
-      into the redline mode as a proposed change.
+- [x] "Apply suggestion" button on a finding → inserts template text
+      into the redline mode as a proposed change. Landed in
+      wave3-redline — FindingsPanel renders the button when a
+      `suggestedTextByRuleId` entry exists for the finding's ruleId.
+      `wave3-wireup` builds that map from saved counter-offers
+      (preferred) with fallback to `rule.suggestedEdit`, writes a
+      ruleId-tagged `RedlineEdit`, and switches the active view to
+      Redline.
 - [ ] Version history: each save of a redlined doc creates a new
       `LeaseRecord` version; navigate versions with a timeline.
 - [ ] Side-letter generator: given a set of proposed edits, produce a
@@ -183,8 +195,14 @@ Local-only, CSP-compatible.
       IndexedDB database). App wire-up landed in `wire-panels`; enabled
       packs now feed `resolveActiveRules` and drive both upload and OCR
       analysis paths. Drag-and-drop and export-to-disk still open.
-- [ ] Custom-rule authoring UI: form-driven matcher builder with live
-      "does this fire on the current lease?" preview.
+- [x] Custom-rule authoring UI: form-driven matcher builder with live
+      "does this fire on the current lease?" preview. Landed in
+      wave3-customRule as `src/ui/CustomRuleBuilderPanel.tsx` +
+      `src/ui/customRuleDraft.ts` (regex / keywordProximity /
+      sectionAnchored with live hit-count, duplicate-id guard, regex
+      compile-error surfacing). App wire-up in `wave3-wireup` wraps
+      the saved rule as a minimal `.lgpack.json` (`custom-<ruleId>`),
+      auto-enables it, and re-analyzes the current lease.
 - [x] `Rule.jurisdictions?: string[]` field (ISO-like codes, e.g.
       `"US-CA"`). UI jurisdiction picker; runtime filter. Shipped in
       phase10b — type lives in `src/rules/types.ts`, filter in
@@ -257,8 +275,13 @@ Local-only, CSP-compatible.
 
 ## Phase 13 — Performance & scale
 
-- [ ] Spawn a dedicated Web Worker for `parseLease` + `analyze`; wire
-      with `postMessage` + transferable `Uint8Array`.
+- [x] Spawn a dedicated Web Worker for `parseLease` + `analyze`; wire
+      with `postMessage` + transferable `Uint8Array`. Landed in
+      wave3-worker — see `src/worker/` (`leaseWorker.ts`,
+      `leaseWorkerClient.ts`, `inlinePipeline.ts`, `handleRequest.ts`).
+      `usePipeline` routes uploads through the `PipelineClient`
+      abstraction with auto-selection of the Worker-backed client in
+      real browsers and an inline fallback for jsdom.
 - [ ] Streaming render: PdfViewer renders page N as soon as
       `getPage(N)` resolves, rather than waiting on the whole doc.
 - [ ] Virtualized `<ul>` in FindingsPanel using IntersectionObserver.
@@ -267,11 +290,14 @@ Local-only, CSP-compatible.
 - [ ] Compile + cache regex instances at rule-pack import time.
 - [ ] Perf benchmark grows to 200-page documents; budget scales by
       pages (e.g., ≤ 8s on 200 pages).
-- [ ] `renderPdfPages` accepts an `AbortSignal` rather than returning a
-      custom `{done, cancel}` handle (moved from tech debt).
-- [ ] Share a single `copyBytes(bytes): Uint8Array` helper rather than
+- [x] `renderPdfPages` accepts an `AbortSignal` rather than returning a
+      custom `{done, cancel}` handle (moved from tech debt). Landed in
+      wave3-perf — `src/ui/renderPdfPages.ts` + PdfViewer consumer.
+- [x] Share a single `copyBytes(bytes): Uint8Array` helper rather than
       inline `new Uint8Array(...)` at every pdf.js hand-off site
-      (moved from tech debt).
+      (moved from tech debt). Landed in wave3-perf as
+      `src/parser/copyBytes.ts`; consumed by `usePipeline.upload`,
+      OCR, and `PdfViewer`.
 
 ## Phase 14 — Content depth (optional)
 
@@ -303,9 +329,10 @@ Local-only, CSP-compatible.
       the pipeline + comparison + OCR state no longer live inline.
 - [ ] Sections track paragraph indices (not just `Paragraph` object
       refs) so `sectionAnchored` doesn't need `Array.indexOf`.
-- [ ] Fix the one react-refresh ESLint warning in
+- [x] Fix the one react-refresh ESLint warning in
       `TemplateMatchesPanel.tsx` (move `classifyMatch` helper to its
-      own file or mark it a pure helper).
+      own file or mark it a pure helper). Landed in wave3-perf —
+      lint is now clean at 0 warnings.
 
 ## Known unknowns & risk register
 

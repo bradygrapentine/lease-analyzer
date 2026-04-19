@@ -36,8 +36,14 @@ import { _resetSigningDbForTests } from './security/signingKeys';
 import {
   _resetAuditDbForTests,
   AUDIT_DB_NAME,
+  listAuditEntries,
   openAuditDb,
 } from './audit/auditLog';
+import {
+  _resetRedlineDbForTests,
+  listEditsForLease,
+  openRedlineDb,
+} from './redline/redlineStorage';
 import {
   _resetBulkDedupDbForTests,
   BULK_DEDUP_DB_NAME,
@@ -66,6 +72,7 @@ beforeEach(async () => {
   await closeIfOpen(() => openAnnotationsDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openCountersDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openAuditDb() as Promise<{ close(): void }>);
+  await closeIfOpen(() => openRedlineDb() as Promise<{ close(): void }>);
   _resetDbForTests();
   _resetPacksDbForTests();
   _resetAnnotationsDbForTests();
@@ -73,6 +80,7 @@ beforeEach(async () => {
   _resetSigningDbForTests();
   _resetAuditDbForTests();
   _resetBulkDedupDbForTests();
+  _resetRedlineDbForTests();
   // Give the close() microtask a tick to land.
   await new Promise<void>((r) => setTimeout(r, 0));
   await wipeDb('leaseguard');
@@ -82,6 +90,7 @@ beforeEach(async () => {
   await wipeDb('leaseguard-signing');
   await wipeDb(AUDIT_DB_NAME);
   await wipeDb(BULK_DEDUP_DB_NAME);
+  await wipeDb('leaseguard-redlines');
 });
 
 async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {
@@ -408,5 +417,108 @@ describe('App panel wire-ups', () => {
     // Clicking the lease button (from the portfolio table) returns to current view.
     const openButtons = screen.getAllByRole('button', { name: /alpha\.pdf/i });
     expect(openButtons.length).toBeGreaterThan(0);
+  });
+
+  it('CustomRuleBuilderPanel saves a rule as an installed pack and re-analyzes', async () => {
+    render(<App />);
+    await uploadLease('Custom.pdf');
+    // Fill the form through the builder.
+    await userEvent.type(screen.getByLabelText(/rule id/i), 'banana-clause');
+    await userEvent.type(
+      screen.getByLabelText(/^title$/i),
+      'Banana clause',
+    );
+    await userEvent.type(
+      screen.getByLabelText(/^explanation$/i),
+      'Flags the word auto-renew as bananas.',
+    );
+    await userEvent.type(
+      screen.getByLabelText(/regex pattern/i),
+      'auto-renew',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /save rule/i }));
+    await waitFor(async () => {
+      const packs = await listInstalledPacks();
+      expect(packs.some((p) => p.id === 'custom-banana-clause')).toBe(true);
+    });
+    // The custom pack is auto-enabled and the saved rule now appears in
+    // the SeverityOverridesPanel list (proxy for "in active rules").
+    await waitFor(() => {
+      expect(
+        screen.getByRole('combobox', {
+          name: /override severity for banana-clause/i,
+        }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('Apply-suggestion writes a RedlineEdit and switches to the Redline view', async () => {
+    render(<App />);
+    await uploadLease('ApplySugg.pdf');
+    // Jury-trial waiver rule ships a built-in suggestedEdit, so the
+    // "Apply suggestion" button is rendered on its finding.
+    const findings = screen.getByRole('complementary', { name: /findings/i });
+    const applyBtns = await within(findings).findAllByRole('button', {
+      name: /apply suggestion for waiver of jury trial/i,
+    });
+    await userEvent.click(applyBtns[0]!);
+    const [lease] = await listLeases();
+    await waitFor(async () => {
+      const edits = await listEditsForLease(lease!.id);
+      expect(edits.length).toBe(1);
+      expect(edits[0]!.ruleId).toBe('jury-waiver');
+    });
+    // View toggles to Redline automatically.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('region', { name: /redline/i }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('RedlinePanel edits a paragraph, exports HTML, and audits the change', async () => {
+    const aClicks: string[] = [];
+    const origCreate = document.createElement.bind(document);
+    const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = origCreate(tag);
+      if (tag === 'a') {
+        el.click = (): void => {
+          aClicks.push(el.getAttribute('download') ?? '');
+        };
+      }
+      return el;
+    });
+    URL.createObjectURL = vi.fn().mockReturnValue('blob:x');
+    URL.revokeObjectURL = vi.fn();
+
+    render(<App />);
+    await uploadLease('Redline.pdf');
+    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    // Edit the first paragraph.
+    const editButtons = await screen.findAllByRole('button', {
+      name: /^edit paragraph 1$/i,
+    });
+    await userEvent.click(editButtons[0]!);
+    const ta = screen.getByRole('textbox', { name: /paragraph 1 text/i });
+    await userEvent.clear(ta);
+    await userEvent.type(ta, 'Edited paragraph one.');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    const [lease] = await listLeases();
+    await waitFor(async () => {
+      const edits = await listEditsForLease(lease!.id);
+      expect(edits.length).toBe(1);
+      expect(edits[0]!.after).toBe('Edited paragraph one.');
+    });
+    // Audit log picked up the redline event.
+    await waitFor(async () => {
+      const entries = await listAuditEntries();
+      expect(entries.some((e) => e.kind === 'redline-edit')).toBe(true);
+    });
+    // Export HTML triggers a download.
+    await userEvent.click(
+      screen.getByRole('button', { name: /export redlined html/i }),
+    );
+    expect(aClicks).toContain('Redline-redline.html');
+    createSpy.mockRestore();
   });
 });

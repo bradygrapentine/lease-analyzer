@@ -73,9 +73,19 @@ import {
   type CounterOffer,
 } from './negotiation/counterOffers';
 import { PortfolioPanel } from './ui/PortfolioPanel';
+import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
+import { RedlinePanel } from './ui/RedlinePanel';
+import {
+  saveEdit,
+  listEditsForLease,
+  deleteEdit,
+} from './redline/redlineStorage';
+import type { RedlineEdit } from './redline/redline';
+import { buildRedlineHtml } from './redline/redline';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
-import type { Finding } from './rules/types';
+import type { Finding, Rule } from './rules/types';
+import { RULE_PACK_SCHEMA_VERSION } from './rules/packSchema';
 import type { ClauseTemplate } from './templates/types';
 import { matchTemplates } from './templates/matchTemplates';
 import {
@@ -124,10 +134,11 @@ export function App(): JSX.Element {
   const [signingPublicKey, setSigningPublicKey] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [counterOffers, setCounterOffers] = useState<CounterOffer[]>([]);
-  const [view, setView] = useState<'current' | 'portfolio'>('current');
+  const [view, setView] = useState<'current' | 'portfolio' | 'redline'>('current');
   const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
     new Map(),
   );
+  const [redlineEdits, setRedlineEdits] = useState<RedlineEdit[]>([]);
 
   const refreshPortfolioFindings = useCallback(async () => {
     const records = await listAllLeaseRecords();
@@ -138,6 +149,10 @@ export function App(): JSX.Element {
 
   const refreshAnnotations = useCallback(async (leaseId: string) => {
     setAnnotations(await listAnnotations(leaseId));
+  }, []);
+
+  const refreshRedlineEdits = useCallback(async (leaseId: string) => {
+    setRedlineEdits(await listEditsForLease(leaseId));
   }, []);
 
   const refreshCounterOffers = useCallback(async () => {
@@ -216,6 +231,29 @@ export function App(): JSX.Element {
     return out;
   }, [activeRules]);
 
+  // For "Apply suggestion": prefer a user-authored counter-offer text over
+  // the rule's built-in `suggestedEdit`. Counter-offers are keyed by ruleId;
+  // if multiple exist we pick the most recently saved one.
+  const suggestedTextByRuleId = useMemo<Record<string, string>>(() => {
+    const out: Record<string, string> = { ...suggestedEditByRuleId };
+    const latestByRule = new Map<string, CounterOffer>();
+    for (const co of counterOffers) {
+      const cur = latestByRule.get(co.ruleId);
+      if (!cur || co.updatedAt > cur.updatedAt) latestByRule.set(co.ruleId, co);
+    }
+    for (const [ruleId, co] of latestByRule) out[ruleId] = co.text;
+    return out;
+  }, [suggestedEditByRuleId, counterOffers]);
+
+  // All rule ids the custom-rule builder should treat as "taken", so the
+  // dup-id guard fires against both the built-in pack and any installed pack.
+  const existingRuleIds = useMemo<string[]>(() => {
+    const ids = new Set<string>();
+    for (const r of RULE_PACK_V1) ids.add(r.id);
+    for (const pack of installedPacks) for (const r of pack.rules) ids.add(r.id);
+    return Array.from(ids);
+  }, [installedPacks]);
+
   useEffect(() => {
     void refreshLibrary();
     void refreshTemplates();
@@ -247,10 +285,12 @@ export function App(): JSX.Element {
   useEffect(() => {
     if (analyzedLeaseId) {
       void refreshAnnotations(analyzedLeaseId);
+      void refreshRedlineEdits(analyzedLeaseId);
     } else {
       setAnnotations([]);
+      setRedlineEdits([]);
     }
-  }, [analyzedLeaseId, refreshAnnotations]);
+  }, [analyzedLeaseId, refreshAnnotations, refreshRedlineEdits]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -684,6 +724,107 @@ export function App(): JSX.Element {
     downloadBlobBytes(zip, 'application/zip', `${status.fileName.replace(/\.pdf$/i, '')}-handoff.zip`);
   }
 
+  async function onSaveCustomRule(rule: Rule): Promise<void> {
+    // Wrap the single rule as a minimal `.lgpack.json` file so it can live
+    // alongside imported packs and flow through the existing enabled-packs
+    // resolver. The pack id is derived from the rule id so the user can
+    // recognize it in the pack manager.
+    const pack: RulePackFile = {
+      schema: RULE_PACK_SCHEMA_VERSION,
+      id: `custom-${rule.id}`,
+      name: `Custom: ${rule.title}`,
+      version: '1.0.0',
+      description: `User-authored rule "${rule.id}" from the custom rule builder.`,
+      rules: [rule],
+    };
+    await saveInstalledPack(pack);
+    await setPackEnabled(pack.id, true);
+    await safeAudit({
+      kind: 'custom-rule-save',
+      payload: { ruleId: rule.id, packId: pack.id },
+    });
+    await refreshPacks();
+    // After the new pack is in state, re-analyze the current lease so the
+    // rule fires immediately on the active document.
+    pipeline.reanalyze();
+    void refreshAuditLog();
+  }
+
+  async function onEditRedlineParagraph(
+    pIndex: number,
+    after: string,
+  ): Promise<void> {
+    if (status.kind !== 'analyzed' || !status.leaseId) return;
+    const before = status.result.doc.paragraphs[pIndex]?.text ?? '';
+    await saveEdit({
+      leaseId: status.leaseId,
+      paragraphIndex: pIndex,
+      before,
+      after,
+      updatedAt: new Date().toISOString(),
+    });
+    await safeAudit({
+      kind: 'redline-edit',
+      payload: { leaseId: status.leaseId, paragraphIndex: pIndex },
+    });
+    await refreshRedlineEdits(status.leaseId);
+    void refreshAuditLog();
+  }
+
+  async function onDeleteRedlineEdit(pIndex: number): Promise<void> {
+    if (status.kind !== 'analyzed' || !status.leaseId) return;
+    await deleteEdit(status.leaseId, pIndex);
+    await safeAudit({
+      kind: 'redline-edit',
+      payload: { leaseId: status.leaseId, paragraphIndex: pIndex, deleted: true },
+    });
+    await refreshRedlineEdits(status.leaseId);
+    void refreshAuditLog();
+  }
+
+  function onExportRedlineHtml(): void {
+    if (status.kind !== 'analyzed') return;
+    const html = buildRedlineHtml({
+      leaseName: status.fileName,
+      doc: status.result.doc,
+      edits: redlineEdits,
+    });
+    downloadBlob(
+      html,
+      'text/html',
+      `${status.fileName.replace(/\.pdf$/i, '')}-redline.html`,
+    );
+  }
+
+  async function onApplySuggestion(
+    _finding: Finding,
+    paragraphIndex: number,
+    suggestedText: string,
+  ): Promise<void> {
+    if (status.kind !== 'analyzed' || !status.leaseId) return;
+    const before = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
+    await saveEdit({
+      leaseId: status.leaseId,
+      paragraphIndex,
+      before,
+      after: suggestedText,
+      updatedAt: new Date().toISOString(),
+      ruleId: _finding.ruleId,
+    });
+    await safeAudit({
+      kind: 'redline-edit',
+      payload: {
+        leaseId: status.leaseId,
+        paragraphIndex,
+        ruleId: _finding.ruleId,
+        applied: true,
+      },
+    });
+    await refreshRedlineEdits(status.leaseId);
+    void refreshAuditLog();
+    setView('redline');
+  }
+
   return (
     <main>
       <header>
@@ -731,6 +872,15 @@ export function App(): JSX.Element {
           >
             Portfolio
           </button>
+          {status.kind === 'analyzed' && (
+            <button
+              type="button"
+              aria-pressed={view === 'redline'}
+              onClick={() => setView('redline')}
+            >
+              Redline
+            </button>
+          )}
         </div>
       </header>
 
@@ -752,6 +902,20 @@ export function App(): JSX.Element {
             setView('current');
             void onOpenLibrary(id);
           }}
+        />
+      )}
+
+      {view === 'redline' && status.kind === 'analyzed' && (
+        <RedlinePanel
+          doc={status.result.doc}
+          edits={redlineEdits}
+          onEditParagraph={(pIdx, after) => {
+            void onEditRedlineParagraph(pIdx, after);
+          }}
+          onDeleteEdit={(pIdx) => {
+            void onDeleteRedlineEdit(pIdx);
+          }}
+          onExportHtml={onExportRedlineHtml}
         />
       )}
 
@@ -804,6 +968,10 @@ export function App(): JSX.Element {
               }}
               definitions={extractLeaseFacts(status.result.doc).definitions}
               plainEnglishByRuleId={plainEnglishByRuleId}
+              suggestedTextByRuleId={suggestedTextByRuleId}
+              onApplySuggestion={(f, pIdx, text) => {
+                void onApplySuggestion(f, pIdx, text);
+              }}
             />
             <PdfViewer
               bytes={status.bytes}
@@ -911,6 +1079,17 @@ export function App(): JSX.Element {
           void onDeletePack(id);
         }}
       />
+
+      <details>
+        <summary>Custom rule builder</summary>
+        <CustomRuleBuilderPanel
+          doc={status.kind === 'analyzed' ? status.result.doc : null}
+          existingRuleIds={existingRuleIds}
+          onSave={(rule) => {
+            void onSaveCustomRule(rule);
+          }}
+        />
+      </details>
 
       <JurisdictionPickerPanel
         available={JURISDICTION_OPTIONS.map((j) => j.code)}
