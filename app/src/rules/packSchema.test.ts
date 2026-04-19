@@ -207,4 +207,50 @@ describe('validatePackFile', () => {
   it('exports the schema version constant', () => {
     expect(RULE_PACK_SCHEMA_VERSION).toBe('leaseguard.rulepack.v1');
   });
+
+  it('accepts a rule with a jurisdictions array of non-empty strings', () => {
+    const pack = validPack();
+    pack.rules[0]!.jurisdictions = ['US-CA', 'US-NY'];
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('accepts a rule with jurisdictions omitted (applies everywhere)', () => {
+    const pack = validPack();
+    delete pack.rules[0]!.jurisdictions;
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('accepts a rule with an empty jurisdictions array', () => {
+    const pack = validPack();
+    pack.rules[0]!.jurisdictions = [];
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('rejects jurisdictions that is not an array', () => {
+    const pack = validPack();
+    (pack.rules[0] as unknown as Record<string, unknown>)['jurisdictions'] =
+      'US-CA';
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/jurisdictions/);
+  });
+
+  it('rejects jurisdictions with an empty-string entry', () => {
+    const pack = validPack();
+    pack.rules[0]!.jurisdictions = ['US-CA', ''];
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/jurisdictions/);
+  });
+
+  it('rejects jurisdictions containing a non-string entry', () => {
+    const pack = validPack();
+    (pack.rules[0] as unknown as Record<string, unknown>)['jurisdictions'] = [
+      'US-CA',
+      42,
+    ];
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/jurisdictions/);
+  });
 });

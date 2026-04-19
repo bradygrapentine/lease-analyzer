@@ -4,10 +4,14 @@ import {
   _resetPacksDbForTests,
   deleteInstalledPack,
   getPackEnabled,
+  getSelectedJurisdictions,
+  getSeverityOverrides,
   listInstalledPacks,
   openPacksDb,
   saveInstalledPack,
   setPackEnabled,
+  setSelectedJurisdictions,
+  setSeverityOverride,
 } from './packStorage';
 import { RULE_PACK_SCHEMA_VERSION, type RulePackFile } from './packSchema';
 
@@ -101,5 +105,58 @@ describe('packStorage', () => {
       expect(names).toContain('leaseguard-packs');
       expect(names).not.toContain('leaseguard');
     }
+  });
+
+  it('selectedJurisdictions defaults to an empty array', async () => {
+    expect(await getSelectedJurisdictions()).toEqual([]);
+  });
+
+  it('setSelectedJurisdictions persists, round-trips, and de-dupes', async () => {
+    await setSelectedJurisdictions(['US-CA', 'US-CA', 'US-NY']);
+    expect(await getSelectedJurisdictions()).toEqual(['US-CA', 'US-NY']);
+  });
+
+  it('setSelectedJurisdictions([]) clears the selection', async () => {
+    await setSelectedJurisdictions(['US-CA']);
+    await setSelectedJurisdictions([]);
+    expect(await getSelectedJurisdictions()).toEqual([]);
+  });
+
+  it('severityOverrides defaults to {} ', async () => {
+    expect(await getSeverityOverrides()).toEqual({});
+  });
+
+  it('setSeverityOverride writes a single entry and survives re-read', async () => {
+    await setSeverityOverride('rule-a', 'high');
+    expect(await getSeverityOverrides()).toEqual({ 'rule-a': 'high' });
+  });
+
+  it('setSeverityOverride merges multiple entries', async () => {
+    await setSeverityOverride('rule-a', 'high');
+    await setSeverityOverride('rule-b', 'info');
+    expect(await getSeverityOverrides()).toEqual({
+      'rule-a': 'high',
+      'rule-b': 'info',
+    });
+  });
+
+  it('setSeverityOverride(ruleId, null) removes the entry', async () => {
+    await setSeverityOverride('rule-a', 'high');
+    await setSeverityOverride('rule-b', 'info');
+    await setSeverityOverride('rule-a', null);
+    expect(await getSeverityOverrides()).toEqual({ 'rule-b': 'info' });
+  });
+
+  it('setSeverityOverride(ruleId, null) on an already-missing id is a no-op', async () => {
+    await setSeverityOverride('rule-a', null);
+    expect(await getSeverityOverrides()).toEqual({});
+  });
+
+  it('severity overrides survive across db handle resets (persistence)', async () => {
+    await setSeverityOverride('rule-a', 'medium');
+    const db = await openPacksDb();
+    db.close();
+    _resetPacksDbForTests();
+    expect(await getSeverityOverrides()).toEqual({ 'rule-a': 'medium' });
   });
 });
