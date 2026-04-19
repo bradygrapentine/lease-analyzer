@@ -28,6 +28,7 @@ describe('LibraryPanel', () => {
         onOpen={noop}
         onDelete={noop}
         onSetStandard={noop}
+        onRename={noop}
       />,
     );
     expect(screen.getByText('One.pdf')).toBeInTheDocument();
@@ -42,6 +43,7 @@ describe('LibraryPanel', () => {
         onOpen={noop}
         onDelete={noop}
         onSetStandard={noop}
+        onRename={noop}
       />,
     );
     expect(screen.getByText(/no saved leases/i)).toBeInTheDocument();
@@ -56,6 +58,7 @@ describe('LibraryPanel', () => {
         onOpen={onOpen}
         onDelete={noop}
         onSetStandard={noop}
+        onRename={noop}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /open pick\.pdf/i }));
@@ -71,6 +74,7 @@ describe('LibraryPanel', () => {
         onOpen={noop}
         onDelete={onDelete}
         onSetStandard={noop}
+        onRename={noop}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /delete gone\.pdf/i }));
@@ -85,6 +89,7 @@ describe('LibraryPanel', () => {
         onOpen={noop}
         onDelete={noop}
         onSetStandard={noop}
+        onRename={noop}
       />,
     );
     const stdBtn = screen.getByRole('button', { name: /open standard\.pdf/i });
@@ -97,6 +102,42 @@ describe('LibraryPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('fires onRename with the new name when user confirms the prompt', async () => {
+    const onRename = vi.fn();
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Renamed.pdf');
+    render(
+      <LibraryPanel
+        leases={[meta({ id: 'r', name: 'Old.pdf' })]}
+        standardId={null}
+        onOpen={noop}
+        onDelete={noop}
+        onSetStandard={noop}
+        onRename={onRename}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /rename old\.pdf/i }));
+    expect(onRename).toHaveBeenCalledWith('r', 'Renamed.pdf');
+    promptSpy.mockRestore();
+  });
+
+  it('does not fire onRename if user cancels the prompt', async () => {
+    const onRename = vi.fn();
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(null);
+    render(
+      <LibraryPanel
+        leases={[meta({ id: 'r', name: 'Old.pdf' })]}
+        standardId={null}
+        onOpen={noop}
+        onDelete={noop}
+        onSetStandard={noop}
+        onRename={onRename}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /rename old\.pdf/i }));
+    expect(onRename).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
   it('fires onSetStandard with the lease id', async () => {
     const onSet = vi.fn();
     render(
@@ -106,6 +147,7 @@ describe('LibraryPanel', () => {
         onOpen={noop}
         onDelete={noop}
         onSetStandard={onSet}
+        onRename={noop}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /set promote\.pdf as standard/i }));

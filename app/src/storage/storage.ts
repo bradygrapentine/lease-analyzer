@@ -123,6 +123,29 @@ export async function clearAll(): Promise<void> {
   await db.clear(SETTINGS);
 }
 
+export async function listAllLeaseRecords(): Promise<LeaseRecord[]> {
+  const db = await openLeaseDb();
+  return db.getAll(STORE);
+}
+
+export async function replaceAllLeases(
+  records: LeaseRecord[],
+  standardId: string | null,
+): Promise<void> {
+  const db = await openLeaseDb();
+  const tx = db.transaction([STORE, SETTINGS], 'readwrite');
+  await tx.objectStore(STORE).clear();
+  for (const record of records) {
+    await tx.objectStore(STORE).put(record);
+  }
+  if (standardId) {
+    await tx.objectStore(SETTINGS).put(standardId, STANDARD_KEY);
+  } else {
+    await tx.objectStore(SETTINGS).delete(STANDARD_KEY);
+  }
+  await tx.done;
+}
+
 export async function setStandardId(id: string): Promise<void> {
   const db = await openLeaseDb();
   await db.put(SETTINGS, id, STANDARD_KEY);

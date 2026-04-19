@@ -6,6 +6,7 @@ interface LibraryPanelProps {
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onSetStandard: (id: string) => void;
+  onRename: (id: string, name: string) => void;
 }
 
 export function LibraryPanel({
@@ -14,6 +15,7 @@ export function LibraryPanel({
   onOpen,
   onDelete,
   onSetStandard,
+  onRename,
 }: LibraryPanelProps): JSX.Element {
   if (leases.length === 0) {
     return (
@@ -50,6 +52,16 @@ export function LibraryPanel({
                   Set as standard
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = window.prompt('New name:', l.name)?.trim();
+                  if (next && next !== l.name) onRename(l.id, next);
+                }}
+                aria-label={`Rename ${l.name}`}
+              >
+                Rename
+              </button>
               <button
                 type="button"
                 onClick={() => onDelete(l.id)}

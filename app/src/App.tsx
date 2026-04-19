@@ -16,11 +16,19 @@ import {
   deleteLease,
   getLease,
   getStandardId,
+  listAllLeaseRecords,
   listLeases,
+  renameLease,
+  replaceAllLeases,
   saveLease,
   setStandardId,
   type LeaseMetadata,
 } from './storage/storage';
+import {
+  exportEncryptedArchive,
+  importEncryptedArchive,
+  WrongPassphraseError,
+} from './storage/archive';
 import { exportFindingsJson } from './storage/exportReport';
 import { exportFindingsHtml } from './storage/exportHtml';
 
@@ -47,6 +55,27 @@ export function App(): JSX.Element {
   useEffect(() => {
     void refreshLibrary();
   }, [refreshLibrary]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent): void {
+      const inEditable =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable);
+      const isCmdF = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f';
+      const isSlash = e.key === '/' && !inEditable;
+      if (!isCmdF && !isSlash) return;
+      const search = document.querySelector<HTMLInputElement>(
+        'input[aria-label="search findings"]',
+      );
+      if (!search) return;
+      e.preventDefault();
+      search.focus();
+      search.select();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   async function handleBytes(bytes: Uint8Array, fileName: string): Promise<void> {
     setStatus({ kind: 'loading', fileName });
@@ -131,10 +160,61 @@ export function App(): JSX.Element {
     await refreshLibrary();
   }
 
+  async function onRename(id: string, name: string): Promise<void> {
+    await renameLease(id, name);
+    await refreshLibrary();
+  }
+
   async function onCompare(aId: string, bId: string): Promise<void> {
     const [a, b] = await Promise.all([getLease(aId), getLease(bId)]);
     if (!a || !b) return;
     setComparison({ a, b });
+  }
+
+  async function onExportArchive(): Promise<void> {
+    const passphrase = window.prompt('Passphrase for the encrypted archive:');
+    if (!passphrase) return;
+    const [records, std] = await Promise.all([listAllLeaseRecords(), getStandardId()]);
+    const bytes = await exportEncryptedArchive(records, std ?? null, passphrase);
+    const blob = new Blob([bytes as BlobPart], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `leaseguard-${new Date().toISOString().slice(0, 10)}.lgarchive`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function onImportArchiveFile(e: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const passphrase = window.prompt('Passphrase for this archive:');
+    if (!passphrase) return;
+    try {
+      const bytes = await readFileBytes(file);
+      const payload = await importEncryptedArchive(bytes, passphrase);
+      if (
+        !window.confirm(
+          `Replace current library with ${payload.leases.length} lease(s) from this archive?`,
+        )
+      ) {
+        return;
+      }
+      await replaceAllLeases(payload.leases, payload.standardId);
+      await refreshLibrary();
+      setStatus({ kind: 'idle' });
+      setSelected(null);
+      setComparison(null);
+    } catch (err) {
+      const msg =
+        err instanceof WrongPassphraseError
+          ? err.message
+          : `Import failed: ${friendlyError(err)}`;
+      setStatus({ kind: 'error', message: msg });
+    }
   }
 
   async function onClearAll(): Promise<void> {
@@ -274,6 +354,9 @@ export function App(): JSX.Element {
         onSetStandard={(id) => {
           void onSetStandard(id);
         }}
+        onRename={(id, name) => {
+          void onRename(id, name);
+        }}
       />
 
       <LibraryCompareForm
@@ -293,6 +376,19 @@ export function App(): JSX.Element {
       )}
 
       <footer>
+        <button type="button" onClick={() => void onExportArchive()}>
+          Export encrypted archive
+        </button>
+        <label>
+          <span className="visually-hidden">Import encrypted archive</span>
+          Import encrypted archive:
+          <input
+            type="file"
+            accept=".lgarchive,application/octet-stream"
+            aria-label="import encrypted archive"
+            onChange={(e) => void onImportArchiveFile(e)}
+          />
+        </label>
         <button type="button" onClick={() => void onClearAll()}>
           Clear all saved data
         </button>

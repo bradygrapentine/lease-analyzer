@@ -45,7 +45,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 - [ ] Span-level highlight overlay in viewer (deferred — needs text-layer)
 - [x] Click finding → show selected snippet + page number
 - [x] Search-within-findings (title/explanation/snippet)
-- [ ] Cmd/Ctrl-F hotkey for global doc search
+- [x] Cmd/Ctrl-F and "/" focus the findings search
 - [x] Severity + category filter chips
 - [x] Loading / empty / parse-error states (idle/loading/analyzed/error)
 - [x] Keyboard navigation across findings (↑/↓/Enter)
@@ -54,16 +54,16 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 ## Phase 4 — Local Storage
 - [x] IndexedDB wrapper (idb) with versioned migrations
 - [x] Save lease + findings on analyze; list in "My Leases"
-- [x] Delete + open-from-library (rename wired in storage, not yet in UI)
+- [x] Delete + open-from-library + rename (in UI)
 - [x] Export findings as JSON
-- [ ] Export printable HTML summary (print-stylesheet)
-- [ ] Encrypted archive export/import (WebCrypto, passphrase-derived key)
+- [x] Export printable HTML summary (print-stylesheet)
+- [x] Encrypted archive export/import (WebCrypto AES-GCM + PBKDF2)
 - [x] "Clear all data" control with confirmation
 
 ## Phase 5 — V2: Compare & OCR
 - [x] Rule-aware diff: added/removed/changed findings between two leases
 - [x] Compare picker in library + ComparePanel render
-- [ ] Text-level diff within aligned sections (paragraph diff)
+- [x] Text-level diff within aligned sections (paragraph diff by exact text; fuzzy match deferred)
 - [x] OCR detection banner when avg chars/page below threshold
 - [ ] Actual OCR via tesseract.js (deferred — heavy dep; detection in place)
 - [x] Compare-against-standard mode (mark a lease as standard; auto-diff on new upload)
