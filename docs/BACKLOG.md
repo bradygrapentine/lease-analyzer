@@ -16,10 +16,10 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Tests | 664 passing | `npm test` |
-| Coverage | 96.86% stmt · 88.56% branch · 92.09% func · 96.86% line | `npm run test:coverage` (thresholds 90/85/90/90) |
-| Bundles | app shell 246 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~6 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
-| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); side dbs `leaseguard-packs` v2, `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1 | migrations tested |
+| Tests | 765 passing | `npm test` |
+| Coverage | 97.02% stmt · 88.06% branch · 93.21% func · 97.02% line | `npm run test:coverage` (thresholds 90/85/90/90) |
+| Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
+| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); side dbs `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1, `leaseguard-versions` v1 | migrations tested |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze | `npm run build` |
 | Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings) | `npm run typecheck && npm run lint` |
 
@@ -175,10 +175,19 @@ Local-only, CSP-compatible.
       (preferred) with fallback to `rule.suggestedEdit`, writes a
       ruleId-tagged `RedlineEdit`, and switches the active view to
       Redline.
-- [ ] Version history: each save of a redlined doc creates a new
-      `LeaseRecord` version; navigate versions with a timeline.
-- [ ] Side-letter generator: given a set of proposed edits, produce a
-      numbered, printable letter with section citations.
+- [x] Version history: each save of a redlined doc creates a new
+      snapshot in a dedicated `leaseguard-versions` IndexedDB; navigate
+      versions with a timeline. Landed wave 4 as
+      `src/negotiation/versionHistory.ts` +
+      `src/ui/VersionHistoryPanel.tsx`; App wire-up in `wave4-wireup`
+      mounts the panel below RedlinePanel with create/restore/export/
+      delete handlers + audit-log entries.
+- [x] Side-letter generator: given a set of proposed edits, produce a
+      numbered, printable letter with section citations. Landed wave 4
+      as `src/negotiation/sideLetter.ts` + `src/ui/SideLetterPanel.tsx`;
+      App wire-up in `wave4-wireup` uses `doc.sections` to resolve
+      paragraph → section labels and provides preview (popup window with
+      download fallback) + download actions.
 
 ## Phase 10 — Rule ecosystem
 
@@ -215,8 +224,15 @@ Local-only, CSP-compatible.
       `setSeverityOverride()`, override application in
       `src/rules/severityOverrides.ts`, UI in
       `src/ui/SeverityOverridesPanel.tsx`.
-- [ ] Ed25519 signature support via WebCrypto; "verified" vs
-      "community" badge in the pack list.
+- [x] Ed25519 signature support via WebCrypto; "verified" vs
+      "community" badge in the pack list. Landed wave 4 as
+      `src/rules/packSigning.ts` (signPack / verifySignedPack) +
+      `saveSignedPack` / `getPackSignatureStatus` in
+      `src/rules/packStorage.ts` (new `signatures` store, DB v3). Panel
+      badge in `src/ui/PackManagerPanel.tsx`; App wire-up in
+      `wave4-wireup` detects signed envelopes at import, routes them
+      through `saveSignedPack`, and surfaces `verified` / `invalid` /
+      `community` on the PackManagerPanel.
 - [~] Bundle a small offline marketplace of curated packs as static
       JSON under `/public/packs/`. Seeded with
       `example-starter.lgpack.json` produced by
@@ -269,9 +285,12 @@ Local-only, CSP-compatible.
 - [x] Replay bundle export: ZIP with PDF + packs + expected JSON +
       replay script. Landed in wave2-replay
       (`src/workflow/replayBundle.ts`).
-- [~] Pack-version pin warning on `diffLeases` when sides disagree.
-      Detection shipped wave2-replay; UI rendering of mismatch still
-      open.
+- [x] Pack-version pin warning on `diffLeases` when sides disagree.
+      Detection shipped wave2-replay; UI rendering landed in
+      `wave4-packSigning` (ComparePanel banner driven by
+      `packVersionMismatch` prop). App wire-up in `wave4-wireup` threads
+      `comparison.a.rulePackVersion` vs `comparison.b.rulePackVersion`
+      into the panel.
 
 ## Phase 13 — Performance & scale
 
@@ -284,12 +303,20 @@ Local-only, CSP-compatible.
       real browsers and an inline fallback for jsdom.
 - [ ] Streaming render: PdfViewer renders page N as soon as
       `getPage(N)` resolves, rather than waiting on the whole doc.
-- [ ] Virtualized `<ul>` in FindingsPanel using IntersectionObserver.
+- [x] Virtualized `<ul>` in FindingsPanel using IntersectionObserver.
+      Landed wave 4 (`wave4-virtualized`) via `src/ui/useInViewport.ts`
+      + FindingsPanel viewport-gated rendering so long finding lists
+      stay cheap to scroll.
 - [ ] Secondary IndexedDB index on `LeaseRecord.findingCount` +
       `rulePackVersion` so `listLeases` can filter cheaply.
-- [ ] Compile + cache regex instances at rule-pack import time.
-- [ ] Perf benchmark grows to 200-page documents; budget scales by
-      pages (e.g., ≤ 8s on 200 pages).
+- [x] Compile + cache regex instances at rule-pack import time. Landed
+      wave 4 (`wave4-compileRules`) as `src/rules/compileRules.ts` plus
+      a two-layer cache in `src/rules/packStorage.ts`
+      (`getCompiledRulesForPack` + `getActiveCompiledRules`) so
+      `analyze` reuses compiled patterns across renders.
+- [x] Perf benchmark grows to 200-page documents; budget scales by
+      pages (e.g., ≤ 8s on 200 pages). Landed wave 4 as
+      `src/rules/perf.bench.test.ts`.
 - [x] `renderPdfPages` accepts an `AbortSignal` rather than returning a
       custom `{done, cancel}` handle (moved from tech debt). Landed in
       wave3-perf — `src/ui/renderPdfPages.ts` + PdfViewer consumer.
