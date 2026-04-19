@@ -35,6 +35,13 @@ export interface PipelineApi {
   ocr: () => Promise<void>;
   /** Overwrite status to `analyzed` with a pre-loaded LeaseRecord (e.g. opening from library). */
   open: (record: LeaseRecord) => void;
+  /**
+   * Re-run `analyze(doc, rules)` over the currently-loaded document using the
+   * hook's current `rules`. No-op unless `status.kind === 'analyzed'`. Used by
+   * the jurisdiction picker / severity override flow to refresh findings
+   * without re-parsing the PDF.
+   */
+  reanalyze: () => void;
   /** Force status back to idle (used by clear-all / import archive). */
   reset: () => void;
   /** Set an external error (e.g. a failed sample fetch). */
@@ -142,6 +149,20 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     }
   }, [status, activeRules]);
 
+  const reanalyze = useCallback((): void => {
+    setStatus((prev) => {
+      if (prev.kind !== 'analyzed') return prev;
+      const findings = analyze(prev.result.doc, activeRules);
+      return {
+        kind: 'analyzed',
+        fileName: prev.fileName,
+        result: { doc: prev.result.doc, findings },
+        bytes: prev.bytes,
+        leaseId: prev.leaseId,
+      };
+    });
+  }, [activeRules]);
+
   const open = useCallback((record: LeaseRecord): void => {
     setStatus({
       kind: 'analyzed',
@@ -175,6 +196,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     upload,
     ocr,
     open,
+    reanalyze,
     reset,
     setError,
     setComparison,
