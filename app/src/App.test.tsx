@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 vi.mock('./ocr/runOcr', () => ({
   runOcr: vi.fn(async (_bytes: Uint8Array, opts?: { onProgress?: (p: { pct: number; stage: string }) => void }) => {
@@ -25,21 +25,44 @@ import {
   listLeases,
   openLeaseDb,
 } from './storage/storage';
+import { _resetPacksDbForTests, openPacksDb } from './rules/packStorage';
+import { _resetAuditDbForTests, AUDIT_DB_NAME, openAuditDb } from './audit/auditLog';
+import { _resetBulkDedupDbForTests, BULK_DEDUP_DB_NAME } from './workflow/bulkImport';
 
-beforeEach(async () => {
-  try {
-    const db = await openLeaseDb();
-    db.close();
-  } catch {
-    // ignore
-  }
-  _resetDbForTests();
+async function wipeDb(name: string): Promise<void> {
   await new Promise<void>((resolve) => {
-    const req = indexedDB.deleteDatabase('leaseguard');
+    const req = indexedDB.deleteDatabase(name);
     req.onsuccess = (): void => resolve();
     req.onerror = (): void => resolve();
     req.onblocked = (): void => resolve();
   });
+}
+
+beforeEach(async () => {
+  try {
+    (await openLeaseDb()).close();
+  } catch {
+    // ignore
+  }
+  try {
+    (await openPacksDb()).close();
+  } catch {
+    // ignore
+  }
+  try {
+    (await openAuditDb()).close();
+  } catch {
+    // ignore
+  }
+  _resetDbForTests();
+  _resetPacksDbForTests();
+  _resetAuditDbForTests();
+  _resetBulkDedupDbForTests();
+  await new Promise<void>((r) => setTimeout(r, 0));
+  await wipeDb('leaseguard');
+  await wipeDb('leaseguard-packs');
+  await wipeDb(AUDIT_DB_NAME);
+  await wipeDb(BULK_DEDUP_DB_NAME);
 });
 
 async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {
@@ -58,7 +81,16 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   const file = await makeLeaseFile(name);
   const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
   await userEvent.upload(input, file);
-  await waitFor(() => expect(screen.getByText(/auto-renewal/i)).toBeInTheDocument());
+  // "auto-renewal" now also appears in the SeverityOverridesPanel row; use
+  // `findAllByText` so we pass as soon as the findings panel renders.
+  await waitFor(() =>
+    expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0),
+  );
+  // Wait for the findings aside to render so click/scroll assertions downstream
+  // find their targets.
+  await waitFor(() =>
+    expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument(),
+  );
 }
 
 describe('App', () => {
@@ -71,7 +103,10 @@ describe('App', () => {
   it('shows findings after a successful upload and analysis', async () => {
     render(<App />);
     await uploadLease();
-    expect(screen.getByText(/waiver of jury trial/i)).toBeInTheDocument();
+    // Scope to the findings <aside>; rule titles also surface in the
+    // SeverityOverridesPanel, which would cause `getByText` ambiguity.
+    const findings = screen.getByRole('complementary', { name: /findings/i });
+    expect(within(findings).getByText(/waiver of jury trial/i)).toBeInTheDocument();
   });
 
   it('saves to the library after analysis and shows it in My Leases', async () => {
@@ -93,8 +128,11 @@ describe('App', () => {
   it('clicking a finding shows the selected finding article', async () => {
     render(<App />);
     await uploadLease();
+    // Multiple buttons now match (finding + "what this means" disclosure).
+    // Pick the main finding button via its `finding-btn` className.
+    const findings = screen.getByRole('complementary', { name: /findings/i });
     await userEvent.click(
-      screen.getByRole('button', { name: /waiver of jury trial/i }),
+      within(findings).getAllByRole('button', { name: /waiver of jury trial/i })[0]!,
     );
     expect(screen.getByRole('article', { name: /selected finding/i })).toBeInTheDocument();
   });
@@ -108,7 +146,9 @@ describe('App', () => {
       .mockResolvedValue(new Response(bytes as BlobPart, { status: 200 }));
     render(<App />);
     await userEvent.click(screen.getByRole('button', { name: /try a sample lease/i }));
-    await waitFor(() => expect(screen.getByText(/auto-renewal/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0),
+    );
     fetchMock.mockRestore();
   });
 
@@ -218,7 +258,9 @@ describe('App', () => {
       expect(screen.getByRole('button', { name: /open reopen\.pdf/i })).toBeInTheDocument(),
     );
     await userEvent.click(screen.getByRole('button', { name: /open reopen\.pdf/i }));
-    await waitFor(() => expect(screen.getByText(/auto-renewal/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0),
+    );
   });
 
   it('export findings JSON and HTML each trigger a download', async () => {
@@ -263,11 +305,15 @@ describe('App', () => {
     // needsOcr heuristic flags it and the "Attempt OCR" button appears.
     const ocrButton = await screen.findByRole('button', { name: /attempt ocr/i });
     await userEvent.click(ocrButton);
-    // Progress text transitions through at least one running state.
-    await waitFor(() =>
-      expect(screen.getByText(/mandatory arbitration/i)).toBeInTheDocument(),
-    );
-    expect(screen.getByText(/waiver of jury trial/i)).toBeInTheDocument();
+    // Progress text transitions through at least one running state. Scope
+    // to the findings <aside> because rule titles also appear in the
+    // SeverityOverridesPanel, which triggers `getByText` ambiguity.
+    await waitFor(() => {
+      const findings = screen.getByRole('complementary', { name: /findings/i });
+      expect(within(findings).getByText(/mandatory arbitration/i)).toBeInTheDocument();
+    });
+    const findings = screen.getByRole('complementary', { name: /findings/i });
+    expect(within(findings).getByText(/waiver of jury trial/i)).toBeInTheDocument();
   });
 
   it('importing an encrypted archive replaces the library on confirm', async () => {
