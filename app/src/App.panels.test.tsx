@@ -48,6 +48,13 @@ import {
   _resetBulkDedupDbForTests,
   BULK_DEDUP_DB_NAME,
 } from './workflow/bulkImport';
+import {
+  _resetVersionsDbForTests,
+  listVersionsForLease,
+  openVersionsDb,
+} from './negotiation/versionHistory';
+import { signPack } from './rules/packSigning';
+import { saveLease } from './storage/storage';
 
 async function wipeDb(name: string): Promise<void> {
   await new Promise<void>((resolve) => {
@@ -73,6 +80,7 @@ beforeEach(async () => {
   await closeIfOpen(() => openCountersDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openAuditDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openRedlineDb() as Promise<{ close(): void }>);
+  await closeIfOpen(() => openVersionsDb() as Promise<{ close(): void }>);
   _resetDbForTests();
   _resetPacksDbForTests();
   _resetAnnotationsDbForTests();
@@ -81,6 +89,7 @@ beforeEach(async () => {
   _resetAuditDbForTests();
   _resetBulkDedupDbForTests();
   _resetRedlineDbForTests();
+  _resetVersionsDbForTests();
   // Give the close() microtask a tick to land.
   await new Promise<void>((r) => setTimeout(r, 0));
   await wipeDb('leaseguard');
@@ -91,6 +100,7 @@ beforeEach(async () => {
   await wipeDb(AUDIT_DB_NAME);
   await wipeDb(BULK_DEDUP_DB_NAME);
   await wipeDb('leaseguard-redlines');
+  await wipeDb('leaseguard-versions');
 });
 
 async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {
@@ -520,5 +530,315 @@ describe('App panel wire-ups', () => {
     );
     expect(aClicks).toContain('Redline-redline.html');
     createSpy.mockRestore();
+  });
+
+  it('VersionHistoryPanel creates a version snapshot in the redline view', async () => {
+    render(<App />);
+    await uploadLease('Versioned.pdf');
+    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    // Seed an edit so the snapshot is non-empty.
+    const editButtons = await screen.findAllByRole('button', {
+      name: /^edit paragraph 1$/i,
+    });
+    await userEvent.click(editButtons[0]!);
+    const ta = screen.getByRole('textbox', { name: /paragraph 1 text/i });
+    await userEvent.clear(ta);
+    await userEvent.type(ta, 'Edit before snapshot.');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    // Fill label + click Save version. RTL queries pierce the collapsed
+    // <details> wrapper so we don't need to open it.
+    const labelInput = await screen.findByLabelText(/new version label/i);
+    await userEvent.type(labelInput, 'v1');
+    await userEvent.click(screen.getByRole('button', { name: /^save version$/i }));
+    const [lease] = await listLeases();
+    await waitFor(async () => {
+      const vs = await listVersionsForLease(lease!.id);
+      expect(vs.length).toBe(1);
+      expect(vs[0]!.label).toBe('v1');
+      expect(vs[0]!.edits.length).toBe(1);
+    });
+    // Audit captured the save.
+    await waitFor(async () => {
+      const entries = await listAuditEntries();
+      expect(entries.some((e) => e.kind === 'version-save')).toBe(true);
+    });
+  });
+
+  it('SideLetterPanel downloads HTML when edits exist', async () => {
+    const aClicks: string[] = [];
+    const origCreate = document.createElement.bind(document);
+    const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = origCreate(tag);
+      if (tag === 'a') {
+        el.click = (): void => {
+          aClicks.push(el.getAttribute('download') ?? '');
+        };
+      }
+      return el;
+    });
+    URL.createObjectURL = vi.fn().mockReturnValue('blob:x');
+    URL.revokeObjectURL = vi.fn();
+
+    render(<App />);
+    await uploadLease('SideLetter.pdf');
+    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    // Seed an edit to give the side-letter clauses to cite.
+    const editButtons = await screen.findAllByRole('button', {
+      name: /^edit paragraph 1$/i,
+    });
+    await userEvent.click(editButtons[0]!);
+    const ta = screen.getByRole('textbox', { name: /paragraph 1 text/i });
+    await userEvent.clear(ta);
+    await userEvent.type(ta, 'Side letter test.');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    // Fill the signer and click download.
+    await userEvent.type(screen.getByLabelText(/signer name/i), 'Jane Doe');
+    await userEvent.click(
+      screen.getByRole('button', { name: /download side letter/i }),
+    );
+    expect(aClicks).toContain('SideLetter-side-letter.html');
+    createSpy.mockRestore();
+  });
+
+  it('PackManagerPanel imports a signed envelope and shows Verified badge', async () => {
+    render(<App />);
+    const pack = {
+      schema: 'leaseguard.rulepack.v1' as const,
+      id: 'signed-pack',
+      name: 'Signed pack',
+      version: '1.0.0',
+      description: 'signed test',
+      rules: [
+        {
+          id: 'signed-rule',
+          severity: 'medium' as const,
+          category: 'fees' as const,
+          title: 'Signed rule',
+          explanation: 'x',
+          citation: null,
+          match: { type: 'regex' as const, pattern: 'kiwi', flags: 'i' },
+        },
+      ],
+    };
+    // Generate an Ed25519 keypair + signed envelope locally.
+    const kp = (await crypto.subtle.generateKey(
+      { name: 'Ed25519' },
+      true,
+      ['sign', 'verify'],
+    )) as CryptoKeyPair;
+    const envelope = await signPack(pack, kp.privateKey, kp.publicKey);
+    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    await userEvent.upload(
+      input,
+      new File([JSON.stringify(envelope)], 'signed.lgpack.json', {
+        type: 'application/json',
+      }),
+    );
+    await waitFor(async () => {
+      expect((await listInstalledPacks()).length).toBe(1);
+    });
+    // The badge span for the signed-pack row should report "Verified".
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText(/signature status: verified/i),
+      ).toBeInTheDocument();
+    });
+    // Audit log captured the verification + import.
+    await waitFor(async () => {
+      const entries = await listAuditEntries();
+      expect(entries.some((e) => e.kind === 'pack-signature-verified')).toBe(true);
+    });
+  });
+
+  it('VersionHistoryPanel restores, exports, and deletes saved versions', async () => {
+    const aClicks: string[] = [];
+    const origCreate = document.createElement.bind(document);
+    const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = origCreate(tag);
+      if (tag === 'a') {
+        el.click = (): void => {
+          aClicks.push(el.getAttribute('download') ?? '');
+        };
+      }
+      return el;
+    });
+    URL.createObjectURL = vi.fn().mockReturnValue('blob:x');
+    URL.revokeObjectURL = vi.fn();
+
+    render(<App />);
+    await uploadLease('VersionCrud.pdf');
+    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    // Seed one edit + one saved version ("v1").
+    const editButtons = await screen.findAllByRole('button', {
+      name: /^edit paragraph 1$/i,
+    });
+    await userEvent.click(editButtons[0]!);
+    const ta = screen.getByRole('textbox', { name: /paragraph 1 text/i });
+    await userEvent.clear(ta);
+    await userEvent.type(ta, 'Snapshot edit.');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    await userEvent.type(screen.getByLabelText(/new version label/i), 'v1');
+    await userEvent.click(screen.getByRole('button', { name: /^save version$/i }));
+    const [lease] = await listLeases();
+    await waitFor(async () => {
+      expect((await listVersionsForLease(lease!.id)).length).toBe(1);
+    });
+    // Export — triggers a download.
+    await userEvent.click(screen.getByRole('button', { name: /export version v1/i }));
+    expect(aClicks.some((n) => n.includes('VersionCrud-redline'))).toBe(true);
+    // Restore — no-op on snapshot equal to current state, but exercises path.
+    await userEvent.click(screen.getByRole('button', { name: /restore version v1/i }));
+    await waitFor(async () => {
+      const entries = await listAuditEntries();
+      expect(entries.some((e) => e.kind === 'version-restore')).toBe(true);
+    });
+    // Delete — timeline drops back to empty.
+    await userEvent.click(screen.getByRole('button', { name: /delete version v1/i }));
+    await waitFor(async () => {
+      expect((await listVersionsForLease(lease!.id)).length).toBe(0);
+    });
+    createSpy.mockRestore();
+  });
+
+  it('SideLetterPanel preview falls back to download when popup is blocked', async () => {
+    const aClicks: string[] = [];
+    const origCreate = document.createElement.bind(document);
+    const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = origCreate(tag);
+      if (tag === 'a') {
+        el.click = (): void => {
+          aClicks.push(el.getAttribute('download') ?? '');
+        };
+      }
+      return el;
+    });
+    URL.createObjectURL = vi.fn().mockReturnValue('blob:x');
+    URL.revokeObjectURL = vi.fn();
+    // Simulate popup blocker — window.open returns null.
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+
+    render(<App />);
+    await uploadLease('SideLetterPreview.pdf');
+    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /generate side letter preview/i }),
+    );
+    // Popup blocked → fallback downloads the letter.
+    expect(aClicks.some((n) => n.endsWith('-side-letter.html'))).toBe(true);
+    openSpy.mockRestore();
+    createSpy.mockRestore();
+  });
+
+  it('PackManagerPanel reports "Invalid signature" on a tampered envelope', async () => {
+    render(<App />);
+    const pack = {
+      schema: 'leaseguard.rulepack.v1' as const,
+      id: 'tampered-pack',
+      name: 'Tampered',
+      version: '1.0.0',
+      description: 'tampered',
+      rules: [
+        {
+          id: 'tampered-rule',
+          severity: 'low' as const,
+          category: 'general' as const,
+          title: 'Tampered',
+          explanation: 'x',
+          citation: null,
+          match: { type: 'regex' as const, pattern: 'mango', flags: 'i' },
+        },
+      ],
+    };
+    const kp = (await crypto.subtle.generateKey(
+      { name: 'Ed25519' },
+      true,
+      ['sign', 'verify'],
+    )) as CryptoKeyPair;
+    const envelope = await signPack(pack, kp.privateKey, kp.publicKey);
+    // Mutate the payload so the signature no longer matches.
+    const tampered = {
+      ...envelope,
+      payload: envelope.payload.replace('Tampered', 'TamperedX'),
+    };
+    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    await userEvent.upload(
+      input,
+      new File([JSON.stringify(tampered)], 'tampered.lgpack.json', {
+        type: 'application/json',
+      }),
+    );
+    // Pack should NOT land in the store; the PackManagerPanel surfaces the
+    // verify error via its error banner.
+    await waitFor(() =>
+      expect(screen.getByText(/Invalid signed pack/i)).toBeInTheDocument(),
+    );
+    expect((await listInstalledPacks()).length).toBe(0);
+    // Audit log captured the invalid signature event.
+    await waitFor(async () => {
+      const entries = await listAuditEntries();
+      expect(entries.some((e) => e.kind === 'pack-signature-invalid')).toBe(true);
+    });
+  });
+
+  it('ComparePanel surfaces a pack-version mismatch banner', async () => {
+    // Pre-seed two leases with different rulePackVersions so the compare
+    // helper trips the mismatch path. We bypass the upload pipeline
+    // because both leases need distinct rulePackVersion stamps.
+    const bytesA = await makePdf([
+      {
+        blocks: [{ text: 'This lease shall auto-renew annually.', x: 72, y: 72 }],
+      },
+    ]);
+    const bytesB = await makePdf([
+      {
+        blocks: [{ text: 'Tenant waives any right to a jury trial.', x: 72, y: 72 }],
+      },
+    ]);
+    // Reuse analyzeFile output by calling saveLease directly; the compare
+    // picker just needs two records with different rulePackVersion.
+    const { analyzeFile } = await import('./ui/analyzeFile');
+    const { RULE_PACK_V1 } = await import('./rules/packV1');
+    const rA = await analyzeFile(bytesA, RULE_PACK_V1);
+    const rB = await analyzeFile(bytesB, RULE_PACK_V1);
+    // saveLease derives rulePackVersion from findings[0]; override to force
+    // a mismatch even when the pack ships the same version on both sides.
+    const findingsA = rA.findings.map((f) => ({ ...f, rulePackVersion: '1.0.0' }));
+    const findingsB = rB.findings.map((f) => ({ ...f, rulePackVersion: '1.2.0' }));
+    // Guard: the fixture paragraphs must trip at least one rule, otherwise
+    // the mismatch field on the record falls back to 'unknown' on both sides.
+    expect(findingsA.length).toBeGreaterThan(0);
+    expect(findingsB.length).toBeGreaterThan(0);
+    const idA = await saveLease({
+      name: 'lease-a.pdf',
+      doc: rA.doc,
+      findings: findingsA,
+    });
+    const idB = await saveLease({
+      name: 'lease-b.pdf',
+      doc: rB.doc,
+      findings: findingsB,
+    });
+
+    render(<App />);
+    // Wait for refreshLibrary to populate the picker with both leases.
+    await waitFor(() => {
+      const sel = screen.getByLabelText(/lease A/i) as HTMLSelectElement;
+      // Two lease options + the "—" placeholder.
+      expect(sel.options.length).toBeGreaterThanOrEqual(3);
+    });
+    const aSelect = screen.getByLabelText(/lease A/i);
+    const bSelect = screen.getByLabelText(/lease B/i);
+    await userEvent.selectOptions(aSelect, idA);
+    await userEvent.selectOptions(bSelect, idB);
+    await userEvent.click(screen.getByRole('button', { name: /^compare$/i }));
+    // ComparePanel renders first — wait for it before checking the banner.
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: /^compare$/i })).toBeInTheDocument(),
+    );
+    // Target the banner div specifically (role=alert). The Dismiss button
+    // also matches a label containing "pack version mismatch".
+    expect(
+      screen.getByRole('alert', { name: /pack version mismatch/i }),
+    ).toHaveTextContent(/v1\.0\.0/);
   });
 });

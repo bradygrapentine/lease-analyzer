@@ -75,6 +75,8 @@ import {
 import { PortfolioPanel } from './ui/PortfolioPanel';
 import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
 import { RedlinePanel } from './ui/RedlinePanel';
+import { VersionHistoryPanel } from './ui/VersionHistoryPanel';
+import { SideLetterPanel } from './ui/SideLetterPanel';
 import {
   saveEdit,
   listEditsForLease,
@@ -82,6 +84,21 @@ import {
 } from './redline/redlineStorage';
 import type { RedlineEdit } from './redline/redline';
 import { buildRedlineHtml } from './redline/redline';
+import {
+  listVersionsForLease,
+  saveVersion,
+  getVersion,
+  deleteVersion,
+  type LeaseVersion,
+} from './negotiation/versionHistory';
+import { buildSideLetterHtml } from './negotiation/sideLetter';
+import {
+  getPackSignatureStatus,
+  saveSignedPack,
+  type PackSignatureStatus,
+} from './rules/packStorage';
+import { verifySignedPack } from './rules/packSigning';
+import type { PackSignatureBadge } from './ui/PackManagerPanel';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding, Rule } from './rules/types';
@@ -139,6 +156,13 @@ export function App(): JSX.Element {
     new Map(),
   );
   const [redlineEdits, setRedlineEdits] = useState<RedlineEdit[]>([]);
+  const [versions, setVersions] = useState<LeaseVersion[]>([]);
+  const [sideLetterSigner, setSideLetterSigner] = useState<{ name: string; title: string }>(
+    { name: '', title: '' },
+  );
+  const [packSignatureStatus, setPackSignatureStatus] = useState<
+    Record<string, PackSignatureBadge>
+  >({});
 
   const refreshPortfolioFindings = useCallback(async () => {
     const records = await listAllLeaseRecords();
@@ -155,6 +179,10 @@ export function App(): JSX.Element {
     setRedlineEdits(await listEditsForLease(leaseId));
   }, []);
 
+  const refreshVersions = useCallback(async (leaseId: string) => {
+    setVersions(await listVersionsForLease(leaseId));
+  }, []);
+
   const refreshCounterOffers = useCallback(async () => {
     setCounterOffers(await listCounterOffers());
   }, []);
@@ -166,11 +194,23 @@ export function App(): JSX.Element {
   const refreshPacks = useCallback(async () => {
     const packs = await listInstalledPacks();
     const enabled = new Set<string>();
+    const sigStatus: Record<string, PackSignatureBadge> = {};
     for (const p of packs) {
       if (await getPackEnabled(p.id)) enabled.add(p.id);
+      const status: PackSignatureStatus = await getPackSignatureStatus(p.id);
+      // Map storage-layer "unsigned" to UI's "community" badge.
+      sigStatus[p.id] =
+        status === 'verified'
+          ? 'verified'
+          : status === 'invalid'
+            ? 'invalid'
+            : status === 'unknown'
+              ? 'unknown'
+              : 'community';
     }
     setInstalledPacks(packs);
     setEnabledPacks(enabled);
+    setPackSignatureStatus(sigStatus);
   }, []);
 
   const refreshRulePackSettings = useCallback(async () => {
@@ -286,11 +326,13 @@ export function App(): JSX.Element {
     if (analyzedLeaseId) {
       void refreshAnnotations(analyzedLeaseId);
       void refreshRedlineEdits(analyzedLeaseId);
+      void refreshVersions(analyzedLeaseId);
     } else {
       setAnnotations([]);
       setRedlineEdits([]);
+      setVersions([]);
     }
-  }, [analyzedLeaseId, refreshAnnotations, refreshRedlineEdits]);
+  }, [analyzedLeaseId, refreshAnnotations, refreshRedlineEdits, refreshVersions]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -532,6 +574,45 @@ export function App(): JSX.Element {
     const bytes = await readFileBytes(file);
     const text = new TextDecoder().decode(bytes);
     const parsed: unknown = JSON.parse(text);
+
+    // Detect a signed envelope by shape. A signed `.lgpack.json` is the
+    // envelope itself (algorithm + payload + signature + publicKey); the
+    // inner pack JSON lives as a string under `payload`. Route that case
+    // through `saveSignedPack` so the trust badge gets recorded.
+    if (
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      'algorithm' in parsed &&
+      'payload' in parsed &&
+      'signature' in parsed
+    ) {
+      const verify = await verifySignedPack(parsed);
+      if (!verify.ok || !verify.pack) {
+        await safeAudit({
+          kind: 'pack-signature-invalid',
+          payload: { reason: verify.reason ?? 'unknown' },
+        });
+        void refreshAuditLog();
+        throw new Error(`Invalid signed pack: ${verify.reason ?? 'unknown'}`);
+      }
+      await saveSignedPack(
+        parsed as import('./rules/packSigning').SignedPackEnvelope,
+        verify.pack,
+      );
+      await setPackEnabled(verify.pack.id, true);
+      await safeAudit({
+        kind: 'pack-signature-verified',
+        payload: { packId: verify.pack.id, version: verify.pack.version },
+      });
+      await safeAudit({
+        kind: 'import-pack',
+        payload: { packId: verify.pack.id, version: verify.pack.version, signed: true },
+      });
+      await refreshPacks();
+      void refreshAuditLog();
+      return;
+    }
+
     const result = validatePackFile(parsed);
     if (!result.ok) {
       throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
@@ -782,6 +863,154 @@ export function App(): JSX.Element {
     void refreshAuditLog();
   }
 
+  async function onCreateVersion(label?: string, note?: string): Promise<void> {
+    if (status.kind !== 'analyzed' || !status.leaseId) return;
+    const leaseId = status.leaseId;
+    // Snapshot edits live — re-read from storage so we capture anything
+    // currently persisted (the in-state `redlineEdits` should match but
+    // the storage read is authoritative).
+    const currentEdits = await listEditsForLease(leaseId);
+    const saved = await saveVersion({
+      leaseId,
+      edits: currentEdits,
+      ...(label !== undefined ? { label } : {}),
+      ...(note !== undefined ? { note } : {}),
+    });
+    await safeAudit({
+      kind: 'version-save',
+      payload: {
+        leaseId,
+        versionId: saved.versionId,
+        editCount: saved.edits.length,
+      },
+    });
+    await refreshVersions(leaseId);
+    void refreshAuditLog();
+  }
+
+  async function onRestoreVersion(versionId: string): Promise<void> {
+    if (status.kind !== 'analyzed' || !status.leaseId) return;
+    const leaseId = status.leaseId;
+    const version = await getVersion(versionId);
+    if (!version || version.leaseId !== leaseId) return;
+    // Replace strategy: delete every currently-stored edit, then save the
+    // version's snapshot in. This keeps the redline DB's
+    // `(leaseId, paragraphIndex)` uniqueness invariant intact without
+    // introducing a new "bulk replace" primitive.
+    const current = await listEditsForLease(leaseId);
+    for (const e of current) {
+      await deleteEdit(leaseId, e.paragraphIndex);
+    }
+    for (const e of version.edits) {
+      await saveEdit({ ...e, leaseId });
+    }
+    await safeAudit({
+      kind: 'version-restore',
+      payload: { leaseId, versionId, restoredEdits: version.edits.length },
+    });
+    await refreshRedlineEdits(leaseId);
+    void refreshAuditLog();
+  }
+
+  async function onDeleteVersion(versionId: string): Promise<void> {
+    if (status.kind !== 'analyzed' || !status.leaseId) return;
+    const leaseId = status.leaseId;
+    await deleteVersion(versionId);
+    await safeAudit({
+      kind: 'version-delete',
+      payload: { leaseId, versionId },
+    });
+    await refreshVersions(leaseId);
+    void refreshAuditLog();
+  }
+
+  async function onExportVersion(versionId: string): Promise<void> {
+    if (status.kind !== 'analyzed') return;
+    const version = await getVersion(versionId);
+    if (!version) return;
+    const html = buildRedlineHtml({
+      leaseName: status.fileName,
+      doc: status.result.doc,
+      edits: version.edits,
+    });
+    const labelPart = version.label ? `-${version.label.replace(/[^a-z0-9-]+/gi, '_')}` : '';
+    downloadBlob(
+      html,
+      'text/html',
+      `${status.fileName.replace(/\.pdf$/i, '')}-redline${labelPart}.html`,
+    );
+  }
+
+  /**
+   * Map a paragraph index to its section label, if the parser identified a
+   * section. Searches `doc.sections` for the section containing this
+   * paragraph's text — cheap enough at redline scale (sections are small).
+   * Returns `undefined` to let `buildSideLetterHtml` fall back to
+   * `Page N, \u00b6 M` labeling.
+   */
+  function sectionForParagraph(paragraphIndex: number): string | undefined {
+    if (status.kind !== 'analyzed') return undefined;
+    const paragraph = status.result.doc.paragraphs[paragraphIndex];
+    if (!paragraph) return undefined;
+    for (const section of status.result.doc.sections) {
+      if (section.paragraphs.includes(paragraph)) {
+        return section.number ?? section.heading;
+      }
+    }
+    return undefined;
+  }
+
+  function onSideLetterPreview(): void {
+    if (status.kind !== 'analyzed') return;
+    const html = buildSideLetterHtml({
+      leaseName: status.fileName,
+      edits: redlineEdits,
+      sectionFor: sectionForParagraph,
+      signer:
+        sideLetterSigner.name.trim() !== ''
+          ? {
+              name: sideLetterSigner.name.trim(),
+              ...(sideLetterSigner.title.trim() !== ''
+                ? { title: sideLetterSigner.title.trim() }
+                : {}),
+            }
+          : undefined,
+    });
+    // Open in a popup window. Falls back gracefully when the browser blocks
+    // the popup by downloading instead — keeps the UI discoverable.
+    const win = window.open('', '_blank', 'noopener,noreferrer');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } else {
+      onSideLetterDownload();
+    }
+  }
+
+  function onSideLetterDownload(): void {
+    if (status.kind !== 'analyzed') return;
+    const html = buildSideLetterHtml({
+      leaseName: status.fileName,
+      edits: redlineEdits,
+      sectionFor: sectionForParagraph,
+      signer:
+        sideLetterSigner.name.trim() !== ''
+          ? {
+              name: sideLetterSigner.name.trim(),
+              ...(sideLetterSigner.title.trim() !== ''
+                ? { title: sideLetterSigner.title.trim() }
+                : {}),
+            }
+          : undefined,
+    });
+    downloadBlob(
+      html,
+      'text/html',
+      `${status.fileName.replace(/\.pdf$/i, '')}-side-letter.html`,
+    );
+  }
+
   function onExportRedlineHtml(): void {
     if (status.kind !== 'analyzed') return;
     const html = buildRedlineHtml({
@@ -906,17 +1135,46 @@ export function App(): JSX.Element {
       )}
 
       {view === 'redline' && status.kind === 'analyzed' && (
-        <RedlinePanel
-          doc={status.result.doc}
-          edits={redlineEdits}
-          onEditParagraph={(pIdx, after) => {
-            void onEditRedlineParagraph(pIdx, after);
-          }}
-          onDeleteEdit={(pIdx) => {
-            void onDeleteRedlineEdit(pIdx);
-          }}
-          onExportHtml={onExportRedlineHtml}
-        />
+        <>
+          <RedlinePanel
+            doc={status.result.doc}
+            edits={redlineEdits}
+            onEditParagraph={(pIdx, after) => {
+              void onEditRedlineParagraph(pIdx, after);
+            }}
+            onDeleteEdit={(pIdx) => {
+              void onDeleteRedlineEdit(pIdx);
+            }}
+            onExportHtml={onExportRedlineHtml}
+          />
+          <details>
+            <summary>Version history</summary>
+            <VersionHistoryPanel
+              versions={versions}
+              currentEditCount={redlineEdits.length}
+              onCreateVersion={(label, note) => {
+                void onCreateVersion(label, note);
+              }}
+              onRestoreVersion={(vId) => {
+                void onRestoreVersion(vId);
+              }}
+              onDeleteVersion={(vId) => {
+                void onDeleteVersion(vId);
+              }}
+              onExportVersion={(vId) => {
+                void onExportVersion(vId);
+              }}
+            />
+          </details>
+          <SideLetterPanel
+            leaseName={status.fileName}
+            edits={redlineEdits}
+            signerDraft={sideLetterSigner}
+            onSignerChange={(s) => setSideLetterSigner(s)}
+            onPreview={onSideLetterPreview}
+            onDownload={onSideLetterDownload}
+          />
+        </>
       )}
 
       {view === 'current' && status.kind === 'analyzed' && (
@@ -1078,6 +1336,7 @@ export function App(): JSX.Element {
         onDelete={(id) => {
           void onDeletePack(id);
         }}
+        signatureStatusByPackId={packSignatureStatus}
       />
 
       <details>
@@ -1166,6 +1425,14 @@ export function App(): JSX.Element {
           bName={comparison.b.name}
           aFindings={comparison.a.findings}
           bFindings={comparison.b.findings}
+          {...(comparison.a.rulePackVersion !== comparison.b.rulePackVersion
+            ? {
+                packVersionMismatch: {
+                  a: comparison.a.rulePackVersion,
+                  b: comparison.b.rulePackVersion,
+                },
+              }
+            : {})}
         />
       )}
 
