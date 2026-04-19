@@ -96,7 +96,7 @@ Local-only, CSP-compatible.
 - [x] "Download diagnostics" JSON export (schema `leaseguard.diagnostics.v1`)
 - [x] Bundle-size budget in CI via `scripts/check-bundle-budget.mjs`
 - [ ] Rule-authoring guide (`docs/RULES.md`) with matcher cookbook
-- [ ] Storybook for viewer + findings components
+- [x] Storybook scaffold + stories for all UI components
 - [ ] Code-split pdf.worker via dynamic import (first paint budget)
 
 ## Cross-cutting tech debt

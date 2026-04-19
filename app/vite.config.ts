@@ -45,6 +45,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.test.{ts,tsx}',
         'src/**/*.bench.test.{ts,tsx}',
+        'src/**/*.stories.{ts,tsx}',
         'src/**/index.ts', // barrel re-exports
         'src/test/**',
         'src/main.tsx',
