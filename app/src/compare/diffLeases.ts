@@ -22,9 +22,28 @@ export interface SectionDiff {
 
 export interface LeaseDiff {
   sections: SectionDiff[];
+  /**
+   * Present when the two leases were analyzed under different rule pack
+   * versions. Pure data — UI renders it separately. Absent when both
+   * versions match or either side wasn't stamped.
+   */
+  packVersionMismatch?: { a: string; b: string };
 }
 
-export function diffLeases(a: LeaseDocument, b: LeaseDocument): LeaseDiff {
+/**
+ * Optional analysis metadata for either side of the diff. Existing
+ * callers that only pass in a LeaseDocument keep working.
+ */
+export interface DiffOptions {
+  rulePackVersionA?: string;
+  rulePackVersionB?: string;
+}
+
+export function diffLeases(
+  a: LeaseDocument,
+  b: LeaseDocument,
+  options: DiffOptions = {},
+): LeaseDiff {
   const aByKey = indexSections(a.sections);
   const bByKey = indexSections(b.sections);
   const allKeys = orderedUnion(a.sections, b.sections);
@@ -62,7 +81,16 @@ export function diffLeases(a: LeaseDocument, b: LeaseDocument): LeaseDiff {
     }
   }
 
-  return { sections: out };
+  const diff: LeaseDiff = { sections: out };
+  const { rulePackVersionA, rulePackVersionB } = options;
+  if (
+    rulePackVersionA !== undefined &&
+    rulePackVersionB !== undefined &&
+    rulePackVersionA !== rulePackVersionB
+  ) {
+    diff.packVersionMismatch = { a: rulePackVersionA, b: rulePackVersionB };
+  }
+  return diff;
 }
 
 function indexSections(sections: Section[]): Map<string, Section> {
