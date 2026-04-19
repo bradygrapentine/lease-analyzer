@@ -10,6 +10,11 @@ import { TemplatesPanel } from './ui/TemplatesPanel';
 import { TemplateMatchesPanel } from './ui/TemplateMatchesPanel';
 import { LeaseFactsPanel } from './ui/LeaseFactsPanel';
 import { extractLeaseFacts } from './facts/extractFacts';
+import { WorkflowPanel } from './ui/WorkflowPanel';
+import { buildIcs, type IcsDateInput } from './workflow/buildIcs';
+import { buildSummary, copyToClipboard } from './workflow/copySummary';
+import { buildHandoffZip } from './workflow/buildHandoffZip';
+import type { LeaseFacts } from './facts/types';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
@@ -242,6 +247,54 @@ export function App(): JSX.Element {
     );
   }
 
+  function onBuildIcs(): void {
+    if (status.kind !== 'analyzed') return;
+    const facts = extractLeaseFacts(status.result.doc);
+    const dates = leaseFactsToIcsDates(facts);
+    if (dates.length === 0) {
+      // Nothing date-shaped to emit — surface via status so the user sees why.
+      pipeline.setError('No dates found in this lease to export to .ics.');
+      return;
+    }
+    const ics = buildIcs({ leaseName: status.fileName, dates });
+    downloadBlobBytes(
+      new TextEncoder().encode(ics),
+      'text/calendar',
+      `${status.fileName.replace(/\.pdf$/i, '')}.ics`,
+    );
+  }
+
+  async function onCopySummary(): Promise<void> {
+    if (status.kind !== 'analyzed') return;
+    const summary = buildSummary({
+      leaseName: status.fileName,
+      findings: status.result.findings,
+    });
+    await copyToClipboard(summary);
+  }
+
+  function onDownloadHandoff(): void {
+    if (status.kind !== 'analyzed') return;
+    const pdfBytes = status.bytes ?? new Uint8Array();
+    const findingsJson = exportFindingsJson({
+      name: status.fileName,
+      doc: status.result.doc,
+      findings: status.result.findings,
+    });
+    const findingsHtml = exportFindingsHtml({
+      name: status.fileName,
+      doc: status.result.doc,
+      findings: status.result.findings,
+    });
+    const readme =
+      `LeaseGuard handoff for ${status.fileName}\n\n` +
+      `- lease.pdf: original PDF (may be empty if opened from the library).\n` +
+      `- findings.html: printable findings report.\n` +
+      `- findings.json: machine-readable findings (schema leaseguard.findings.v1).\n`;
+    const zip = buildHandoffZip({ pdfBytes, findingsHtml, findingsJson, readme });
+    downloadBlobBytes(zip, 'application/zip', `${status.fileName.replace(/\.pdf$/i, '')}-handoff.zip`);
+  }
+
   return (
     <main>
       <header>
@@ -349,6 +402,13 @@ export function App(): JSX.Element {
           )}
           <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
           <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
+          <WorkflowPanel
+            leaseName={status.fileName}
+            findings={status.result.findings}
+            onBuildIcs={onBuildIcs}
+            onCopySummary={onCopySummary}
+            onDownloadHandoff={onDownloadHandoff}
+          />
         </div>
       )}
 
@@ -444,6 +504,15 @@ async function readFileBytes(file: File): Promise<Uint8Array> {
 
 function downloadBlob(content: string, mime: string, filename: string): void {
   const blob = new Blob([content], { type: mime });
+  triggerDownload(blob, filename);
+}
+
+function downloadBlobBytes(bytes: Uint8Array, mime: string, filename: string): void {
+  const blob = new Blob([bytes as BlobPart], { type: mime });
+  triggerDownload(blob, filename);
+}
+
+function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -452,4 +521,42 @@ function downloadBlob(content: string, mime: string, filename: string): void {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Adapter from Phase 8 `LeaseFacts` to the date-shape `buildIcs` expects.
+ * We surface commencement + expiration + a 30-day-out notice reminder when
+ * the lease specifies a notice period. Skip anything we can't ISO-format.
+ */
+function leaseFactsToIcsDates(facts: LeaseFacts): IcsDateInput[] {
+  const out: IcsDateInput[] = [];
+  if (facts.commencementDate) {
+    out.push({ summary: 'Lease commences', date: facts.commencementDate });
+  }
+  if (facts.expirationDate) {
+    out.push({ summary: 'Lease expires', date: facts.expirationDate });
+  }
+  if (facts.expirationDate && facts.noticePeriodDays) {
+    const notice = subtractDaysIso(facts.expirationDate, facts.noticePeriodDays);
+    if (notice) {
+      out.push({
+        summary: `Notice deadline (${facts.noticePeriodDays} days before expiration)`,
+        date: notice,
+      });
+    }
+  }
+  return out;
+}
+
+function subtractDaysIso(iso: string, days: number): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  const t = Date.UTC(Number(y), Number(mo) - 1, Number(d));
+  if (Number.isNaN(t)) return null;
+  const shifted = new Date(t - days * 86_400_000);
+  const yy = shifted.getUTCFullYear();
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(shifted.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
 }
