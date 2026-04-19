@@ -4,16 +4,19 @@ import {
   _resetPacksDbForTests,
   deleteInstalledPack,
   getPackEnabled,
+  getPackSignatureStatus,
   getSelectedJurisdictions,
   getSeverityOverrides,
   listInstalledPacks,
   openPacksDb,
   saveInstalledPack,
+  saveSignedPack,
   setPackEnabled,
   setSelectedJurisdictions,
   setSeverityOverride,
 } from './packStorage';
 import { RULE_PACK_SCHEMA_VERSION, type RulePackFile } from './packSchema';
+import { signPack, type SignedPackEnvelope } from './packSigning';
 
 function pack(id: string, overrides: Partial<RulePackFile> = {}): RulePackFile {
   return {
@@ -158,5 +161,53 @@ describe('packStorage', () => {
     db.close();
     _resetPacksDbForTests();
     expect(await getSeverityOverrides()).toEqual({ 'rule-a': 'medium' });
+  });
+
+  describe('signed-pack persistence', () => {
+    async function makeEnvelope(
+      p: RulePackFile,
+    ): Promise<{ env: SignedPackEnvelope; pack: RulePackFile }> {
+      const kp = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
+        'sign',
+        'verify',
+      ])) as CryptoKeyPair;
+      const env = await signPack(p, kp.privateKey, kp.publicKey);
+      return { env, pack: p };
+    }
+
+    it('getPackSignatureStatus returns "unknown" for an unseen pack id', async () => {
+      expect(await getPackSignatureStatus('nope')).toBe('unknown');
+    });
+
+    it('getPackSignatureStatus returns "unsigned" for a pack installed without an envelope', async () => {
+      await saveInstalledPack(pack('plain'));
+      expect(await getPackSignatureStatus('plain')).toBe('unsigned');
+    });
+
+    it('saveSignedPack stores pack + envelope and reports "verified"', async () => {
+      const { env, pack: p } = await makeEnvelope(pack('signed'));
+      await saveSignedPack(env, p);
+      expect(await getPackSignatureStatus('signed')).toBe('verified');
+      const list = await listInstalledPacks();
+      expect(list.map((x) => x.id)).toContain('signed');
+    });
+
+    it('saveSignedPack rejects a tampered envelope', async () => {
+      const { env, pack: p } = await makeEnvelope(pack('signed'));
+      const tampered: SignedPackEnvelope = {
+        ...env,
+        payload: env.payload.replace('Pack signed', 'Evil pack'),
+      };
+      await expect(saveSignedPack(tampered, p)).rejects.toThrow(/verification/i);
+      // Pack should NOT be present since save was rejected.
+      expect(await getPackSignatureStatus('signed')).toBe('unknown');
+    });
+
+    it('deleteInstalledPack also removes the signature record', async () => {
+      const { env, pack: p } = await makeEnvelope(pack('signed'));
+      await saveSignedPack(env, p);
+      await deleteInstalledPack('signed');
+      expect(await getPackSignatureStatus('signed')).toBe('unknown');
+    });
   });
 });
