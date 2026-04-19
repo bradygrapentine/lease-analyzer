@@ -83,6 +83,13 @@ Matcher semantics:
   negation token (`not`, `shall not`, `without`, …) is emitted with
   `negated: true` and confidence × 0.5.
 
+### `templates/`
+
+| File                  | Role                                              |
+|-----------------------|---------------------------------------------------|
+| `types.ts`            | `ClauseTemplate` (user's canonical clause text) and `ClauseTemplateMatch` (per-template best-paragraph similarity result) |
+| `matchTemplates.ts`   | Scores every (template, paragraph) pair via `similarity()` and picks the best match per template; consumer decides visual treatment by `bestScore` |
+
 ### `compare/`
 
 - `diffFindings(a, b)` — classifies rule hits as added / removed /
@@ -109,6 +116,8 @@ Matcher semantics:
 | `LibraryPanel`        | Saved leases, open / rename / delete, standard-lease badge |
 | `ComparePanel`        | Rule-diff summary (added / removed / changed) |
 | `LibraryCompareForm`  | Two-select picker for ad-hoc compares          |
+| `TemplatesPanel`      | CRUD UI for the user's clause-text templates (list + add form + inline edit) |
+| `TemplateMatchesPanel`| After analyze, shows each template with a matched/weak/missing badge + snippet |
 
 ### `App.tsx`
 

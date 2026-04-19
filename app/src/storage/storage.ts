@@ -1,12 +1,14 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { LeaseDocument } from '../parser/types';
 import type { Finding } from '../rules/types';
+import type { ClauseTemplate } from '../templates/types';
 
 const DB_NAME = 'leaseguard';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE = 'leases';
 const SETTINGS = 'settings';
 const STANDARD_KEY = 'standardLeaseId';
+export const CLAUSE_TEMPLATES_STORE = 'clauseTemplates';
 
 export interface LeaseRecord {
   id: string;
@@ -40,6 +42,10 @@ interface LeaseGuardSchema extends DBSchema {
     key: string;
     value: string;
   };
+  [CLAUSE_TEMPLATES_STORE]: {
+    key: string;
+    value: ClauseTemplate;
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<LeaseGuardSchema>> | null = null;
@@ -51,13 +57,25 @@ export function _resetDbForTests(): void {
 export async function openLeaseDb(): Promise<IDBPDatabase<LeaseGuardSchema>> {
   if (!dbPromise) {
     dbPromise = openDB<LeaseGuardSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains(STORE)) {
-          const store = db.createObjectStore(STORE, { keyPath: 'id' });
-          store.createIndex('by-createdAt', 'createdAt');
+      upgrade(db, oldVersion, _newVersion, _tx) {
+        // v0 → v1: leases store (keyPath: id, by-createdAt index).
+        if (oldVersion < 1) {
+          if (!db.objectStoreNames.contains(STORE)) {
+            const store = db.createObjectStore(STORE, { keyPath: 'id' });
+            store.createIndex('by-createdAt', 'createdAt');
+          }
         }
-        if (!db.objectStoreNames.contains(SETTINGS)) {
-          db.createObjectStore(SETTINGS);
+        // v1 → v2: settings store (for standardLeaseId, etc).
+        if (oldVersion < 2) {
+          if (!db.objectStoreNames.contains(SETTINGS)) {
+            db.createObjectStore(SETTINGS);
+          }
+        }
+        // v2 → v3: clauseTemplates store for user's saved clause-text templates.
+        if (oldVersion < 3) {
+          if (!db.objectStoreNames.contains(CLAUSE_TEMPLATES_STORE)) {
+            db.createObjectStore(CLAUSE_TEMPLATES_STORE, { keyPath: 'id' });
+          }
         }
       },
     });
@@ -121,6 +139,7 @@ export async function clearAll(): Promise<void> {
   const db = await openLeaseDb();
   await db.clear(STORE);
   await db.clear(SETTINGS);
+  await db.clear(CLAUSE_TEMPLATES_STORE);
 }
 
 export async function listAllLeaseRecords(): Promise<LeaseRecord[]> {
@@ -161,7 +180,7 @@ export async function clearStandardId(): Promise<void> {
   await db.delete(SETTINGS, STANDARD_KEY);
 }
 
-function randomId(): string {
+export function randomId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
   }

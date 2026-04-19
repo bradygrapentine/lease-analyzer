@@ -6,10 +6,23 @@ import { LibraryPanel } from './ui/LibraryPanel';
 import { PdfViewer } from './ui/PdfViewer';
 import { ComparePanel } from './ui/ComparePanel';
 import { LibraryCompareForm } from './ui/LibraryCompareForm';
+import { TemplatesPanel } from './ui/TemplatesPanel';
+import { TemplateMatchesPanel } from './ui/TemplateMatchesPanel';
 import { needsOcr } from './compare/needsOcr';
+import { runOcr } from './ocr/runOcr';
+import { analyze } from './rules/analyze';
+import { RULE_PACK_V1 } from './rules/packV1';
 import type { LeaseRecord } from './storage/storage';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
+import type { ClauseTemplate } from './templates/types';
+import { matchTemplates } from './templates/matchTemplates';
+import {
+  saveTemplate,
+  listTemplates,
+  updateTemplate,
+  deleteTemplate,
+} from './storage/templates';
 import {
   clearAll,
   clearStandardId,
@@ -45,6 +58,10 @@ export function App(): JSX.Element {
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   const [comparison, setComparison] = useState<{ a: LeaseRecord; b: LeaseRecord } | null>(null);
   const [standardId, setStandardIdState] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
+  const [ocrState, setOcrState] = useState<
+    { kind: 'idle' } | { kind: 'running'; pct: number; stage: string } | { kind: 'error'; message: string }
+  >({ kind: 'idle' });
 
   const refreshLibrary = useCallback(async () => {
     const [leases, std] = await Promise.all([listLeases(), getStandardId()]);
@@ -52,9 +69,14 @@ export function App(): JSX.Element {
     setStandardIdState(std ?? null);
   }, []);
 
+  const refreshTemplates = useCallback(async () => {
+    setTemplates(await listTemplates());
+  }, []);
+
   useEffect(() => {
     void refreshLibrary();
-  }, [refreshLibrary]);
+    void refreshTemplates();
+  }, [refreshLibrary, refreshTemplates]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -221,8 +243,48 @@ export function App(): JSX.Element {
     if (!window.confirm('Delete all saved leases from this device? This cannot be undone.')) return;
     await clearAll();
     await refreshLibrary();
+    await refreshTemplates();
     setStatus({ kind: 'idle' });
     setSelected(null);
+  }
+
+  async function onSaveTemplate(input: { name: string; text: string }): Promise<void> {
+    await saveTemplate(input);
+    await refreshTemplates();
+  }
+
+  async function onUpdateTemplate(id: string, patch: { name?: string; text?: string }): Promise<void> {
+    await updateTemplate(id, patch);
+    await refreshTemplates();
+  }
+
+  async function onDeleteTemplate(id: string): Promise<void> {
+    await deleteTemplate(id);
+    await refreshTemplates();
+  }
+
+  async function onAttemptOcr(): Promise<void> {
+    if (status.kind !== 'analyzed' || !status.bytes) return;
+    setOcrState({ kind: 'running', pct: 0, stage: 'starting' });
+    try {
+      // pdf.js transfers the ArrayBuffer during parse, so hand runOcr a copy
+      // and keep the original for the viewer.
+      const copy = new Uint8Array(status.bytes);
+      const doc = await runOcr(copy, {
+        onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
+      });
+      const findings = analyze(doc, RULE_PACK_V1);
+      setStatus({
+        kind: 'analyzed',
+        fileName: status.fileName,
+        result: { doc, findings },
+        bytes: status.bytes,
+      });
+      setSelected(null);
+      setOcrState({ kind: 'idle' });
+    } catch (err) {
+      setOcrState({ kind: 'error', message: friendlyError(err) });
+    }
   }
 
   function onExportJson(): void {
@@ -311,10 +373,25 @@ export function App(): JSX.Element {
             const ocr = needsOcr(status.result.doc);
             if (!ocr.likelyScanned) return null;
             return (
-              <p role="status" className="ocr-banner">
-                This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page).
-                Text extraction may be incomplete; OCR support is not enabled in this build.
-              </p>
+              <div role="status" className="ocr-banner">
+                <p>
+                  This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page).
+                  Text extraction may be incomplete.
+                </p>
+                {status.bytes && ocrState.kind !== 'running' && (
+                  <button type="button" onClick={() => void onAttemptOcr()}>
+                    Attempt OCR
+                  </button>
+                )}
+                {ocrState.kind === 'running' && (
+                  <p aria-live="polite" className="ocr-progress">
+                    Running OCR: {ocrState.stage} ({Math.round(ocrState.pct * 100)}%)
+                  </p>
+                )}
+                {ocrState.kind === 'error' && (
+                  <p role="alert">OCR failed: {ocrState.message}</p>
+                )}
+              </div>
             );
           })()}
           <div className="split">
@@ -343,6 +420,7 @@ export function App(): JSX.Element {
               <small>Page {selected.page}</small>
             </article>
           )}
+          <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
         </div>
       )}
 
@@ -367,6 +445,19 @@ export function App(): JSX.Element {
         leases={library}
         onCompare={(a, b) => {
           void onCompare(a, b);
+        }}
+      />
+
+      <TemplatesPanel
+        templates={templates}
+        onSave={(input) => {
+          void onSaveTemplate(input);
+        }}
+        onUpdate={(id, patch) => {
+          void onUpdateTemplate(id, patch);
+        }}
+        onDelete={(id) => {
+          void onDeleteTemplate(id);
         }}
       />
 

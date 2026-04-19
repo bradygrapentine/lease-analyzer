@@ -76,7 +76,7 @@ enforced by CI via `npm run test:coverage`.
 - [x] Compare picker + ComparePanel UI
 - [x] `needsOcr` heuristic + warning banner
 - [ ] Tesseract.js OCR engine (heavy dep; detection in place)
-- [ ] Per-clause "my standard" template library
+- [x] Per-clause "my standard" template library
 
 ## Phase 6 — Polish & Distribution
 - [x] 50-page perf guard in test run
