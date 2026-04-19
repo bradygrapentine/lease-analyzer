@@ -131,6 +131,17 @@ function validateRule(rule: unknown, path: string, errs: string[]): void {
   } else {
     validateMatcher(rule['match'], `${path}.match`, errs);
   }
+
+  // Phase 10b: optional jurisdictions tag array.
+  if ('jurisdictions' in rule && rule['jurisdictions'] !== undefined) {
+    const j = rule['jurisdictions'];
+    if (
+      !Array.isArray(j) ||
+      !j.every((c) => typeof c === 'string' && c.length > 0)
+    ) {
+      errs.push(`${path}.jurisdictions must be an array of non-empty strings`);
+    }
+  }
 }
 
 export function validatePackFile(json: unknown): ValidationResult {

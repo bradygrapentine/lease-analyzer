@@ -38,6 +38,12 @@ export interface Rule {
   explanation: string;
   citation: string | null;
   match: Matcher;
+  /**
+   * Optional ISO-like jurisdiction codes (e.g. `"US-CA"`, `"UK-ENG"`). If
+   * omitted or empty, the rule applies everywhere. Phase 10b addition —
+   * purely additive so existing packs deserialize unchanged.
+   */
+  jurisdictions?: string[];
 }
 
 export interface Span {
