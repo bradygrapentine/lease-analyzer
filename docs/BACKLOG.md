@@ -12,8 +12,9 @@ enough to land in one PR.
 | `[ ]` | Not started |
 | `!`   | Blocker (no blockers at time of writing) |
 
-Current automated footprint: **144 tests · 97% statements · 86% branches**,
-enforced by CI via `npm run test:coverage`.
+Current automated footprint: **196 tests · 97% statements · 86% branches**,
+enforced by CI via `npm run test:coverage`. Bundle-size budgets enforced by
+`npm run check:budget`.
 
 ---
 
@@ -91,7 +92,7 @@ enforced by CI via `npm run test:coverage`.
 - [x] SVG app icon + favicon link
 - [x] Side-by-side CSS layout (stacks below 960px)
 - [ ] Lighthouse a11y + PWA scores ≥ 95 in CI
-- [ ] Tauri desktop wrapper with local library folder
+- [~] Tauri desktop wrapper scaffold committed (`app/src-tauri/`); needs Rust toolchain locally to build. CI pending.
 - [ ] Onboarding tour (sample lease button exists; full walkthrough pending)
 
 ## Phase 7 — Observability & hygiene
@@ -101,9 +102,9 @@ Local-only, CSP-compatible.
 - [x] Error boundary with in-memory crash log (ring buffer, capacity 20)
 - [x] "Download diagnostics" JSON export (schema `leaseguard.diagnostics.v1`)
 - [x] Bundle-size budget in CI via `scripts/check-bundle-budget.mjs`
-- [ ] Rule-authoring guide (`docs/RULES.md`) with matcher cookbook
+- [x] Rule-authoring guide (`docs/RULES.md`) with matcher cookbook
 - [x] Storybook scaffold + stories for all UI components
-- [ ] Code-split pdf.worker via dynamic import (first paint budget)
+- [x] Code-split pdf.worker via dynamic import (`loadPdfjs` in `renderPdfPages.ts` uses `await import(...)`; app shell is 197 KiB, pdf.worker is a separate 1.3 MB chunk loaded on first PDF parse)
 
 ## Cross-cutting tech debt
 
