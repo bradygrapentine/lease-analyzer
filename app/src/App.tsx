@@ -8,6 +8,8 @@ import { ComparePanel } from './ui/ComparePanel';
 import { LibraryCompareForm } from './ui/LibraryCompareForm';
 import { TemplatesPanel } from './ui/TemplatesPanel';
 import { TemplateMatchesPanel } from './ui/TemplateMatchesPanel';
+import { LeaseFactsPanel } from './ui/LeaseFactsPanel';
+import { extractLeaseFacts } from './facts/extractFacts';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
@@ -346,6 +348,7 @@ export function App(): JSX.Element {
             </article>
           )}
           <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
+          <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
         </div>
       )}
 
