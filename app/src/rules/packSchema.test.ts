@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  PLAIN_ENGLISH_MAX,
   RULE_PACK_SCHEMA_VERSION,
+  SUGGESTED_EDIT_MAX,
   validatePackFile,
   type RulePackFile,
 } from './packSchema';
@@ -252,5 +254,87 @@ describe('validatePackFile', () => {
     const result = validatePackFile(pack);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.join(' ')).toMatch(/jurisdictions/);
+  });
+
+  // Phase 14 — plainEnglish + suggestedEdit.
+
+  it('accepts a rule with a plainEnglish summary within max length', () => {
+    const pack = validPack();
+    pack.rules[0]!.plainEnglish = 'In practice, this rule does X and Y.';
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('accepts a rule with plainEnglish omitted', () => {
+    const pack = validPack();
+    delete pack.rules[0]!.plainEnglish;
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('rejects plainEnglish when not a string', () => {
+    const pack = validPack();
+    (pack.rules[0] as unknown as Record<string, unknown>)['plainEnglish'] = 42;
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/plainEnglish/);
+  });
+
+  it('rejects empty-string plainEnglish', () => {
+    const pack = validPack();
+    pack.rules[0]!.plainEnglish = '';
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/plainEnglish/);
+  });
+
+  it('rejects plainEnglish longer than max', () => {
+    const pack = validPack();
+    pack.rules[0]!.plainEnglish = 'x'.repeat(PLAIN_ENGLISH_MAX + 1);
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/plainEnglish/);
+  });
+
+  it('accepts plainEnglish exactly at max length', () => {
+    const pack = validPack();
+    pack.rules[0]!.plainEnglish = 'x'.repeat(PLAIN_ENGLISH_MAX);
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('accepts a rule with a suggestedEdit string', () => {
+    const pack = validPack();
+    pack.rules[0]!.suggestedEdit =
+      'Tenant may terminate with 30 days written notice, subject to a fee equal to one month of rent.';
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('accepts a rule with suggestedEdit omitted', () => {
+    const pack = validPack();
+    delete pack.rules[0]!.suggestedEdit;
+    expect(validatePackFile(pack).ok).toBe(true);
+  });
+
+  it('rejects suggestedEdit when not a string', () => {
+    const pack = validPack();
+    (pack.rules[0] as unknown as Record<string, unknown>)['suggestedEdit'] =
+      true;
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/suggestedEdit/);
+  });
+
+  it('rejects empty-string suggestedEdit', () => {
+    const pack = validPack();
+    pack.rules[0]!.suggestedEdit = '';
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/suggestedEdit/);
+  });
+
+  it('rejects suggestedEdit longer than max', () => {
+    const pack = validPack();
+    pack.rules[0]!.suggestedEdit = 'x'.repeat(SUGGESTED_EDIT_MAX + 1);
+    const result = validatePackFile(pack);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.join(' ')).toMatch(/suggestedEdit/);
   });
 });
