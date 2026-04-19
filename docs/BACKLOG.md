@@ -66,14 +66,16 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 - [ ] Text-level diff within aligned sections (paragraph diff)
 - [x] OCR detection banner when avg chars/page below threshold
 - [ ] Actual OCR via tesseract.js (deferred — heavy dep; detection in place)
-- [ ] "My standard clauses" library + compare-against-standard mode
+- [x] Compare-against-standard mode (mark a lease as standard; auto-diff on new upload)
+- [ ] "My standard clauses" library (individual clause templates — different scope)
 
 ## Phase 6 — Polish & Distribution
 - [x] Performance budget test (50-page parse < 3s; measured ~210ms in CI-like env)
 - [ ] Lighthouse a11y + PWA scores ≥ 95 in CI (manual run pending)
 - [x] PWA manifest, service worker, offline shell (vite-plugin-pwa, autoUpdate)
 - [ ] Tauri desktop wrapper (optional) with local library folder
-- [ ] Onboarding tour + sample lease
+- [x] Sample lease bundled in `public/sample.pdf` with "Try sample" button
+- [ ] Onboarding tour (guided first-use walkthrough)
 - [x] Privacy disclosure explaining the no-network guarantee (header &lt;details&gt;)
 - [x] Printable HTML summary export
 

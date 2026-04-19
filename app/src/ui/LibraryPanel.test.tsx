@@ -17,13 +17,17 @@ function meta(over: Partial<LeaseMetadata>): LeaseMetadata {
   };
 }
 
+const noop = (): void => {};
+
 describe('LibraryPanel', () => {
   it('renders an entry per saved lease', () => {
     render(
       <LibraryPanel
         leases={[meta({ id: '1', name: 'One.pdf' }), meta({ id: '2', name: 'Two.pdf' })]}
-        onOpen={() => {}}
-        onDelete={() => {}}
+        standardId={null}
+        onOpen={noop}
+        onDelete={noop}
+        onSetStandard={noop}
       />,
     );
     expect(screen.getByText('One.pdf')).toBeInTheDocument();
@@ -31,7 +35,15 @@ describe('LibraryPanel', () => {
   });
 
   it('shows an empty-state message when list is empty', () => {
-    render(<LibraryPanel leases={[]} onOpen={() => {}} onDelete={() => {}} />);
+    render(
+      <LibraryPanel
+        leases={[]}
+        standardId={null}
+        onOpen={noop}
+        onDelete={noop}
+        onSetStandard={noop}
+      />,
+    );
     expect(screen.getByText(/no saved leases/i)).toBeInTheDocument();
   });
 
@@ -40,8 +52,10 @@ describe('LibraryPanel', () => {
     render(
       <LibraryPanel
         leases={[meta({ id: 'picked', name: 'Pick.pdf' })]}
+        standardId={null}
         onOpen={onOpen}
-        onDelete={() => {}}
+        onDelete={noop}
+        onSetStandard={noop}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /open pick\.pdf/i }));
@@ -53,11 +67,48 @@ describe('LibraryPanel', () => {
     render(
       <LibraryPanel
         leases={[meta({ id: 'gone', name: 'Gone.pdf' })]}
-        onOpen={() => {}}
+        standardId={null}
+        onOpen={noop}
         onDelete={onDelete}
+        onSetStandard={noop}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /delete gone\.pdf/i }));
     expect(onDelete).toHaveBeenCalledWith('gone');
+  });
+
+  it('shows a standard badge on the current standard and no "Set as standard" button for it', () => {
+    render(
+      <LibraryPanel
+        leases={[meta({ id: 's', name: 'Standard.pdf' }), meta({ id: 'o', name: 'Other.pdf' })]}
+        standardId="s"
+        onOpen={noop}
+        onDelete={noop}
+        onSetStandard={noop}
+      />,
+    );
+    const stdBtn = screen.getByRole('button', { name: /open standard\.pdf/i });
+    expect(stdBtn.textContent).toMatch(/★/);
+    expect(
+      screen.queryByRole('button', { name: /set standard\.pdf as standard/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /set other\.pdf as standard/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('fires onSetStandard with the lease id', async () => {
+    const onSet = vi.fn();
+    render(
+      <LibraryPanel
+        leases={[meta({ id: 'p', name: 'Promote.pdf' })]}
+        standardId={null}
+        onOpen={noop}
+        onDelete={noop}
+        onSetStandard={onSet}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /set promote\.pdf as standard/i }));
+    expect(onSet).toHaveBeenCalledWith('p');
   });
 });

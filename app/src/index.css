@@ -10,7 +10,56 @@ body {
 }
 
 main {
-  max-width: 48rem;
+  max-width: 72rem;
   margin: 0 auto;
   padding: 2rem 1rem;
+}
+
+.split {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .split {
+    grid-template-columns: minmax(18rem, 28rem) 1fr;
+  }
+}
+
+.split aside[aria-label='findings'] {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.pdf-viewer .pdf-page {
+  border: 1px solid #ccc;
+  margin-bottom: 0.5rem;
+}
+
+.pdf-viewer canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.ocr-banner {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #6a4a00;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

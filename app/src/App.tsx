@@ -12,10 +12,13 @@ import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
 import {
   clearAll,
+  clearStandardId,
   deleteLease,
   getLease,
+  getStandardId,
   listLeases,
   saveLease,
+  setStandardId,
   type LeaseMetadata,
 } from './storage/storage';
 import { exportFindingsJson } from './storage/exportReport';
@@ -33,28 +36,73 @@ export function App(): JSX.Element {
   const [library, setLibrary] = useState<LeaseMetadata[]>([]);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   const [comparison, setComparison] = useState<{ a: LeaseRecord; b: LeaseRecord } | null>(null);
+  const [standardId, setStandardIdState] = useState<string | null>(null);
 
   const refreshLibrary = useCallback(async () => {
-    setLibrary(await listLeases());
+    const [leases, std] = await Promise.all([listLeases(), getStandardId()]);
+    setLibrary(leases);
+    setStandardIdState(std ?? null);
   }, []);
 
   useEffect(() => {
     void refreshLibrary();
   }, [refreshLibrary]);
 
-  async function onFileChange(e: ChangeEvent<HTMLInputElement>): Promise<void> {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setStatus({ kind: 'loading', fileName: file.name });
+  async function handleBytes(bytes: Uint8Array, fileName: string): Promise<void> {
+    setStatus({ kind: 'loading', fileName });
     setSelected(null);
+    setComparison(null);
     try {
-      const bytes = await readFileBytes(file);
       // pdf.js transfers ownership of the ArrayBuffer during parse, so we
       // hand it a copy and keep the original for the viewer.
       const result = await analyzeFile(new Uint8Array(bytes));
-      await saveLease({ name: file.name, doc: result.doc, findings: result.findings });
+      const newId = await saveLease({
+        name: fileName,
+        doc: result.doc,
+        findings: result.findings,
+      });
       await refreshLibrary();
-      setStatus({ kind: 'analyzed', fileName: file.name, result, bytes });
+      setStatus({ kind: 'analyzed', fileName, result, bytes });
+
+      // Auto-compare against the standard, if one exists and it isn't this lease.
+      const std = await getStandardId();
+      if (std && std !== newId) {
+        const standard = await getLease(std);
+        if (standard) {
+          setComparison({
+            a: standard,
+            b: {
+              id: newId,
+              name: fileName,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              rulePackVersion: result.findings[0]?.rulePackVersion ?? 'unknown',
+              pageCount: result.doc.pages.length,
+              findingCount: result.findings.length,
+              doc: result.doc,
+              findings: result.findings,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      setStatus({ kind: 'error', message: friendlyError(err) });
+    }
+  }
+
+  async function onFileChange(e: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const bytes = await readFileBytes(file);
+    await handleBytes(bytes, file.name);
+  }
+
+  async function onTrySample(): Promise<void> {
+    try {
+      const res = await fetch('/sample.pdf');
+      if (!res.ok) throw new Error(`Could not load sample (${res.status})`);
+      const buf = await res.arrayBuffer();
+      await handleBytes(new Uint8Array(buf), 'Sample lease.pdf');
     } catch (err) {
       setStatus({ kind: 'error', message: friendlyError(err) });
     }
@@ -74,6 +122,12 @@ export function App(): JSX.Element {
 
   async function onDeleteLibrary(id: string): Promise<void> {
     await deleteLease(id);
+    if (standardId === id) await clearStandardId();
+    await refreshLibrary();
+  }
+
+  async function onSetStandard(id: string): Promise<void> {
+    await setStandardId(id);
     await refreshLibrary();
   }
 
@@ -148,6 +202,9 @@ export function App(): JSX.Element {
             onChange={onFileChange}
           />
         </label>
+        <button type="button" onClick={() => void onTrySample()}>
+          Try a sample lease
+        </button>
       </header>
 
       {status.kind === 'loading' && (
@@ -207,11 +264,15 @@ export function App(): JSX.Element {
 
       <LibraryPanel
         leases={library}
+        standardId={standardId}
         onOpen={(id) => {
           void onOpenLibrary(id);
         }}
         onDelete={(id) => {
           void onDeleteLibrary(id);
+        }}
+        onSetStandard={(id) => {
+          void onSetStandard(id);
         }}
       />
 

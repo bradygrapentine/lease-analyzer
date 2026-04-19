@@ -3,8 +3,10 @@ import type { LeaseDocument } from '../parser/types';
 import type { Finding } from '../rules/types';
 
 const DB_NAME = 'leaseguard';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'leases';
+const SETTINGS = 'settings';
+const STANDARD_KEY = 'standardLeaseId';
 
 export interface LeaseRecord {
   id: string;
@@ -34,6 +36,10 @@ interface LeaseGuardSchema extends DBSchema {
     value: LeaseRecord;
     indexes: { 'by-createdAt': number };
   };
+  [SETTINGS]: {
+    key: string;
+    value: string;
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<LeaseGuardSchema>> | null = null;
@@ -49,6 +55,9 @@ export async function openLeaseDb(): Promise<IDBPDatabase<LeaseGuardSchema>> {
         if (!db.objectStoreNames.contains(STORE)) {
           const store = db.createObjectStore(STORE, { keyPath: 'id' });
           store.createIndex('by-createdAt', 'createdAt');
+        }
+        if (!db.objectStoreNames.contains(SETTINGS)) {
+          db.createObjectStore(SETTINGS);
         }
       },
     });
@@ -111,6 +120,22 @@ export async function deleteLease(id: string): Promise<void> {
 export async function clearAll(): Promise<void> {
   const db = await openLeaseDb();
   await db.clear(STORE);
+  await db.clear(SETTINGS);
+}
+
+export async function setStandardId(id: string): Promise<void> {
+  const db = await openLeaseDb();
+  await db.put(SETTINGS, id, STANDARD_KEY);
+}
+
+export async function getStandardId(): Promise<string | undefined> {
+  const db = await openLeaseDb();
+  return db.get(SETTINGS, STANDARD_KEY);
+}
+
+export async function clearStandardId(): Promise<void> {
+  const db = await openLeaseDb();
+  await db.delete(SETTINGS, STANDARD_KEY);
 }
 
 function randomId(): string {
