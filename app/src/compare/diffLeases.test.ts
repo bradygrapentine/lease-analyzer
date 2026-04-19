@@ -93,4 +93,26 @@ describe('diffLeases', () => {
     const statuses = result.sections[0]!.paragraphs.map((p) => p.status).sort();
     expect(statuses).toEqual(['added', 'removed']);
   });
+
+  it('flags packVersionMismatch when the two sides were analyzed under different rule pack versions', () => {
+    const a = doc([section('Rent', [para('Rent is $1000.')])]);
+    const b = doc([section('Rent', [para('Rent is $1200.')])]);
+    const result = diffLeases(a, b, { rulePackVersionA: '1.0.0', rulePackVersionB: '1.1.0' });
+    expect(result.packVersionMismatch).toEqual({ a: '1.0.0', b: '1.1.0' });
+  });
+
+  it('omits packVersionMismatch when both sides share the same rule pack version', () => {
+    const a = doc([section('Rent', [para('Rent is $1000.')])]);
+    const b = doc([section('Rent', [para('Rent is $1200.')])]);
+    const result = diffLeases(a, b, { rulePackVersionA: '1.0.0', rulePackVersionB: '1.0.0' });
+    expect(result.packVersionMismatch).toBeUndefined();
+  });
+
+  it('omits packVersionMismatch when either version is not supplied', () => {
+    const a = doc([section('Rent', [para('Rent is $1000.')])]);
+    const b = doc([section('Rent', [para('Rent is $1200.')])]);
+    expect(diffLeases(a, b, { rulePackVersionA: '1.0.0' }).packVersionMismatch).toBeUndefined();
+    expect(diffLeases(a, b, { rulePackVersionB: '1.0.0' }).packVersionMismatch).toBeUndefined();
+    expect(diffLeases(a, b).packVersionMismatch).toBeUndefined();
+  });
 });
