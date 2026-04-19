@@ -106,6 +106,108 @@ Local-only, CSP-compatible.
 - [x] Storybook scaffold + stories for all UI components
 - [x] Code-split pdf.worker via dynamic import (`loadPdfjs` in `renderPdfPages.ts` uses `await import(...)`; app shell is 197 KiB, pdf.worker is a separate 1.3 MB chunk loaded on first PDF parse)
 
+## Phase 8 — Structured lease understanding
+
+- [ ] Table detection: cluster text items into row/column grids when
+      y-alignment + x-column consistency exceed a threshold; emit
+      `Table { rows: Cell[][], page, bbox }` model.
+- [ ] Rent-schedule extraction as the first use case; typed
+      `RentSchedulePeriod[]` (from/to dates, amount, escalator).
+- [ ] Definition detection: regex anchors for `"X" shall mean Y` /
+      `X means Y`; populate a doc-wide `definitions: Map<Term, Span>`.
+- [ ] Cross-reference resolver: find `\bSection \d+(\.\d+)*\b`,
+      `\bExhibit [A-Z]\b`, `\bSchedule \d+\b`; link to the section.
+- [ ] `LeaseFacts` object: base rent, deposit, term length, notice
+      periods, commencement/expiration dates.
+- [ ] Hover-glossary in the findings panel (tooltip on defined terms).
+- [ ] Golden tests: a commercial lease fixture exercising table +
+      definitions + references simultaneously.
+
+## Phase 9 — Negotiation support
+
+- [ ] `Annotation` IndexedDB store (keyed by leaseId+paragraphIndex);
+      add/edit/delete UI anchored to the findings panel.
+- [ ] Redline edit mode: contentEditable paragraph rendering with
+      tracked-changes diff, stored separately from the original.
+- [ ] Export redlined HTML with `<ins>`/`<del>` tags + print stylesheet.
+- [ ] Counter-offer library (extends Phase 5 clause templates):
+      per-rule "suggested replacement" field, editable per user.
+- [ ] "Apply suggestion" button on a finding → inserts template text
+      into the redline mode as a proposed change.
+- [ ] Version history: each save of a redlined doc creates a new
+      `LeaseRecord` version; navigate versions with a timeline.
+- [ ] Side-letter generator: given a set of proposed edits, produce a
+      numbered, printable letter with section citations.
+
+## Phase 10 — Rule ecosystem
+
+- [ ] JSON Schema for rule packs (`leaseguard.rulepack.v1`). Validate
+      on import, reject malformed, show a diff of what changed from
+      the currently loaded pack.
+- [ ] Import/export UI: drag a `.lgpack.json` file; list installed
+      packs; disable/enable per pack.
+- [ ] Custom-rule authoring UI: form-driven matcher builder with live
+      "does this fire on the current lease?" preview.
+- [ ] `Rule.jurisdictions?: string[]` field (ISO-like codes, e.g.
+      `"US-CA"`). UI jurisdiction picker; runtime filter.
+- [ ] Per-user severity overrides persisted in settings.
+- [ ] Ed25519 signature support via WebCrypto; "verified" vs
+      "community" badge in the pack list.
+- [ ] Bundle a small offline marketplace of curated packs as static
+      JSON under `/public/packs/`.
+
+## Phase 11 — Workflow & integrations
+
+- [ ] `.ics` export from `LeaseFacts` dates (Phase 8 dep). Local file
+      download, no calendar-API integration.
+- [ ] "Copy summary" button → HTML + plain-text to the clipboard via
+      `navigator.clipboard`.
+- [ ] Lawyer handoff ZIP: original PDF + HTML report + JSON + readme
+      bundled with JSZip (or native `CompressionStream` if sufficient).
+- [ ] Portfolio view: grid of leases across the library with counts
+      per rule id; filterable.
+- [ ] Bulk import: drop a zip/folder of PDFs; progress bar; per-file
+      status; deduplicate by content hash.
+
+## Phase 12 — Trust & verification
+
+- [ ] `reproducibility.test.ts`: run `analyze` N times over the same
+      fixture, assert byte-identical output.
+- [ ] Signing keypair: generate + store via WebCrypto, unlocked with a
+      passphrase (reuse the archive-export passphrase pattern).
+- [ ] Signed JSON export: add `signature` field; include `inputHash`
+      (SHA-256 of the PDF), `rulePackVersion`, `findings`.
+- [ ] Append-only audit log in IndexedDB; hash-chained entries
+      (`prevHash`); "Download audit log" button.
+- [ ] Replay bundle export: ZIP with PDF + packs + expected JSON +
+      replay script.
+- [ ] Pack-version pin warning on `diffLeases` when sides disagree.
+
+## Phase 13 — Performance & scale
+
+- [ ] Spawn a dedicated Web Worker for `parseLease` + `analyze`; wire
+      with `postMessage` + transferable `Uint8Array`.
+- [ ] Streaming render: PdfViewer renders page N as soon as
+      `getPage(N)` resolves, rather than waiting on the whole doc.
+- [ ] Virtualized `<ul>` in FindingsPanel using IntersectionObserver.
+- [ ] Secondary IndexedDB index on `LeaseRecord.findingCount` +
+      `rulePackVersion` so `listLeases` can filter cheaply.
+- [ ] Compile + cache regex instances at rule-pack import time.
+- [ ] Perf benchmark grows to 200-page documents; budget scales by
+      pages (e.g., ≤ 8s on 200 pages).
+
+## Phase 14 — Content depth (optional)
+
+- [ ] Per-rule `plainEnglish?: string` field populated at build time
+      by the maintainer; UI shows a "What this means" expandable.
+- [ ] Per-rule `suggestedEdit?: string` consumed by the Phase 9
+      counter-offer flow.
+- [ ] Static legal-term glossary at `public/glossary/v1.json`;
+      consumed by the definitions tooltip.
+- [ ] i18n scaffold: lift UI strings to a typed `messages` object;
+      locale picker; pilot with en + one other locale.
+- [ ] OCR language picker once a second `*.traineddata.gz` lands.
+
 ## Cross-cutting tech debt
 
 - [ ] Extract a `usePipeline` hook — App's `handleBytes` is the tallest function in the codebase
@@ -115,5 +217,12 @@ Local-only, CSP-compatible.
 
 ## Explicitly out of scope
 
-Cloud sync, accounts, team collaboration, LLM-based summarization,
-jurisdiction-specific legal reasoning, telemetry / analytics of any kind.
+- Cloud sync, accounts, team collaboration (local-first contract).
+  Encrypted-archive share (Phase 4) is the approved escape hatch.
+- Telemetry / analytics of any kind, including anonymous usage counts.
+- Runtime LLM inference over network. Build-time generation of static
+  content by the maintainer is allowed (Phase 14); live API calls are
+  not.
+- Jurisdiction-specific legal **advice**. Jurisdiction-tagged rules
+  (Phase 10) surface clauses without drawing conclusions.
+- Anything that requires a backend service to work.
