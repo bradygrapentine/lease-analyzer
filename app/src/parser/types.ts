@@ -32,6 +32,14 @@ export interface Section {
   heading: string;
   number: string | null;
   paragraphs: Paragraph[];
+  /**
+   * Indices into `LeaseDocument.paragraphs` for each entry in `paragraphs`,
+   * in the same order. Added so consumers (e.g. `runSectionAnchored`) can
+   * locate a section paragraph in the master array in O(1) instead of via
+   * `indexOf`. Kept alongside the `paragraphs` refs to avoid churning UI
+   * call sites that still use the refs.
+   */
+  paragraphIndexes: number[];
   startPage: number;
 }
 

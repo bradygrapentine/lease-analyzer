@@ -28,7 +28,9 @@ export function detectSections(paragraphs: Paragraph[]): Section[] {
   const sections: Section[] = [];
   let current: Section | null = null;
 
-  for (const para of paragraphs) {
+  for (let i = 0; i < paragraphs.length; i++) {
+    const para = paragraphs[i];
+    if (!para) continue;
     const heading = matchHeading(para.text);
     if (heading) {
       if (current) sections.push(current);
@@ -36,6 +38,7 @@ export function detectSections(paragraphs: Paragraph[]): Section[] {
         heading: heading.heading,
         number: heading.number,
         paragraphs: [],
+        paragraphIndexes: [],
         startPage: para.page,
       };
       continue;
@@ -46,10 +49,12 @@ export function detectSections(paragraphs: Paragraph[]): Section[] {
         heading: 'Preamble',
         number: null,
         paragraphs: [],
+        paragraphIndexes: [],
         startPage: para.page,
       };
     }
     current.paragraphs.push(para);
+    current.paragraphIndexes.push(i);
   }
 
   if (current) sections.push(current);

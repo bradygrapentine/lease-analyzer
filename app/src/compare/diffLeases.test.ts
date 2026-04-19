@@ -7,7 +7,13 @@ function para(text: string, page = 1): Paragraph {
 }
 
 function section(heading: string, paragraphs: Paragraph[], number: string | null = null): Section {
-  return { heading, number, paragraphs, startPage: paragraphs[0]?.page ?? 1 };
+  return {
+    heading,
+    number,
+    paragraphs,
+    paragraphIndexes: paragraphs.map((_, i) => i),
+    startPage: paragraphs[0]?.page ?? 1,
+  };
 }
 
 function doc(sections: Section[]): LeaseDocument {

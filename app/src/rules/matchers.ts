@@ -123,18 +123,26 @@ function runSectionAnchored(
   compiled?: CompiledMatcherCache,
 ): RuleMatch[] {
   const heading = compiled?.headingRegex ?? new RegExp(matcher.headingPattern, 'i');
-  const allowed = new Set<Paragraph>();
+  // Collect the master-paragraph indexes for every section whose heading
+  // matches. Sections now track these directly (see parser/types.ts), so
+  // we no longer need `doc.paragraphs.indexOf(para)` — each leaf hit's
+  // filtered index maps straight into an originalIndex via array lookup.
+  const originalIndexes: number[] = [];
+  const filtered: Paragraph[] = [];
   for (const section of doc.sections) {
-    if (heading.test(section.heading)) {
-      for (const para of section.paragraphs) allowed.add(para);
+    if (!heading.test(section.heading)) continue;
+    for (let i = 0; i < section.paragraphs.length; i++) {
+      const para = section.paragraphs[i];
+      const idx = section.paragraphIndexes[i];
+      if (!para || idx === undefined) continue;
+      filtered.push(para);
+      originalIndexes.push(idx);
     }
   }
-  const filtered = doc.paragraphs.filter((p) => allowed.has(p));
   if (filtered.length === 0) return [];
   const leafHits = runLeaf(matcher.child, filtered, compiled?.child);
   return leafHits.map((hit) => {
-    const para = filtered[hit.paragraphIndex];
-    const originalIndex = para ? doc.paragraphs.indexOf(para) : hit.paragraphIndex;
+    const originalIndex = originalIndexes[hit.paragraphIndex] ?? hit.paragraphIndex;
     return { ...hit, paragraphIndex: originalIndex };
   });
 }
