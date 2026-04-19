@@ -26,6 +26,25 @@ interface FindingsPanelProps {
    * in a finding's snippet are wrapped with a hover tooltip.
    */
   definitions?: DefinitionEntry[];
+  /**
+   * Optional per-rule suggested replacement text (either a user-saved
+   * counter-offer or `rule.suggestedEdit`). When a finding's ruleId
+   * appears in this map AND `onApplySuggestion` is provided, an "Apply
+   * suggestion" button is rendered on the finding. Phase 9 addition —
+   * purely additive.
+   */
+  suggestedTextByRuleId?: Record<string, string>;
+  /**
+   * Optional "Apply suggestion" callback. When present (and we have
+   * suggested text for the finding), renders a button on each matching
+   * finding that invokes this with the finding, its paragraphIndex, and
+   * the suggested text. Wiring into redline storage is App's job.
+   */
+  onApplySuggestion?: (
+    finding: Finding,
+    paragraphIndex: number,
+    suggestedText: string,
+  ) => void;
 }
 
 export function FindingsPanel({
@@ -33,6 +52,8 @@ export function FindingsPanel({
   onSelect,
   plainEnglishByRuleId,
   definitions,
+  suggestedTextByRuleId,
+  onApplySuggestion,
 }: FindingsPanelProps): JSX.Element {
   const [query, setQuery] = useState('');
   const [hiddenSeverities, setHiddenSeverities] = useState<Set<Severity>>(new Set());
@@ -168,6 +189,22 @@ export function FindingsPanel({
                             {isOpen ? <p>{plain}</p> : null}
                           </div>
                         ) : null}
+                        {(() => {
+                          if (!onApplySuggestion) return null;
+                          const suggested = suggestedTextByRuleId?.[finding.ruleId];
+                          if (!suggested) return null;
+                          return (
+                            <button
+                              type="button"
+                              aria-label={`apply suggestion for ${finding.title}`}
+                              onClick={() =>
+                                onApplySuggestion(finding, finding.paragraphIndex, suggested)
+                              }
+                            >
+                              Apply suggestion
+                            </button>
+                          );
+                        })()}
                       </li>
                     );
                   })}
