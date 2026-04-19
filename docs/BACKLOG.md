@@ -120,11 +120,14 @@ Local-only, CSP-compatible.
 
 ## Phase 8 — Structured lease understanding
 
-- [ ] Table detection: cluster text items into row/column grids when
+- [x] Table detection: cluster text items into row/column grids when
       y-alignment + x-column consistency exceed a threshold; emit
-      `Table { rows: Cell[][], page, bbox }` model.
-- [ ] Rent-schedule extraction as the first use case; typed
-      `RentSchedulePeriod[]` (from/to dates, amount, escalator).
+      `Table { rows: Cell[][], page, bbox }` model. Shipped in phase8b
+      at `src/parser/tables.ts`.
+- [x] Rent-schedule extraction as the first use case; typed
+      `RentSchedulePeriod[]` (from/to dates, amount, escalator). Shipped
+      in phase8b at `src/facts/rentSchedule.ts`; consumed by
+      `extractLeaseFacts`.
 - [x] Definition detection: regex anchors for `"X" shall mean Y` /
       `X means Y`; populated as `DefinitionEntry[]`
       (term / definition / page / paragraphIndex) by
@@ -138,7 +141,10 @@ Local-only, CSP-compatible.
       `extractLeaseFacts(doc: LeaseDocument): LeaseFacts`. Rendered by
       the new `LeaseFactsPanel` (populated + empty stories). App wire-up
       landed in `wire-panels`.
-- [ ] Hover-glossary in the findings panel (tooltip on defined terms).
+- [x] Hover-glossary in the findings panel (tooltip on defined terms).
+      Landed in wave 2 (`src/ui/highlightDefinedTerms.ts`); FindingsPanel
+      wraps defined terms in its snippet with a tooltip when
+      `definitions` prop is supplied.
 - [ ] Golden tests: a commercial lease fixture exercising table +
       definitions + references simultaneously.
 
@@ -164,11 +170,12 @@ Local-only, CSP-compatible.
 
 ## Phase 10 — Rule ecosystem
 
-- [~] JSON Schema for rule packs (`leaseguard.rulepack.v1`). Validate
+- [x] JSON Schema for rule packs (`leaseguard.rulepack.v1`). Validate
       on import, reject malformed. Implemented as a hand-rolled
       validator in `src/rules/packSchema.ts` (no ajv dep); covers
       matcher-type / severity / category enums + regex compileability.
-      Diff-vs-currently-loaded UI still open.
+      Diff-vs-currently-loaded UI shipped as `PackDiffPanel` in
+      wave2-jurisdictionUi; App wire-up lands in wave2-wireup.
 - [x] Import/export UI: list installed packs; disable/enable per
       pack; accept `.lgpack.json`. Implemented in
       `src/ui/PackManagerPanel.tsx`, backed by
@@ -178,9 +185,18 @@ Local-only, CSP-compatible.
       analysis paths. Drag-and-drop and export-to-disk still open.
 - [ ] Custom-rule authoring UI: form-driven matcher builder with live
       "does this fire on the current lease?" preview.
-- [ ] `Rule.jurisdictions?: string[]` field (ISO-like codes, e.g.
-      `"US-CA"`). UI jurisdiction picker; runtime filter.
-- [ ] Per-user severity overrides persisted in settings.
+- [x] `Rule.jurisdictions?: string[]` field (ISO-like codes, e.g.
+      `"US-CA"`). UI jurisdiction picker; runtime filter. Shipped in
+      phase10b — type lives in `src/rules/types.ts`, filter in
+      `src/rules/jurisdictions.ts`, picker in
+      `src/ui/JurisdictionPickerPanel.tsx`. App wire-up lands in
+      wave2-wireup.
+- [x] Per-user severity overrides persisted in settings. Shipped in
+      phase10b — persistence via
+      `packStorage.getSeverityOverrides()` /
+      `setSeverityOverride()`, override application in
+      `src/rules/severityOverrides.ts`, UI in
+      `src/ui/SeverityOverridesPanel.tsx`.
 - [ ] Ed25519 signature support via WebCrypto; "verified" vs
       "community" badge in the pack list.
 - [~] Bundle a small offline marketplace of curated packs as static
@@ -227,11 +243,17 @@ Local-only, CSP-compatible.
       Schema pinned at `leaseguard.findings.v1`; `signature` is an
       optional extension. App wire-up (SigningKeyPanel + gated
       "Export findings (signed JSON)" button) landed in `wire-panels`.
-- [ ] Append-only audit log in IndexedDB; hash-chained entries
-      (`prevHash`); "Download audit log" button.
-- [ ] Replay bundle export: ZIP with PDF + packs + expected JSON +
-      replay script.
-- [ ] Pack-version pin warning on `diffLeases` when sides disagree.
+- [x] Append-only audit log in IndexedDB; hash-chained entries
+      (`prevHash`); "Download audit log" button. Module landed in
+      wave2-audit (`src/audit/auditLog.ts`,
+      `src/audit/auditExport.ts`); panel (`AuditLogPanel`) + App
+      wire-up complete in wave2-wireup.
+- [x] Replay bundle export: ZIP with PDF + packs + expected JSON +
+      replay script. Landed in wave2-replay
+      (`src/workflow/replayBundle.ts`).
+- [~] Pack-version pin warning on `diffLeases` when sides disagree.
+      Detection shipped wave2-replay; UI rendering of mismatch still
+      open.
 
 ## Phase 13 — Performance & scale
 
@@ -253,10 +275,15 @@ Local-only, CSP-compatible.
 
 ## Phase 14 — Content depth (optional)
 
-- [ ] Per-rule `plainEnglish?: string` field populated at build time
+- [x] Per-rule `plainEnglish?: string` field populated at build time
       by the maintainer; UI shows a "What this means" expandable.
-- [ ] Per-rule `suggestedEdit?: string` consumed by the Phase 9
-      counter-offer flow.
+      Landed wave 2 — field in `src/rules/types.ts`,
+      FindingsPanel renders the disclosure when
+      `plainEnglishByRuleId` is provided.
+- [x] Per-rule `suggestedEdit?: string` consumed by the Phase 9
+      counter-offer flow. Landed wave 2 — field in
+      `src/rules/types.ts`; CounterOfferPanel pre-fills its textarea
+      with `rule.suggestedEdit` (wave2-wireup).
 - [ ] Static legal-term glossary at `public/glossary/v1.json`;
       consumed by the definitions tooltip.
 - [ ] i18n scaffold: lift UI strings to a typed `messages` object;

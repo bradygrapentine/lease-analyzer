@@ -182,6 +182,48 @@ describe('usePipeline', () => {
     expect(result.current.status.kind).toBe('idle');
   });
 
+  it('reanalyze() is a no-op when not in analyzed state', () => {
+    const { result } = renderHook(() => usePipeline());
+    act(() => {
+      result.current.reanalyze();
+    });
+    expect(result.current.status.kind).toBe('idle');
+  });
+
+  it('reanalyze() re-runs rules over the current doc with current rules', async () => {
+    // Start with an empty rule set — no findings after upload.
+    const { result, rerender } = renderHook(
+      (props: { rules: import('../rules/types').Rule[] }) =>
+        usePipeline({ rules: props.rules }),
+      { initialProps: { rules: [] as import('../rules/types').Rule[] } },
+    );
+    const bytes = await makeBytes();
+    await act(async () => {
+      await result.current.upload(bytes, 'reanalyze.pdf');
+    });
+    if (result.current.status.kind !== 'analyzed') throw new Error('expected analyzed');
+    expect(result.current.status.result.findings.length).toBe(0);
+
+    // Swap in a rule that matches the fixture — reanalyze should pick it up
+    // without re-parsing the PDF.
+    const rule: import('../rules/types').Rule = {
+      id: 'test-renew',
+      severity: 'low',
+      category: 'general',
+      title: 'Renewal mention',
+      explanation: 'The lease mentions renewal.',
+      citation: null,
+      match: { type: 'regex', pattern: 'auto-renew', flags: 'i' },
+    };
+    rerender({ rules: [rule] });
+    act(() => {
+      result.current.reanalyze();
+    });
+    if (result.current.status.kind !== 'analyzed') throw new Error('expected analyzed');
+    expect(result.current.status.result.findings.length).toBeGreaterThan(0);
+    expect(result.current.status.result.findings[0]?.ruleId).toBe('test-renew');
+  });
+
   it('setError() pushes an error status', () => {
     const { result } = renderHook(() => usePipeline());
     act(() => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CounterOffer } from '../negotiation/counterOffers';
 import type { Finding } from '../rules/types';
 
@@ -8,6 +8,13 @@ interface CounterOfferPanelProps {
   onSave: (ruleId: string, name: string, text: string) => void;
   onDelete: (id: string) => void;
   onApply?: (counter: CounterOffer) => void;
+  /**
+   * Optional `rule.suggestedEdit` for the currently-selected finding's rule.
+   * When the user hasn't started typing AND no counter-offer is saved for
+   * this rule yet, the textarea pre-fills with this as a starting point.
+   * Pre-fill is NOT auto-saved.
+   */
+  suggestedEdit?: string;
 }
 
 export function CounterOfferPanel({
@@ -16,9 +23,24 @@ export function CounterOfferPanel({
   onSave,
   onDelete,
   onApply,
+  suggestedEdit,
 }: CounterOfferPanelProps): JSX.Element {
   const [name, setName] = useState('');
   const [text, setText] = useState('');
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+
+  // Seed the textarea with `suggestedEdit` once per (rule, no-saved-counter)
+  // transition. We only auto-fill when the current text is empty — any user
+  // typing wins, and we never clobber their draft on re-render.
+  useEffect(() => {
+    if (!finding || !suggestedEdit) return;
+    const hasSaved = counters.some((c) => c.ruleId === finding.ruleId);
+    if (hasSaved) return;
+    if (prefilledFor === finding.ruleId) return;
+    if (text !== '') return;
+    setText(suggestedEdit);
+    setPrefilledFor(finding.ruleId);
+  }, [finding, suggestedEdit, counters, text, prefilledFor]);
 
   if (!finding) {
     return (

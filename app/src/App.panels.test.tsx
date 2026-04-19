@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('./ocr/runOcr', () => ({
@@ -19,6 +19,8 @@ import {
   listInstalledPacks,
   openPacksDb,
   getPackEnabled,
+  getSelectedJurisdictions,
+  getSeverityOverrides,
 } from './rules/packStorage';
 import {
   _resetCountersDbForTests,
@@ -31,6 +33,15 @@ import {
   openAnnotationsDb,
 } from './annotations/annotations';
 import { _resetSigningDbForTests } from './security/signingKeys';
+import {
+  _resetAuditDbForTests,
+  AUDIT_DB_NAME,
+  openAuditDb,
+} from './audit/auditLog';
+import {
+  _resetBulkDedupDbForTests,
+  BULK_DEDUP_DB_NAME,
+} from './workflow/bulkImport';
 
 async function wipeDb(name: string): Promise<void> {
   await new Promise<void>((resolve) => {
@@ -54,11 +65,14 @@ beforeEach(async () => {
   await closeIfOpen(() => openPacksDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openAnnotationsDb() as Promise<{ close(): void }>);
   await closeIfOpen(() => openCountersDb() as Promise<{ close(): void }>);
+  await closeIfOpen(() => openAuditDb() as Promise<{ close(): void }>);
   _resetDbForTests();
   _resetPacksDbForTests();
   _resetAnnotationsDbForTests();
   _resetCountersDbForTests();
   _resetSigningDbForTests();
+  _resetAuditDbForTests();
+  _resetBulkDedupDbForTests();
   // Give the close() microtask a tick to land.
   await new Promise<void>((r) => setTimeout(r, 0));
   await wipeDb('leaseguard');
@@ -66,6 +80,8 @@ beforeEach(async () => {
   await wipeDb('leaseguard-annotations');
   await wipeDb('leaseguard-counters');
   await wipeDb('leaseguard-signing');
+  await wipeDb(AUDIT_DB_NAME);
+  await wipeDb(BULK_DEDUP_DB_NAME);
 });
 
 async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {
@@ -84,7 +100,14 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   const file = await makeLeaseFile(name);
   const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
   await userEvent.upload(input, file);
-  await waitFor(() => expect(screen.getByText(/auto-renewal/i)).toBeInTheDocument());
+  // Wait until the findings <aside> mounts — rule titles also surface in the
+  // SeverityOverridesPanel even before analysis finishes, so we scope to the
+  // findings region here rather than looking for a rule title anywhere.
+  await waitFor(() =>
+    expect(
+      screen.getByRole('complementary', { name: /findings/i }),
+    ).toBeInTheDocument(),
+  );
 }
 
 describe('App panel wire-ups', () => {
@@ -175,7 +198,12 @@ describe('App panel wire-ups', () => {
       expect((await listInstalledPacks()).length).toBe(1);
     });
     await waitFor(async () => expect(await getPackEnabled('custom-pack')).toBe(true));
-    await userEvent.click(screen.getByRole('button', { name: /delete pack custom-pack/i }));
+    // Give refreshPacks() time to propagate to the UI — without this, on
+    // full-suite runs the next event loop tick can beat the render.
+    const deleteBtn = await screen.findByRole('button', {
+      name: /delete pack custom-pack/i,
+    });
+    await userEvent.click(deleteBtn);
     await waitFor(async () => {
       expect((await listInstalledPacks()).length).toBe(0);
     });
@@ -201,8 +229,11 @@ describe('App panel wire-ups', () => {
   it('AnnotationsPanel saves a note keyed by lease + paragraph', async () => {
     render(<App />);
     await uploadLease('Notes.pdf');
+    // Pick the finding button (the first match — the "what this means"
+    // disclosure button also matches the rule title via aria-label).
+    const findings = screen.getByRole('complementary', { name: /findings/i });
     await userEvent.click(
-      screen.getByRole('button', { name: /waiver of jury trial/i }),
+      within(findings).getAllByRole('button', { name: /waiver of jury trial/i })[0]!,
     );
     const note = screen.getByLabelText(/new note/i);
     await userEvent.type(note, 'Push back on this.');
@@ -218,8 +249,9 @@ describe('App panel wire-ups', () => {
   it('CounterOfferPanel saves a counter offer keyed by rule', async () => {
     render(<App />);
     await uploadLease('Counters.pdf');
+    const findings = screen.getByRole('complementary', { name: /findings/i });
     await userEvent.click(
-      screen.getByRole('button', { name: /waiver of jury trial/i }),
+      within(findings).getAllByRole('button', { name: /waiver of jury trial/i })[0]!,
     );
     await userEvent.type(
       screen.getByLabelText(/new counter-offer name/i),
@@ -236,6 +268,133 @@ describe('App panel wire-ups', () => {
       const offers = await listCounterOffers();
       expect(offers.length).toBe(1);
     });
+  });
+
+  it('JurisdictionPickerPanel toggles and re-runs analysis', async () => {
+    render(<App />);
+    await uploadLease('JurisLease.pdf');
+    const cb = await screen.findByRole('checkbox', { name: /jurisdiction US-CA/i });
+    await userEvent.click(cb);
+    // Selection persists via packStorage.
+    await waitFor(async () => {
+      const j = await getSelectedJurisdictions();
+      expect(j).toContain('US-CA');
+    });
+    // Clear the selection.
+    await userEvent.click(cb);
+    await waitFor(async () => {
+      const j = await getSelectedJurisdictions();
+      expect(j).not.toContain('US-CA');
+    });
+  });
+
+  it('SeverityOverridesPanel persists overrides and triggers reanalyze', async () => {
+    render(<App />);
+    await uploadLease('OverrideLease.pdf');
+    const select = await screen.findByRole('combobox', {
+      name: /override severity for auto-renewal/i,
+    });
+    await userEvent.selectOptions(select, 'error');
+    await waitFor(async () => {
+      const ov = await getSeverityOverrides();
+      expect(ov['auto-renewal']).toBe('high');
+    });
+    // Clear via the per-row button.
+    const clear = screen.getByRole('button', { name: /clear override for auto-renewal/i });
+    await userEvent.click(clear);
+    await waitFor(async () => {
+      const ov = await getSeverityOverrides();
+      expect(ov['auto-renewal']).toBeUndefined();
+    });
+  });
+
+  it('PackDiffPanel renders a diff from an uploaded pack file', async () => {
+    render(<App />);
+    const pack = {
+      schema: 'leaseguard.rulepack.v1',
+      id: 'diff-pack',
+      name: 'Diff',
+      version: '1.0.0',
+      description: 'diff test',
+      rules: [
+        {
+          id: 'brand-new',
+          severity: 'low',
+          category: 'general',
+          title: 'Brand new rule',
+          explanation: 'x',
+          citation: null,
+          match: { type: 'regex', pattern: 'mango', flags: 'i' },
+        },
+      ],
+    };
+    const input = screen.getByLabelText(/pack file to diff/i) as HTMLInputElement;
+    await userEvent.upload(
+      input,
+      new File([JSON.stringify(pack)], 'diff.lgpack.json', { type: 'application/json' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: /rule pack diff/i })).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/Brand new rule/i)).toBeInTheDocument();
+  });
+
+  it('AuditLogPanel populates entries after an analyze and verifies the chain', async () => {
+    render(<App />);
+    await uploadLease('Auditing.pdf');
+    // At least the analyze start/complete entries should appear.
+    await waitFor(() => {
+      expect(
+        screen.getByRole('table', { name: /audit entries/i }),
+      ).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByRole('button', { name: /verify chain/i }));
+    await waitFor(() =>
+      expect(screen.getByTestId('audit-verification')).toHaveTextContent(
+        /chain intact/i,
+      ),
+    );
+  });
+
+  it('BulkImportPanel imports multiple PDFs into the library', async () => {
+    render(<App />);
+    // Two distinct lease fixtures — bulk-import dedups by content hash.
+    const bytesA = await makePdf([
+      {
+        blocks: [{ text: 'Lease A shall auto-renew annually.', x: 72, y: 72 }],
+      },
+    ]);
+    const bytesB = await makePdf([
+      {
+        blocks: [
+          { text: 'Lease B is a totally different document.', x: 72, y: 72 },
+        ],
+      },
+    ]);
+    const fileA = new File([bytesA as BlobPart], 'bulk-a.pdf', {
+      type: 'application/pdf',
+    });
+    const fileB = new File([bytesB as BlobPart], 'bulk-b.pdf', {
+      type: 'application/pdf',
+    });
+    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    await userEvent.upload(input, [fileA, fileB]);
+    await waitFor(async () => {
+      expect((await listLeases()).length).toBe(2);
+    });
+  });
+
+  it('CounterOfferPanel pre-fills the textarea from rule.suggestedEdit', async () => {
+    render(<App />);
+    await uploadLease('Prefill.pdf');
+    const findings = screen.getByRole('complementary', { name: /findings/i });
+    await userEvent.click(
+      within(findings).getAllByRole('button', { name: /waiver of jury trial/i })[0]!,
+    );
+    // The built-in rule pack ships a suggestedEdit for jury-waiver; ensure
+    // it lands in the textarea without the user typing.
+    const textarea = screen.getByLabelText(/new counter-offer text/i) as HTMLTextAreaElement;
+    await waitFor(() => expect(textarea.value.length).toBeGreaterThan(0));
   });
 
   it('Portfolio view toggle shows PortfolioPanel and returns via lease click', async () => {

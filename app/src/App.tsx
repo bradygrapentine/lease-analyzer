@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { usePipeline } from './App/usePipeline';
 import { FindingsPanel } from './ui/FindingsPanel';
@@ -14,6 +14,7 @@ import { WorkflowPanel } from './ui/WorkflowPanel';
 import { buildIcs, type IcsDateInput } from './workflow/buildIcs';
 import { buildSummary, copyToClipboard } from './workflow/copySummary';
 import { buildHandoffZip } from './workflow/buildHandoffZip';
+import { bulkImport, type BulkResult, type BulkSummary } from './workflow/bulkImport';
 import type { LeaseFacts } from './facts/types';
 import { PackManagerPanel } from './ui/PackManagerPanel';
 import {
@@ -22,10 +23,36 @@ import {
   saveInstalledPack,
   setPackEnabled,
   getPackEnabled,
+  getSelectedJurisdictions,
+  setSelectedJurisdictions,
+  getSeverityOverrides,
+  setSeverityOverride,
 } from './rules/packStorage';
 import { validatePackFile, type RulePackFile } from './rules/packSchema';
 import { resolveActiveRules } from './rules/activePack';
 import { RULE_PACK_V1 } from './rules/packV1';
+import { JURISDICTION_OPTIONS, filterByJurisdiction } from './rules/jurisdictions';
+import { applySeverityOverrides } from './rules/severityOverrides';
+import { diffPack, type PackDiff } from './rules/packDiff';
+import { analyzeFile } from './ui/analyzeFile';
+import { JurisdictionPickerPanel } from './ui/JurisdictionPickerPanel';
+import { SeverityOverridesPanel } from './ui/SeverityOverridesPanel';
+import { PackDiffPanel } from './ui/PackDiffPanel';
+import { AuditLogPanel } from './ui/AuditLogPanel';
+import { BulkImportPanel } from './ui/BulkImportPanel';
+import {
+  overrideToSeverity,
+  overridesToPanel,
+  severityToOverride as severityToOverrideSeverity,
+} from './ui/severityMap';
+import {
+  appendAuditEntry,
+  listAuditEntries,
+  verifyAuditChain,
+  type AuditEntry,
+  type ChainVerification,
+} from './audit/auditLog';
+import { buildAuditLogJson, downloadAuditLogBlob } from './audit/auditExport';
 import { SigningKeyPanel } from './ui/SigningKeyPanel';
 import { createSigningKey, exportPublicKey } from './security/signingKeys';
 import { signExport } from './storage/exportReport';
@@ -67,6 +94,7 @@ import {
   listLeases,
   renameLease,
   replaceAllLeases,
+  saveLease,
   setStandardId,
   type LeaseMetadata,
 } from './storage/storage';
@@ -86,6 +114,13 @@ export function App(): JSX.Element {
   const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
   const [installedPacks, setInstalledPacks] = useState<RulePackFile[]>([]);
   const [enabledPacks, setEnabledPacks] = useState<Set<string>>(new Set());
+  const [selectedJurisdictions, setSelectedJurisdictionsState] = useState<string[]>([]);
+  const [severityOverrides, setSeverityOverridesState] = useState<
+    Record<string, import('./rules/types').Severity>
+  >({});
+  const [packDiff, setPackDiff] = useState<PackDiff | null>(null);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [auditVerification, setAuditVerification] = useState<ChainVerification | null>(null);
   const [signingPublicKey, setSigningPublicKey] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [counterOffers, setCounterOffers] = useState<CounterOffer[]>([]);
@@ -123,6 +158,19 @@ export function App(): JSX.Element {
     setEnabledPacks(enabled);
   }, []);
 
+  const refreshRulePackSettings = useCallback(async () => {
+    const [j, ov] = await Promise.all([
+      getSelectedJurisdictions(),
+      getSeverityOverrides(),
+    ]);
+    setSelectedJurisdictionsState(j);
+    setSeverityOverridesState(ov);
+  }, []);
+
+  const refreshAuditLog = useCallback(async () => {
+    setAuditEntries(await listAuditEntries());
+  }, []);
+
   const refreshLibrary = useCallback(async () => {
     const [leases, std] = await Promise.all([listLeases(), getStandardId()]);
     setLibrary(leases);
@@ -133,9 +181,40 @@ export function App(): JSX.Element {
     setTemplates(await listTemplates());
   }, []);
 
-  const activeRules = resolveActiveRules(RULE_PACK_V1, installedPacks, enabledPacks).rules;
+  // Layered rule resolution:
+  //   built-in + installed packs → filter by jurisdictions → apply severity
+  //   overrides. Each step is pure; no IndexedDB inside the memo.
+  const baseResolvedRules = resolveActiveRules(
+    RULE_PACK_V1,
+    installedPacks,
+    enabledPacks,
+  ).rules;
+  const activeRules = useMemo(
+    () =>
+      applySeverityOverrides(
+        filterByJurisdiction(baseResolvedRules, selectedJurisdictions),
+        severityOverrides,
+      ),
+    [baseResolvedRules, selectedJurisdictions, severityOverrides],
+  );
   const pipeline = usePipeline({ onLibraryChange: refreshLibrary, rules: activeRules });
   const { status, ocrState, comparison } = pipeline;
+
+  const plainEnglishByRuleId = useMemo<Record<string, string>>(() => {
+    const out: Record<string, string> = {};
+    for (const r of activeRules) {
+      if (r.plainEnglish) out[r.id] = r.plainEnglish;
+    }
+    return out;
+  }, [activeRules]);
+
+  const suggestedEditByRuleId = useMemo<Record<string, string>>(() => {
+    const out: Record<string, string> = {};
+    for (const r of activeRules) {
+      if (r.suggestedEdit) out[r.id] = r.suggestedEdit;
+    }
+    return out;
+  }, [activeRules]);
 
   useEffect(() => {
     void refreshLibrary();
@@ -143,12 +222,16 @@ export function App(): JSX.Element {
     void refreshPacks();
     void refreshSigningKey();
     void refreshCounterOffers();
+    void refreshRulePackSettings();
+    void refreshAuditLog();
   }, [
     refreshLibrary,
     refreshTemplates,
     refreshPacks,
     refreshSigningKey,
     refreshCounterOffers,
+    refreshRulePackSettings,
+    refreshAuditLog,
   ]);
 
   // Re-index the portfolio whenever the library or the view changes.
@@ -192,7 +275,25 @@ export function App(): JSX.Element {
 
   async function handleBytes(bytes: Uint8Array, fileName: string): Promise<void> {
     setSelected(null);
+    // Audit writes must never block or abort the primary pipeline. If the
+    // audit database is momentarily unavailable the user still needs their
+    // analysis; we swallow errors here and log to console for diagnostics.
+    await safeAudit({ kind: 'analyze', payload: { fileName, phase: 'start' } });
     await pipeline.upload(bytes, fileName);
+    await safeAudit({ kind: 'analyze', payload: { fileName, phase: 'complete' } });
+    void refreshAuditLog();
+  }
+
+  async function safeAudit(input: {
+    kind: string;
+    payload: Record<string, unknown>;
+  }): Promise<void> {
+    try {
+      await appendAuditEntry(input);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('audit append failed', err);
+    }
   }
 
   async function onFileChange(e: ChangeEvent<HTMLInputElement>): Promise<void> {
@@ -223,7 +324,9 @@ export function App(): JSX.Element {
   async function onDeleteLibrary(id: string): Promise<void> {
     await deleteLease(id);
     if (standardId === id) await clearStandardId();
+    await safeAudit({ kind: 'delete-lease', payload: { leaseId: id } });
     await refreshLibrary();
+    void refreshAuditLog();
   }
 
   async function onSetStandard(id: string): Promise<void> {
@@ -395,7 +498,94 @@ export function App(): JSX.Element {
     }
     await saveInstalledPack(result.pack);
     await setPackEnabled(result.pack.id, true);
+    await safeAudit({
+      kind: 'import-pack',
+      payload: { packId: result.pack.id, version: result.pack.version },
+    });
     await refreshPacks();
+    void refreshAuditLog();
+  }
+
+  async function onComparePackFile(file: File): Promise<void> {
+    try {
+      const bytes = await readFileBytes(file);
+      const text = new TextDecoder().decode(bytes);
+      const parsed: unknown = JSON.parse(text);
+      const result = validatePackFile(parsed);
+      if (!result.ok) {
+        pipeline.setError(`Invalid pack: ${result.errors.join('; ')}`);
+        return;
+      }
+      setPackDiff(diffPack(activeRules, result.pack));
+    } catch (err) {
+      pipeline.setError(`Could not diff pack: ${friendlyError(err)}`);
+    }
+  }
+
+  async function onSelectedJurisdictionsChange(next: string[]): Promise<void> {
+    setSelectedJurisdictionsState(next);
+    await setSelectedJurisdictions(next);
+    // Re-run analyze against the currently loaded doc with the new filter.
+    pipeline.reanalyze();
+  }
+
+  async function onSeverityOverrideChange(
+    ruleId: string,
+    panelSeverity: import('./ui/SeverityOverridesPanel').OverrideSeverity | null,
+  ): Promise<void> {
+    const next = { ...severityOverrides };
+    if (panelSeverity === null) {
+      delete next[ruleId];
+      await setSeverityOverride(ruleId, null);
+    } else {
+      const real = overrideToSeverity(panelSeverity);
+      next[ruleId] = real;
+      await setSeverityOverride(ruleId, real);
+    }
+    setSeverityOverridesState(next);
+    pipeline.reanalyze();
+  }
+
+  async function onRefreshAudit(): Promise<void> {
+    await refreshAuditLog();
+  }
+
+  async function onVerifyAudit(): Promise<void> {
+    setAuditVerification(await verifyAuditChain());
+  }
+
+  function onDownloadAudit(): void {
+    const json = buildAuditLogJson(auditEntries, auditVerification);
+    downloadAuditLogBlob(
+      json,
+      `leaseguard-audit-${new Date().toISOString().slice(0, 10)}.json`,
+    );
+  }
+
+  async function onBulkImportFiles(
+    files: File[],
+    onProgress: (r: BulkResult) => void,
+  ): Promise<BulkSummary> {
+    const summary = await bulkImport(
+      files,
+      (r) => {
+        onProgress(r);
+      },
+      {
+        analyze: async (bytes) => {
+          const result = await analyzeFile(bytes, activeRules);
+          return { doc: result.doc, findings: result.findings };
+        },
+        save: async (input) => saveLease(input),
+      },
+    );
+    await safeAudit({
+      kind: 'bulk-import',
+      payload: { ok: summary.ok, skipped: summary.skipped, errors: summary.errors },
+    });
+    await refreshLibrary();
+    void refreshAuditLog();
+    return summary;
   }
 
   async function onTogglePack(id: string, enabled: boolean): Promise<void> {
@@ -425,6 +615,11 @@ export function App(): JSX.Element {
       'application/json',
       `${status.fileName.replace(/\.pdf$/i, '')}-findings.json`,
     );
+    const fileName = status.fileName;
+    void safeAudit({
+      kind: 'export',
+      payload: { fileName, format: 'json' },
+    }).then(() => refreshAuditLog());
   }
 
   function onExportHtml(): void {
@@ -607,6 +802,8 @@ export function App(): JSX.Element {
                 setSelected(f);
                 setSelectedPage(f.page);
               }}
+              definitions={extractLeaseFacts(status.result.doc).definitions}
+              plainEnglishByRuleId={plainEnglishByRuleId}
             />
             <PdfViewer
               bytes={status.bytes}
@@ -649,6 +846,9 @@ export function App(): JSX.Element {
             onDelete={(id) => {
               void onDeleteCounterOffer(id);
             }}
+            suggestedEdit={
+              selected ? suggestedEditByRuleId[selected.ruleId] : undefined
+            }
           />
           <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
           <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
@@ -710,6 +910,65 @@ export function App(): JSX.Element {
         onDelete={(id) => {
           void onDeletePack(id);
         }}
+      />
+
+      <JurisdictionPickerPanel
+        available={JURISDICTION_OPTIONS.map((j) => j.code)}
+        selected={selectedJurisdictions}
+        onChange={(next) => {
+          void onSelectedJurisdictionsChange(next);
+        }}
+      />
+
+      <SeverityOverridesPanel
+        rules={activeRules.map((r) => ({
+          id: r.id,
+          title: r.title,
+          severity: severityToOverrideSeverity(r.severity),
+        }))}
+        overrides={overridesToPanel(severityOverrides)}
+        onChange={(ruleId, sev) => {
+          void onSeverityOverrideChange(ruleId, sev);
+        }}
+      />
+
+      <section aria-label="diff rule pack">
+        <h2>Diff rule pack</h2>
+        <p>
+          Load a <code>.lgpack.json</code> file to see how it differs from the
+          currently active rule set. Nothing is saved until you import it via
+          the pack manager above.
+        </p>
+        <label>
+          <span className="visually-hidden">Pack file to diff</span>
+          <input
+            type="file"
+            accept=".lgpack.json,application/json"
+            aria-label="pack file to diff"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (f) void onComparePackFile(f);
+            }}
+          />
+        </label>
+        {packDiff && <PackDiffPanel diff={packDiff} />}
+      </section>
+
+      <BulkImportPanel
+        onImport={(files, onProgress) => onBulkImportFiles(files, onProgress)}
+      />
+
+      <AuditLogPanel
+        entries={auditEntries}
+        verification={auditVerification}
+        onRefresh={() => {
+          void onRefreshAudit();
+        }}
+        onVerify={() => {
+          void onVerifyAudit();
+        }}
+        onDownload={onDownloadAudit}
       />
 
       <SigningKeyPanel
