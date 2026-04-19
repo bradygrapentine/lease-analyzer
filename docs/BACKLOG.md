@@ -16,8 +16,8 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Tests | 196 passing (pre-merge baseline — will update once all phase merges land) | `npm test` |
-| Coverage | 97% stmt · 86% branch · 93% func · 97% line (above 90/85/90/90 thresholds) | `npm run test:coverage` |
+| Tests | 345 passing | `npm test` |
+| Coverage | 97.33% stmt · 87.53% branch · 95.04% func · 97.33% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell 197 KiB · pdf.js api 400 KiB · pdf.worker 1.3 MiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
 | IndexedDB | schema v3 (`leases` + `settings` + `clauseTemplates`) | migrations tested |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js` | `npm run build` |
