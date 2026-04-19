@@ -19,6 +19,7 @@ import {
   type LeaseMetadata,
 } from './storage/storage';
 import { exportFindingsJson } from './storage/exportReport';
+import { exportFindingsHtml } from './storage/exportHtml';
 
 type Status =
   | { kind: 'idle' }
@@ -88,14 +89,32 @@ export function App(): JSX.Element {
     setSelected(null);
   }
 
-  function onExport(): void {
+  function onExportJson(): void {
     if (status.kind !== 'analyzed') return;
     const json = exportFindingsJson({
       name: status.fileName,
       doc: status.result.doc,
       findings: status.result.findings,
     });
-    downloadJson(json, `${status.fileName.replace(/\.pdf$/i, '')}-findings.json`);
+    downloadBlob(
+      json,
+      'application/json',
+      `${status.fileName.replace(/\.pdf$/i, '')}-findings.json`,
+    );
+  }
+
+  function onExportHtml(): void {
+    if (status.kind !== 'analyzed') return;
+    const html = exportFindingsHtml({
+      name: status.fileName,
+      doc: status.result.doc,
+      findings: status.result.findings,
+    });
+    downloadBlob(
+      html,
+      'text/html',
+      `${status.fileName.replace(/\.pdf$/i, '')}-findings.html`,
+    );
   }
 
   return (
@@ -103,6 +122,21 @@ export function App(): JSX.Element {
       <header>
         <h1>LeaseGuard</h1>
         <p>Private, local-first lease analyzer. Nothing leaves your device.</p>
+        <details className="privacy">
+          <summary>Privacy &amp; how this works</summary>
+          <ul>
+            <li>The PDF is parsed entirely in your browser via pdf.js.</li>
+            <li>All storage is in IndexedDB on this device. No account, no sync.</li>
+            <li>
+              A strict Content-Security-Policy (<code>default-src &apos;self&apos;</code>)
+              blocks this page from loading scripts, fonts, or data from any other
+              origin.
+            </li>
+            <li>
+              LeaseGuard is not legal advice. Findings are heuristic pattern matches.
+            </li>
+          </ul>
+        </details>
         <label>
           <span className="visually-hidden">Upload lease</span>
           <input
@@ -127,8 +161,11 @@ export function App(): JSX.Element {
       {status.kind === 'analyzed' && (
         <div className="results">
           <div className="results-actions">
-            <button type="button" onClick={onExport}>
+            <button type="button" onClick={onExportJson}>
               Export findings (JSON)
+            </button>
+            <button type="button" onClick={onExportHtml}>
+              Export findings (printable HTML)
             </button>
           </div>
           {(() => {
@@ -223,8 +260,8 @@ async function readFileBytes(file: File): Promise<Uint8Array> {
   });
 }
 
-function downloadJson(json: string, filename: string): void {
-  const blob = new Blob([json], { type: 'application/json' });
+function downloadBlob(content: string, mime: string, filename: string): void {
+  const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
