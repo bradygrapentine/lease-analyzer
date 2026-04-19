@@ -151,6 +151,66 @@ describe('PackManagerPanel', () => {
     expect(onImport).not.toHaveBeenCalled();
   });
 
+  it('renders a "Community" badge by default when signatureStatusByPackId is omitted', () => {
+    render(
+      <PackManagerPanel
+        builtInName="Built-in"
+        installed={[pack('p1')]}
+        enabled={new Set()}
+        onImport={async () => {}}
+        onToggle={() => {}}
+        onDelete={() => {}}
+      />,
+    );
+    expect(
+      screen.getByLabelText(/signature status: community/i),
+    ).toBeInTheDocument();
+  });
+
+  it('renders the supplied signature badge per pack', () => {
+    render(
+      <PackManagerPanel
+        builtInName="Built-in"
+        installed={[pack('p1'), pack('p2'), pack('p3')]}
+        enabled={new Set()}
+        onImport={async () => {}}
+        onToggle={() => {}}
+        onDelete={() => {}}
+        signatureStatusByPackId={{
+          p1: 'verified',
+          p2: 'invalid',
+          // p3 intentionally omitted — falls back to community.
+        }}
+      />,
+    );
+    expect(
+      screen.getByLabelText(/signature status: verified/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/signature status: invalid signature/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/signature status: community/i),
+    ).toBeInTheDocument();
+  });
+
+  it('renders an "unknown" badge for unknown status', () => {
+    render(
+      <PackManagerPanel
+        builtInName="Built-in"
+        installed={[pack('p1')]}
+        enabled={new Set()}
+        onImport={async () => {}}
+        onToggle={() => {}}
+        onDelete={() => {}}
+        signatureStatusByPackId={{ p1: 'unknown' }}
+      />,
+    );
+    expect(
+      screen.getByLabelText(/signature status: unknown/i),
+    ).toBeInTheDocument();
+  });
+
   it('surfaces import errors via a status message', async () => {
     const onImport = vi.fn().mockRejectedValue(new Error('bad schema'));
     render(

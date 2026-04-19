@@ -2,6 +2,16 @@ import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { RulePackFile } from '../rules/packSchema';
 
+/**
+ * Signature trust vocabulary surfaced in the panel. Intentionally a
+ * superset of the storage-layer statuses: "community" covers packs that
+ * were imported without an envelope (storage calls those "unsigned"),
+ * while "verified" and "invalid" mean exactly what they do on disk.
+ * Anything outside this set (including missing) falls back to
+ * "community" so legacy callers keep rendering.
+ */
+export type PackSignatureBadge = 'verified' | 'community' | 'invalid' | 'unknown';
+
 interface PackManagerPanelProps {
   builtInName: string;
   installed: RulePackFile[];
@@ -9,6 +19,26 @@ interface PackManagerPanelProps {
   onImport: (file: File) => Promise<void>;
   onToggle: (id: string, enabled: boolean) => void;
   onDelete: (id: string) => void;
+  /**
+   * Per-pack signature badge. Optional so existing call sites (notably
+   * App.tsx until its wire-up pass) stay valid; any pack missing from
+   * the map renders as "community".
+   */
+  signatureStatusByPackId?: Record<string, PackSignatureBadge>;
+}
+
+function badgeLabel(status: PackSignatureBadge): string {
+  switch (status) {
+    case 'verified':
+      return 'Verified';
+    case 'invalid':
+      return 'Invalid signature';
+    case 'unknown':
+      return 'Unknown';
+    case 'community':
+    default:
+      return 'Community';
+  }
 }
 
 export function PackManagerPanel({
@@ -18,6 +48,7 @@ export function PackManagerPanel({
   onImport,
   onToggle,
   onDelete,
+  signatureStatusByPackId,
 }: PackManagerPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -45,29 +76,39 @@ export function PackManagerPanel({
         <li>
           <strong>{builtInName}</strong> <em>(built-in)</em>
         </li>
-        {installed.map((p) => (
-          <li key={p.id}>
-            <label>
-              <input
-                type="checkbox"
-                aria-label={`Enable pack ${p.id}`}
-                checked={enabled.has(p.id)}
-                onChange={(e) => onToggle(p.id, e.target.checked)}
-              />
-              <strong>{p.name}</strong>{' '}
-              <small>
-                v{p.version} · {p.rules.length} rule{p.rules.length === 1 ? '' : 's'}
-              </small>
-            </label>
-            <button
-              type="button"
-              onClick={() => onDelete(p.id)}
-              aria-label={`Delete pack ${p.id}`}
-            >
-              Delete
-            </button>
-          </li>
-        ))}
+        {installed.map((p) => {
+          const status: PackSignatureBadge =
+            signatureStatusByPackId?.[p.id] ?? 'community';
+          return (
+            <li key={p.id}>
+              <label>
+                <input
+                  type="checkbox"
+                  aria-label={`Enable pack ${p.id}`}
+                  checked={enabled.has(p.id)}
+                  onChange={(e) => onToggle(p.id, e.target.checked)}
+                />
+                <strong>{p.name}</strong>{' '}
+                <span
+                  aria-label={`Signature status: ${badgeLabel(status)}`}
+                  data-signature-status={status}
+                >
+                  [{badgeLabel(status)}]
+                </span>{' '}
+                <small>
+                  v{p.version} · {p.rules.length} rule{p.rules.length === 1 ? '' : 's'}
+                </small>
+              </label>
+              <button
+                type="button"
+                onClick={() => onDelete(p.id)}
+                aria-label={`Delete pack ${p.id}`}
+              >
+                Delete
+              </button>
+            </li>
+          );
+        })}
         {installed.length === 0 && (
           <li>
             <em>No additional packs installed.</em>
