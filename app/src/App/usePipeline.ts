@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { analyzeFile, type AnalysisResult } from '../ui/analyzeFile';
+import { useCallback, useMemo, useState } from 'react';
+import { type AnalysisResult } from '../ui/analyzeFile';
 import { runOcr } from '../ocr/runOcr';
 import { analyze } from '../rules/analyze';
 import { RULE_PACK_V1 } from '../rules/packV1';
@@ -7,6 +7,8 @@ import type { Rule } from '../rules/types';
 import { getLease, getStandardId, saveLease, type LeaseRecord } from '../storage/storage';
 import { PasswordProtectedPdfError } from '../parser/types';
 import { copyBytes } from '../parser/copyBytes';
+import { createLeaseWorkerClient } from '../worker/leaseWorkerClient';
+import type { PipelineClient } from '../worker/types';
 
 export type PipelineStatus =
   | { kind: 'idle' }
@@ -59,6 +61,16 @@ export interface UsePipelineDeps {
    * rule-pack installs override this by resolving active rules at call time.
    */
   rules?: Rule[];
+  /**
+   * Pipeline client used for parse+analyze. Defaults to an auto-selected
+   * client (Web Worker in real browsers, inline fallback in jsdom). Tests
+   * can inject a deterministic stub to avoid worker plumbing.
+   *
+   * Phase 13 addition — purely additive; existing callers keep the old
+   * main-thread behavior transparently (the inline fallback IS the old
+   * main-thread pipeline).
+   */
+  pipelineClient?: PipelineClient;
 }
 
 /**
@@ -79,8 +91,14 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     null,
   );
 
-  const { onLibraryChange, rules } = deps;
+  const { onLibraryChange, rules, pipelineClient } = deps;
   const activeRules = rules ?? RULE_PACK_V1;
+
+  // Memoize the auto-selected client so we don't spin up a new Worker per
+  // render. When a caller injects `pipelineClient`, we use it directly and
+  // skip auto-selection (useful for tests).
+  const defaultClient = useMemo<PipelineClient>(() => createLeaseWorkerClient(), []);
+  const client = pipelineClient ?? defaultClient;
 
   const upload = useCallback(
     async (bytes: Uint8Array, fileName: string): Promise<void> => {
@@ -88,8 +106,13 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
       setComparisonState(null);
       try {
         // pdf.js transfers ownership of the ArrayBuffer during parse, so we
-        // hand it a copy and keep the original for the viewer.
-        const result = await analyzeFile(copyBytes(bytes), activeRules);
+        // hand the worker (or inline pipeline) a dedicated copy and keep
+        // the original for the viewer. The worker-backed client also
+        // transfers the copy's buffer; the viewer's copy is untouched.
+        const result: AnalysisResult = await client.parseAndAnalyze(
+          copyBytes(bytes),
+          activeRules,
+        );
         const newId = await saveLease({
           name: fileName,
           doc: result.doc,
@@ -123,7 +146,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         setStatus({ kind: 'error', message: friendlyError(err) });
       }
     },
-    [onLibraryChange, activeRules],
+    [onLibraryChange, activeRules, client],
   );
 
   const ocr = useCallback(async (): Promise<void> => {

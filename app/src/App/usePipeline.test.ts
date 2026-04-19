@@ -232,4 +232,25 @@ describe('usePipeline', () => {
     if (result.current.status.kind !== 'error') throw new Error('expected error');
     expect(result.current.status.message).toBe('boom');
   });
+
+  it('routes upload() through an injected pipelineClient (Phase 13 worker hook)', async () => {
+    const doc = {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [],
+      sections: [],
+      raw: '',
+    };
+    const parseAndAnalyze = vi.fn(async () => ({ doc, findings: [] }));
+    const pipelineClient = { parseAndAnalyze, terminate: vi.fn() };
+    const { result } = renderHook(() => usePipeline({ pipelineClient }));
+    const bytes = new Uint8Array([1, 2, 3]);
+    await act(async () => {
+      await result.current.upload(bytes, 'stub.pdf');
+    });
+    expect(parseAndAnalyze).toHaveBeenCalledTimes(1);
+    // Hook must transition to analyzed using the stub's output.
+    if (result.current.status.kind !== 'analyzed') throw new Error('expected analyzed');
+    expect(result.current.status.result.doc).toBe(doc);
+    expect(result.current.status.result.findings).toEqual([]);
+  });
 });
