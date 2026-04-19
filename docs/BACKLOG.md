@@ -50,13 +50,13 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 - [ ] A11y pass: labels, focus ring, contrast, ARIA roles (basic labels in place)
 
 ## Phase 4 — Local Storage
-- [ ] IndexedDB wrapper (idb) with versioned migrations
-- [ ] Save lease + findings on analyze; list in "My Leases"
-- [ ] Rename, delete, open-from-library
-- [ ] Export findings as JSON
+- [x] IndexedDB wrapper (idb) with versioned migrations
+- [x] Save lease + findings on analyze; list in "My Leases"
+- [x] Delete + open-from-library (rename wired in storage, not yet in UI)
+- [x] Export findings as JSON
 - [ ] Export printable HTML summary (print-stylesheet)
 - [ ] Encrypted archive export/import (WebCrypto, passphrase-derived key)
-- [ ] "Clear all data" control with confirmation
+- [x] "Clear all data" control with confirmation
 
 ## Phase 5 — V2: Compare & OCR
 - [ ] Two-lease diff view; align sections, highlight clause-level deltas
