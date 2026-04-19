@@ -45,6 +45,7 @@ import {
   saveCounterOffer,
   type CounterOffer,
 } from './negotiation/counterOffers';
+import { PortfolioPanel } from './ui/PortfolioPanel';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
@@ -88,6 +89,17 @@ export function App(): JSX.Element {
   const [signingPublicKey, setSigningPublicKey] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [counterOffers, setCounterOffers] = useState<CounterOffer[]>([]);
+  const [view, setView] = useState<'current' | 'portfolio'>('current');
+  const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
+    new Map(),
+  );
+
+  const refreshPortfolioFindings = useCallback(async () => {
+    const records = await listAllLeaseRecords();
+    const map = new Map<string, Finding[]>();
+    for (const r of records) map.set(r.id, r.findings);
+    setPortfolioFindings(map);
+  }, []);
 
   const refreshAnnotations = useCallback(async (leaseId: string) => {
     setAnnotations(await listAnnotations(leaseId));
@@ -138,6 +150,13 @@ export function App(): JSX.Element {
     refreshSigningKey,
     refreshCounterOffers,
   ]);
+
+  // Re-index the portfolio whenever the library or the view changes.
+  useEffect(() => {
+    if (view === 'portfolio') {
+      void refreshPortfolioFindings();
+    }
+  }, [view, library, refreshPortfolioFindings]);
 
   // Load annotations whenever the currently-analyzed lease changes.
   const analyzedLeaseId =
@@ -501,19 +520,46 @@ export function App(): JSX.Element {
         <button type="button" onClick={() => void onTrySample()}>
           Try a sample lease
         </button>
+        <div role="group" aria-label="view mode" className="view-toggle">
+          <button
+            type="button"
+            aria-pressed={view === 'current'}
+            onClick={() => setView('current')}
+          >
+            Current lease
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === 'portfolio'}
+            onClick={() => setView('portfolio')}
+          >
+            Portfolio
+          </button>
+        </div>
       </header>
 
-      {status.kind === 'loading' && (
+      {view === 'current' && status.kind === 'loading' && (
         <p role="status" aria-live="polite">
           Analyzing {status.fileName}…
         </p>
       )}
 
-      {status.kind === 'error' && (
+      {view === 'current' && status.kind === 'error' && (
         <p role="alert">Could not analyze this file: {status.message}</p>
       )}
 
-      {status.kind === 'analyzed' && (
+      {view === 'portfolio' && (
+        <PortfolioPanel
+          leases={library}
+          findingsByLease={portfolioFindings}
+          onOpenLease={(id) => {
+            setView('current');
+            void onOpenLibrary(id);
+          }}
+        />
+      )}
+
+      {view === 'current' && status.kind === 'analyzed' && (
         <div className="results">
           <div className="results-actions">
             <button type="button" onClick={onExportJson}>
