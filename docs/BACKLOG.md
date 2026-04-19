@@ -183,12 +183,19 @@ Local-only, CSP-compatible.
 
 ## Phase 12 — Trust & verification
 
-- [ ] `reproducibility.test.ts`: run `analyze` N times over the same
-      fixture, assert byte-identical output.
-- [ ] Signing keypair: generate + store via WebCrypto, unlocked with a
+- [x] `reproducibility.test.ts`: run `analyze` N times over the same
+      fixture, assert byte-identical output. (Confirmed already
+      deterministic; test uses synthetic residential + commercial PDF
+      fixtures with N=3.)
+- [x] Signing keypair: generate + store via WebCrypto, unlocked with a
       passphrase (reuse the archive-export passphrase pattern).
-- [ ] Signed JSON export: add `signature` field; include `inputHash`
+      Ed25519; private key PBKDF2+AES-GCM-wrapped in a separate
+      `leaseguard-signing` IndexedDB.
+- [x] Signed JSON export: add `signature` field; include `inputHash`
       (SHA-256 of the PDF), `rulePackVersion`, `findings`.
+      (Schema pinned at `leaseguard.findings.v1`; `signature` is an
+      optional extension. UI wire-up of the panel in `App.tsx` is
+      pending and will land in a follow-up.)
 - [ ] Append-only audit log in IndexedDB; hash-chained entries
       (`prevHash`); "Download audit log" button.
 - [ ] Replay bundle export: ZIP with PDF + packs + expected JSON +
