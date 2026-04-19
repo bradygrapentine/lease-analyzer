@@ -170,16 +170,24 @@ Local-only, CSP-compatible.
 
 ## Phase 11 — Workflow & integrations
 
-- [ ] `.ics` export from `LeaseFacts` dates (Phase 8 dep). Local file
-      download, no calendar-API integration.
-- [ ] "Copy summary" button → HTML + plain-text to the clipboard via
-      `navigator.clipboard`.
-- [ ] Lawyer handoff ZIP: original PDF + HTML report + JSON + readme
-      bundled with JSZip (or native `CompressionStream` if sufficient).
+- [~] `.ics` export — pure `buildIcs({leaseName, dates})` primitive
+      landed in `src/workflow/buildIcs.ts` (RFC 5545, 75-octet folding,
+      escape handling, all-day events). Still pending: Phase 8
+      `LeaseFacts` → `IcsDateInput[]` adapter and the App wire-up.
+- [x] "Copy summary" button → HTML + plain-text to the clipboard via
+      `navigator.clipboard.write` + `ClipboardItem`, with `writeText`
+      fallback. `buildSummary` + `copyToClipboard` in
+      `src/workflow/copySummary.ts`.
+- [x] Lawyer handoff ZIP: original PDF + HTML report + JSON + readme,
+      bundled via a hand-rolled STORE-only ZIP writer
+      (`src/workflow/buildHandoffZip.ts`). No new deps.
 - [ ] Portfolio view: grid of leases across the library with counts
       per rule id; filterable.
 - [ ] Bulk import: drop a zip/folder of PDFs; progress bar; per-file
       status; deduplicate by content hash.
+- [~] `WorkflowPanel` UI primitive (`src/ui/WorkflowPanel.tsx` +
+      stories) with three action buttons and status. App wire-up is a
+      follow-up PR per the constraints of this pass.
 
 ## Phase 12 — Trust & verification
 
