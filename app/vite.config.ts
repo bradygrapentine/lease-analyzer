@@ -62,10 +62,14 @@ export default defineConfig({
         'src/worker/leaseWorker.ts',
       ],
       thresholds: {
-        statements: 90,
-        branches: 85,
-        functions: 90,
-        lines: 90,
+        // Raised 2026-04-18 after wave 5 consolidation. Current actuals
+        // sit at 97.03 / 88.08 / 93.21 / 97.03; floors leave ~2 points of
+        // headroom on stmt/func/line and ~1 on branch so a single honest
+        // regression doesn't break CI.
+        statements: 95,
+        branches: 87,
+        functions: 91,
+        lines: 95,
       },
     },
   },

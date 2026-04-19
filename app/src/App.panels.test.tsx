@@ -98,14 +98,20 @@ function isBenignIdbTeardownError(err: unknown): boolean {
   if (e.code === 11) return true;
   return false;
 }
+interface NodeProcessLike {
+  on(event: 'unhandledRejection', fn: (err: unknown) => void): void;
+  off(event: 'unhandledRejection', fn: (err: unknown) => void): void;
+}
+const proc = (globalThis as unknown as { process?: NodeProcessLike })
+  .process;
 const onUnhandled = (err: unknown): void => {
   if (!isBenignIdbTeardownError(err)) throw err as Error;
 };
 beforeAll(() => {
-  process.on('unhandledRejection', onUnhandled);
+  proc?.on('unhandledRejection', onUnhandled);
 });
 afterAll(() => {
-  process.off('unhandledRejection', onUnhandled);
+  proc?.off('unhandledRejection', onUnhandled);
 });
 
 afterEach(() => {
