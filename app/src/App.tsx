@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react';
 import { analyzeFile, type AnalysisResult } from './ui/analyzeFile';
 import { FindingsPanel } from './ui/FindingsPanel';
 import { LibraryPanel } from './ui/LibraryPanel';
+import { PdfViewer } from './ui/PdfViewer';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
 import {
@@ -18,13 +19,14 @@ import { exportFindingsJson } from './storage/exportReport';
 type Status =
   | { kind: 'idle' }
   | { kind: 'loading'; fileName: string }
-  | { kind: 'analyzed'; fileName: string; result: AnalysisResult }
+  | { kind: 'analyzed'; fileName: string; result: AnalysisResult; bytes: Uint8Array | null }
   | { kind: 'error'; message: string };
 
 export function App(): JSX.Element {
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [selected, setSelected] = useState<Finding | null>(null);
   const [library, setLibrary] = useState<LeaseMetadata[]>([]);
+  const [selectedPage, setSelectedPage] = useState<number | null>(null);
 
   const refreshLibrary = useCallback(async () => {
     setLibrary(await listLeases());
@@ -44,7 +46,7 @@ export function App(): JSX.Element {
       const result = await analyzeFile(bytes);
       await saveLease({ name: file.name, doc: result.doc, findings: result.findings });
       await refreshLibrary();
-      setStatus({ kind: 'analyzed', fileName: file.name, result });
+      setStatus({ kind: 'analyzed', fileName: file.name, result, bytes });
     } catch (err) {
       setStatus({ kind: 'error', message: friendlyError(err) });
     }
@@ -58,6 +60,7 @@ export function App(): JSX.Element {
       kind: 'analyzed',
       fileName: record.name,
       result: { doc: record.doc, findings: record.findings },
+      bytes: null,
     });
   }
 
@@ -117,10 +120,20 @@ export function App(): JSX.Element {
               Export findings (JSON)
             </button>
           </div>
-          <FindingsPanel
-            findings={status.result.findings}
-            onSelect={(f) => setSelected(f)}
-          />
+          <div className="split">
+            <FindingsPanel
+              findings={status.result.findings}
+              onSelect={(f) => {
+                setSelected(f);
+                setSelectedPage(f.page);
+              }}
+            />
+            <PdfViewer
+              bytes={status.bytes}
+              pageCount={status.result.doc.pages.length}
+              selectedPage={selectedPage}
+            />
+          </div>
           {selected && (
             <article aria-label="selected finding">
               <h3>{selected.title}</h3>

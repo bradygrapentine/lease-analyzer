@@ -38,16 +38,18 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `!` blocker
 
 ## Phase 3 — UI
 - [x] Upload control, accepts `application/pdf`
-- [ ] PDF viewer pane using pdf.js canvas renderer (deferred — needs browser-side render)
+- [x] PDF viewer pane using pdf.js canvas renderer (canvas scaffolding + render path; verify in browser)
 - [x] Findings panel: grouped by severity
-- [ ] Collapsible category groups
-- [ ] Click finding → scroll-to + highlight span in viewer (needs PDF viewer)
+- [x] Collapsible severity groups
+- [x] Click finding → scrolls viewer to that page
+- [ ] Span-level highlight overlay in viewer (deferred — needs text-layer)
 - [x] Click finding → show selected snippet + page number
-- [ ] In-document search (Cmd/Ctrl-F)
-- [ ] Severity + category filter chips
+- [x] Search-within-findings (title/explanation/snippet)
+- [ ] Cmd/Ctrl-F hotkey for global doc search
+- [x] Severity + category filter chips
 - [x] Loading / empty / parse-error states (idle/loading/analyzed/error)
-- [ ] Keyboard navigation across findings (↑/↓/Enter)
-- [ ] A11y pass: labels, focus ring, contrast, ARIA roles (basic labels in place)
+- [x] Keyboard navigation across findings (↑/↓/Enter)
+- [ ] Full a11y pass: contrast, focus ring, ARIA audit (labels in place)
 
 ## Phase 4 — Local Storage
 - [x] IndexedDB wrapper (idb) with versioned migrations

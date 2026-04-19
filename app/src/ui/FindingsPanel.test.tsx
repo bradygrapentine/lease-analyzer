@@ -59,4 +59,75 @@ describe('FindingsPanel', () => {
     );
     expect(screen.getByText(/not applicable/i)).toBeInTheDocument();
   });
+
+  it('filters findings by search query across title and explanation', async () => {
+    const findings = [
+      f({ ruleId: 'a', title: 'Arbitration clause', explanation: 'Disputes go to arbitrator.' }),
+      f({ ruleId: 'b', title: 'Rent escalation', explanation: 'Rent rises annually.' }),
+    ];
+    render(<FindingsPanel findings={findings} onSelect={() => {}} />);
+    const search = screen.getByRole('searchbox', { name: /search findings/i });
+    await userEvent.type(search, 'arbitr');
+    expect(screen.getByText('Arbitration clause')).toBeInTheDocument();
+    expect(screen.queryByText('Rent escalation')).not.toBeInTheDocument();
+  });
+
+  it('hides findings when their severity chip is toggled off', async () => {
+    const findings = [
+      f({ ruleId: 'a', severity: 'high', title: 'Arbitration' }),
+      f({ ruleId: 'b', severity: 'medium', title: 'Late fee' }),
+    ];
+    render(<FindingsPanel findings={findings} onSelect={() => {}} />);
+    const highChip = screen.getByRole('button', { name: /severity high/i });
+    await userEvent.click(highChip);
+    expect(screen.queryByText('Arbitration')).not.toBeInTheDocument();
+    expect(screen.getByText('Late fee')).toBeInTheDocument();
+  });
+
+  it('hides findings when their category chip is toggled off', async () => {
+    const findings = [
+      f({ ruleId: 'a', category: 'dispute', title: 'Arbitration' }),
+      f({ ruleId: 'b', category: 'finance', title: 'Rent escalation' }),
+    ];
+    render(<FindingsPanel findings={findings} onSelect={() => {}} />);
+    const disputeChip = screen.getByRole('button', { name: /category dispute/i });
+    await userEvent.click(disputeChip);
+    expect(screen.queryByText('Arbitration')).not.toBeInTheDocument();
+    expect(screen.getByText('Rent escalation')).toBeInTheDocument();
+  });
+
+  it('ArrowDown moves focus to the next finding button', async () => {
+    const findings = [
+      f({ ruleId: 'a', severity: 'high', title: 'First' }),
+      f({ ruleId: 'b', severity: 'high', title: 'Second' }),
+    ];
+    render(<FindingsPanel findings={findings} onSelect={() => {}} />);
+    const first = screen.getByRole('button', { name: /first/i });
+    first.focus();
+    await userEvent.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /second/i }));
+  });
+
+  it('Enter on a focused finding triggers onSelect', async () => {
+    const onSelect = vi.fn();
+    const finding = f({ ruleId: 'enter', title: 'Enter me' });
+    render(<FindingsPanel findings={[finding]} onSelect={onSelect} />);
+    const btn = screen.getByRole('button', { name: /enter me/i });
+    btn.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(onSelect).toHaveBeenCalledWith(finding);
+  });
+
+  it('collapses a severity group when its heading is clicked', async () => {
+    const findings = [
+      f({ ruleId: 'a', severity: 'high', title: 'Arbitration' }),
+      f({ ruleId: 'b', severity: 'medium', title: 'Late fee' }),
+    ];
+    render(<FindingsPanel findings={findings} onSelect={() => {}} />);
+    expect(screen.getByText('Arbitration')).toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: /toggle high/i });
+    await userEvent.click(toggle);
+    expect(screen.queryByText('Arbitration')).not.toBeInTheDocument();
+    expect(screen.getByText('Late fee')).toBeInTheDocument();
+  });
 });
