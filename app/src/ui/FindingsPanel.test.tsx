@@ -222,4 +222,71 @@ describe('FindingsPanel', () => {
     );
     expect(container.querySelector('dfn')).toBeNull();
   });
+
+  // Phase 9 — "Apply suggestion" additive prop.
+
+  it('renders an "Apply suggestion" button when callback + suggestedText exist for the rule', () => {
+    const finding = f({ ruleId: 'apply', title: 'Apply me', paragraphIndex: 4 });
+    render(
+      <FindingsPanel
+        findings={[finding]}
+        onSelect={() => {}}
+        suggestedTextByRuleId={{ apply: 'Suggested replacement.' }}
+        onApplySuggestion={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: /apply suggestion for apply me/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('omits "Apply suggestion" when onApplySuggestion is not provided', () => {
+    const finding = f({ ruleId: 'nobtn', title: 'No btn' });
+    render(
+      <FindingsPanel
+        findings={[finding]}
+        onSelect={() => {}}
+        suggestedTextByRuleId={{ nobtn: 'Suggested.' }}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /apply suggestion/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('omits "Apply suggestion" when the rule id has no suggested text', () => {
+    const finding = f({ ruleId: 'solo', title: 'Solo' });
+    render(
+      <FindingsPanel
+        findings={[finding]}
+        onSelect={() => {}}
+        suggestedTextByRuleId={{}}
+        onApplySuggestion={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /apply suggestion/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('"Apply suggestion" invokes the callback with finding, paragraphIndex, and suggested text', async () => {
+    const onApplySuggestion = vi.fn();
+    const finding = f({
+      ruleId: 'apply',
+      title: 'Apply me',
+      paragraphIndex: 4,
+    });
+    render(
+      <FindingsPanel
+        findings={[finding]}
+        onSelect={() => {}}
+        suggestedTextByRuleId={{ apply: 'Suggested replacement.' }}
+        onApplySuggestion={onApplySuggestion}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /apply suggestion for apply me/i }),
+    );
+    expect(onApplySuggestion).toHaveBeenCalledWith(finding, 4, 'Suggested replacement.');
+  });
 });
