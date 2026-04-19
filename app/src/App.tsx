@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { analyzeFile, type AnalysisResult } from './ui/analyzeFile';
+import { usePipeline } from './App/usePipeline';
 import { FindingsPanel } from './ui/FindingsPanel';
 import { LibraryPanel } from './ui/LibraryPanel';
 import { PdfViewer } from './ui/PdfViewer';
@@ -9,10 +9,6 @@ import { LibraryCompareForm } from './ui/LibraryCompareForm';
 import { TemplatesPanel } from './ui/TemplatesPanel';
 import { TemplateMatchesPanel } from './ui/TemplateMatchesPanel';
 import { needsOcr } from './compare/needsOcr';
-import { runOcr } from './ocr/runOcr';
-import { analyze } from './rules/analyze';
-import { RULE_PACK_V1 } from './rules/packV1';
-import type { LeaseRecord } from './storage/storage';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
 import type { ClauseTemplate } from './templates/types';
@@ -33,7 +29,6 @@ import {
   listLeases,
   renameLease,
   replaceAllLeases,
-  saveLease,
   setStandardId,
   type LeaseMetadata,
 } from './storage/storage';
@@ -45,23 +40,12 @@ import {
 import { exportFindingsJson } from './storage/exportReport';
 import { exportFindingsHtml } from './storage/exportHtml';
 
-type Status =
-  | { kind: 'idle' }
-  | { kind: 'loading'; fileName: string }
-  | { kind: 'analyzed'; fileName: string; result: AnalysisResult; bytes: Uint8Array | null }
-  | { kind: 'error'; message: string };
-
 export function App(): JSX.Element {
-  const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [selected, setSelected] = useState<Finding | null>(null);
   const [library, setLibrary] = useState<LeaseMetadata[]>([]);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
-  const [comparison, setComparison] = useState<{ a: LeaseRecord; b: LeaseRecord } | null>(null);
   const [standardId, setStandardIdState] = useState<string | null>(null);
   const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
-  const [ocrState, setOcrState] = useState<
-    { kind: 'idle' } | { kind: 'running'; pct: number; stage: string } | { kind: 'error'; message: string }
-  >({ kind: 'idle' });
 
   const refreshLibrary = useCallback(async () => {
     const [leases, std] = await Promise.all([listLeases(), getStandardId()]);
@@ -72,6 +56,9 @@ export function App(): JSX.Element {
   const refreshTemplates = useCallback(async () => {
     setTemplates(await listTemplates());
   }, []);
+
+  const pipeline = usePipeline({ onLibraryChange: refreshLibrary });
+  const { status, ocrState, comparison } = pipeline;
 
   useEffect(() => {
     void refreshLibrary();
@@ -100,45 +87,8 @@ export function App(): JSX.Element {
   }, []);
 
   async function handleBytes(bytes: Uint8Array, fileName: string): Promise<void> {
-    setStatus({ kind: 'loading', fileName });
     setSelected(null);
-    setComparison(null);
-    try {
-      // pdf.js transfers ownership of the ArrayBuffer during parse, so we
-      // hand it a copy and keep the original for the viewer.
-      const result = await analyzeFile(new Uint8Array(bytes));
-      const newId = await saveLease({
-        name: fileName,
-        doc: result.doc,
-        findings: result.findings,
-      });
-      await refreshLibrary();
-      setStatus({ kind: 'analyzed', fileName, result, bytes });
-
-      // Auto-compare against the standard, if one exists and it isn't this lease.
-      const std = await getStandardId();
-      if (std && std !== newId) {
-        const standard = await getLease(std);
-        if (standard) {
-          setComparison({
-            a: standard,
-            b: {
-              id: newId,
-              name: fileName,
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-              rulePackVersion: result.findings[0]?.rulePackVersion ?? 'unknown',
-              pageCount: result.doc.pages.length,
-              findingCount: result.findings.length,
-              doc: result.doc,
-              findings: result.findings,
-            },
-          });
-        }
-      }
-    } catch (err) {
-      setStatus({ kind: 'error', message: friendlyError(err) });
-    }
+    await pipeline.upload(bytes, fileName);
   }
 
   async function onFileChange(e: ChangeEvent<HTMLInputElement>): Promise<void> {
@@ -155,7 +105,7 @@ export function App(): JSX.Element {
       const buf = await res.arrayBuffer();
       await handleBytes(new Uint8Array(buf), 'Sample lease.pdf');
     } catch (err) {
-      setStatus({ kind: 'error', message: friendlyError(err) });
+      pipeline.setError(friendlyError(err));
     }
   }
 
@@ -163,12 +113,7 @@ export function App(): JSX.Element {
     const record = await getLease(id);
     if (!record) return;
     setSelected(null);
-    setStatus({
-      kind: 'analyzed',
-      fileName: record.name,
-      result: { doc: record.doc, findings: record.findings },
-      bytes: null,
-    });
+    pipeline.open(record);
   }
 
   async function onDeleteLibrary(id: string): Promise<void> {
@@ -190,7 +135,7 @@ export function App(): JSX.Element {
   async function onCompare(aId: string, bId: string): Promise<void> {
     const [a, b] = await Promise.all([getLease(aId), getLease(bId)]);
     if (!a || !b) return;
-    setComparison({ a, b });
+    pipeline.setComparison({ a, b });
   }
 
   async function onExportArchive(): Promise<void> {
@@ -227,15 +172,14 @@ export function App(): JSX.Element {
       }
       await replaceAllLeases(payload.leases, payload.standardId);
       await refreshLibrary();
-      setStatus({ kind: 'idle' });
+      pipeline.reset();
       setSelected(null);
-      setComparison(null);
     } catch (err) {
       const msg =
         err instanceof WrongPassphraseError
           ? err.message
           : `Import failed: ${friendlyError(err)}`;
-      setStatus({ kind: 'error', message: msg });
+      pipeline.setError(msg);
     }
   }
 
@@ -244,7 +188,7 @@ export function App(): JSX.Element {
     await clearAll();
     await refreshLibrary();
     await refreshTemplates();
-    setStatus({ kind: 'idle' });
+    pipeline.reset();
     setSelected(null);
   }
 
@@ -264,27 +208,8 @@ export function App(): JSX.Element {
   }
 
   async function onAttemptOcr(): Promise<void> {
-    if (status.kind !== 'analyzed' || !status.bytes) return;
-    setOcrState({ kind: 'running', pct: 0, stage: 'starting' });
-    try {
-      // pdf.js transfers the ArrayBuffer during parse, so hand runOcr a copy
-      // and keep the original for the viewer.
-      const copy = new Uint8Array(status.bytes);
-      const doc = await runOcr(copy, {
-        onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
-      });
-      const findings = analyze(doc, RULE_PACK_V1);
-      setStatus({
-        kind: 'analyzed',
-        fileName: status.fileName,
-        result: { doc, findings },
-        bytes: status.bytes,
-      });
-      setSelected(null);
-      setOcrState({ kind: 'idle' });
-    } catch (err) {
-      setOcrState({ kind: 'error', message: friendlyError(err) });
-    }
+    setSelected(null);
+    await pipeline.ocr();
   }
 
   function onExportJson(): void {
