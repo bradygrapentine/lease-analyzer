@@ -1,206 +1,220 @@
 # Roadmap
 
 LeaseGuard is a private, local-first lease analyzer. Everything runs in the
-browser — no server, no uploads leaving the device. Stack: React + pdf.js +
-rules engine + IndexedDB. Build order per CLAUDE.md: **parser → rules → UI**.
+browser — no server, no uploads, no telemetry. The stack is React + pdf.js +
+a deterministic rules engine on top of IndexedDB, built in the order
+**parser → rules → UI** per [`CLAUDE.md`](./CLAUDE.md).
 
-## Phase 0 — Foundations
-Repo scaffolding and guardrails so everything after moves fast.
-- Vite + React + TypeScript skeleton
-- ESLint, Prettier, strict tsconfig
-- Vitest + Playwright for unit and e2e
-- GitHub Actions: typecheck, lint, test on PR
-- Baseline `index.html` shell with CSP that forbids network egress
-
-## Phase 1 — PDF Parser (MVP core)
-Turn an uploaded PDF into structured, queryable text.
-- pdf.js integration (worker bundled locally, no CDN)
-- Page-by-page text extraction with layout metadata (x/y, font size)
-- Paragraph reconstruction (join broken lines, strip headers/footers)
-- Section detection (numbered clauses, headings)
-- Normalized `LeaseDocument` model: `{pages, sections, paragraphs, raw}`
-- Parser unit tests against fixture leases (residential + commercial)
-
-## Phase 2 — Rules Engine
-Detect risky or noteworthy clauses in a normalized lease.
-- Rule DSL (JSON/TS): id, severity, category, pattern, explanation, citation
-- Matchers: regex, keyword proximity, clause-anchored, negation-aware
-- Rule pack v1: auto-renewal, early-termination fees, assignment/subletting,
-  late fees, attorney-fees, security-deposit limits, waiver of jury trial,
-  arbitration, indemnification, rent escalation, personal guaranty
-- Finding model: rule hit + span + page + confidence + rationale
-- Deterministic output; snapshot tests per rule
-
-## Phase 3 — UI
-Make findings legible to a non-lawyer.
-- Upload dropzone, local file only (no network)
-- Split view: PDF viewer (pdf.js) ↔ findings panel
-- Click a finding → scrolls + highlights the exact span in the PDF
-- Severity filters, category grouping, search within document
-- Empty / loading / error states
-- Keyboard-first navigation, a11y pass
-
-## Phase 4 — Local Storage
-Persist leases and findings on-device only.
-- IndexedDB schema: leases, findings, rule-pack versions
-- Lease library view (list, rename, delete, open)
-- Export: JSON report + printable HTML summary
-- Import/export encrypted archive (passphrase) for backup
-
-## Phase 5 — V2: Compare & OCR
-Stretch features from original roadmap.
-- Lease diff: side-by-side comparison of two leases, rule-aware
-- OCR fallback via Tesseract.js for scanned/image PDFs
-- Clause library: reusable "my standard" clauses to compare against
-
-## Phase 6 — Polish & Distribution
-- Performance budget: parse 50-page lease < 3s on M1
-- Accessibility: WCAG 2.1 AA
-- PWA install, offline-first, cached assets
-- Optional desktop wrapper (Tauri) for file-system library mode
-
-## Phase 7 — Observability & hygiene
-Local-only, CSP-compatible guardrails for long-term maintainability.
-- Error boundary + in-memory crash log (no telemetry leaves device)
-- "Download diagnostics" bundle of the last N errors
-- Rule-authoring guide (`docs/RULES.md`) with matcher cookbook
-- Storybook for viewer + findings components
-- Bundle-size budget in CI, pdf.worker code-split
+This document is the "what and why." Ticket-level execution lives in
+[`BACKLOG.md`](./BACKLOG.md); module boundaries and the privacy contract
+live in [`SYSTEM_DESIGN.md`](./SYSTEM_DESIGN.md); rule-authoring conventions
+live in [`RULES.md`](./RULES.md).
 
 ---
 
-Phases 0–7 cover the lease-analyzer *as pitched in the original README*.
-The phases below extend the product along orthogonal axes — deeper parsing,
-user-authored content, negotiation support, workflow integrations, trust,
-and scale — without breaking the local-first, no-network contract.
+## What the product is today
 
-## Phase 8 — Structured lease understanding
-Pull more than prose out of the PDF. The current parser sees paragraphs;
-this phase teaches it to see tables, defined terms, cross-references, and
-key numbers.
-- **Table extraction** — detect rent schedules, escalator tables, and
-  option-to-renew matrices via positional clustering (multi-column layouts
-  with aligned Y-rows). Emit a `Table` model alongside paragraphs.
-- **Definitions tracking** — detect "X shall mean Y" / "X means Y" and
-  build a doc-wide definitions map; surface definition tooltips on hover
-  in the viewer.
-- **Cross-reference resolution** — turn "Section 5.2", "Exhibit B",
-  "Schedule 1" into clickable anchors that scroll the viewer.
-- **Numeric + date extraction** — first-class fields for base rent,
-  security deposit, notice periods, commencement/expiration dates.
-  Expose them as a `LeaseFacts` object (separate from rule findings).
-- **Glossary UI** — hover any defined term in the findings panel to see
-  its in-document definition.
+A PWA that ingests a lease PDF, extracts structured facts, runs a signed
+rule pack against it, and lets the user negotiate, redline, compare, and
+export — all offline. Concretely:
 
-## Phase 9 — Negotiation support
-Turn LeaseGuard from a one-shot analyzer into a tool the tenant/landlord
-uses during back-and-forth.
-- **Inline annotations** — users attach notes to paragraphs; annotations
-  persist in IndexedDB alongside the lease record.
-- **Redline mode** — edit paragraph text in the findings pane; export
-  tracked-changes HTML + a patch file that can be applied by the other
-  side's copy.
-- **Counter-offer suggestions** — per-rule replacement text (e.g., for a
-  one-way attorney-fees clause, a mutual-fees rewrite). User-customisable;
-  stored as clause templates (Phase 5 feature, reused).
-- **Version history** — each analyze of the same filename creates a new
-  version; `diffLeases` already does the heavy lifting, so the UI just
-  surfaces the stack.
-- **Side-letter generator** — given selected findings, produce a
-  printable letter listing requested edits with clause citations.
+- **Parser** — pdf.js (local worker), layout-aware paragraph reconstruction,
+  section detection, table detection (rent schedules / escalator grids),
+  defined-terms map, cross-reference anchors, numeric/date fact extraction
+  into a typed `LeaseFacts` object. OCR fallback via Tesseract.js with an
+  opt-in, manually-dropped `eng.traineddata.gz`.
+- **Rules engine** — JSON/TS rule DSL with regex, keyword-proximity, and
+  clause-anchored matchers. 10 shipped rules, each carrying
+  `plainEnglish` + `suggestedEdit`. Deterministic output (pinned, with a
+  reproducibility test). Compiled regex cache on pack import.
+- **UI** — split viewer + findings panel with click-to-highlight,
+  severity filters, hover-glossary over defined terms, virtualized
+  findings list, keyboard navigation, dedicated Web Worker for parse +
+  analyze with inline fallback.
+- **Library** — IndexedDB stores leases, findings, rule-pack versions,
+  annotations, counter-offers, redlines, version history, signing keys,
+  and a hash-chained audit log.
+- **Negotiation** — inline annotations, redline mode (Current / Portfolio
+  / Redline view toggle) with `<ins>`/`<del>` HTML export, apply-suggestion
+  from findings, counter-offer library with per-rule suggested edits,
+  version history with restore/export, side-letter generator.
+- **Rule ecosystem** — schema-validated `.lgpack.json` import/export,
+  in-app custom-rule builder with live preview, jurisdiction tags + picker,
+  per-user severity overrides, Ed25519 pack signatures with a
+  verified/community badge, and a pack-diff panel.
+- **Trust** — deterministic analyze, Ed25519 signed JSON reports
+  (WebCrypto key in IndexedDB behind a passphrase), hash-chained audit
+  log, replay-bundle ZIP export, pack-version pin warning on
+  `diffLeases` with a Compare-panel banner.
+- **Workflow** — `.ics` export of rent/renewal/expiration dates,
+  clipboard email summary, lawyer-handoff ZIP (PDF + HTML + JSON),
+  portfolio grid across the library, bulk ZIP import with dedupe.
 
-## Phase 10 — Rule ecosystem
-Make the rule pack a first-class content artifact users can extend,
-share (as files, not via cloud), and trust.
-- **External rule-pack import** — accept `.lgpack.json` files with a
-  stable schema + version; validate against JSON Schema at import time.
-- **Custom rule authoring** — UI for users to write their own matchers
-  (guided pickers for keywordProximity / regex) and save as a local pack.
-- **Jurisdiction tags** — each rule gets an optional `jurisdictions:
-  string[]`; users pick one or more tags (e.g., "US-CA", "US-TX") and
-  only matching rules run.
-- **Severity overrides per user** — "treat arbitration as Low for my
-  use case" without forking the pack.
-- **Signed packs** — optional Ed25519 signature on the pack file;
-  imported unsigned packs show a "community" badge, signed packs show
-  the verified author.
-- **Pack marketplace (offline-only)** — in-app directory of known packs
-  bundled as static JSON; users install with one click. No network
-  fetch — packs are curated at build time.
-
-## Phase 11 — Workflow & integrations
-Local-first doesn't mean isolated. Help users hand findings off to
-wherever they actually live.
-- **Calendar export** — generate an `.ics` file with rent-due,
-  renewal-notice, and expiration dates from Phase 8's extracted fields.
-- **Email draft** — copy a pre-formatted summary (HTML + plain text)
-  to the clipboard so the user can paste into their mail client.
-- **Lawyer handoff packet** — bundle the HTML report + the original
-  PDF + a structured JSON into a single ZIP for forwarding.
-- **Portfolio view** — for users with many leases, aggregate findings
-  across the library: "12 leases have auto-renewal clauses, 4 waive
-  jury trial". Render a simple matrix.
-- **Bulk import** — drop a ZIP of PDFs; analyze each in sequence with
-  a progress bar.
-
-## Phase 12 — Trust & verification
-Make the analysis itself auditable. For users who need to prove what
-the app told them, when.
-- **Deterministic analyze** — pin any randomness; guarantee that
-  `analyze(doc, rules)` is byte-identical across runs on the same
-  inputs and rule-pack version. Ship a `reproducibility.test.ts`.
-- **Signed reports** — optional Ed25519 keypair (stored via WebCrypto
-  in IndexedDB behind a passphrase); JSON exports carry a signature
-  covering `{inputHash, rulePackVersion, findings}`.
-- **Audit log** — append-only local log of every analyze/export event,
-  hash-chained so tampering is detectable. Downloadable for review.
-- **Replay bundle** — export a self-contained ZIP with the PDF bytes
-  + rule pack + expected findings JSON; a CLI or another browser can
-  re-run and byte-compare.
-- **Version-pin UI** — when comparing leases across rule-pack versions,
-  warn the user and offer to re-analyze the older one with the current
-  pack.
-
-## Phase 13 — Performance & scale
-Today LeaseGuard handles a 50-page lease in 210 ms. These items keep
-that budget intact as documents, rule packs, and libraries grow.
-- **Web Worker for analyze + parse** — move the heavy pipeline off the
-  main thread; the UI stays responsive during OCR on multi-hundred-page
-  leases.
-- **Streaming parse** — render the viewer's first page while later
-  pages are still extracting.
-- **Virtualized findings list** — windowed rendering for leases with
-  100+ findings.
-- **IndexedDB indexes** — add secondary indexes for category + severity
-  to avoid loading every `LeaseRecord` to list metadata.
-- **Rule compilation cache** — pre-compile regexes at pack-import time
-  rather than on every analyze.
-
-## Phase 14 — Content depth (optional, still no network)
-Make findings more useful without phoning home. Everything ships
-statically in the PWA bundle.
-- **Plain-English rationales** — LLM-generated *at build time* by the
-  maintainer (no runtime API calls), vetted, and committed as part of
-  the rule pack. Findings get a "What this means in plain English"
-  expandable.
-- **"How to fix" suggestions** — per-rule canned edits, again
-  build-time, not runtime.
-- **Embedded legal glossary** — static JSON of common lease terms;
-  surface inline via the definitions tooltip from Phase 8.
-- **i18n** — UI strings externalized; start with English + one
-  non-English locale as a proof.
-- **OCR language expansion** — additional `.traineddata.gz` packs
-  (same manual-drop mechanism as English) with a language picker.
+See [`BACKLOG.md`](./BACKLOG.md) Current footprint for the file-by-file
+breakdown.
 
 ---
 
-## Out of scope (for now)
+## What's shipped vs. still open
+
+Each phase links to its backlog section.
+
+| Phase | Theme | Status |
+| --- | --- | --- |
+| 0 | Foundations | Done |
+| 1 | PDF Parser (MVP core) | Done |
+| 2 | Rules Engine | Done |
+| 3 | UI | Done |
+| 4 | Local Storage | Done |
+| 5 | Compare & OCR | Done |
+| 6 | Polish & Distribution | Partial — Lighthouse a11y/PWA CI, Tauri CI, onboarding tour open |
+| 7 | Observability & hygiene | Done |
+| 8 | Structured lease understanding | Substantially done — commercial golden fixture open |
+| 9 | Negotiation support | Done |
+| 10 | Rule ecosystem | Done |
+| 11 | Workflow & integrations | Done |
+| 12 | Trust & verification | Done |
+| 13 | Performance & scale | Substantially done — streaming PdfViewer render + secondary IDB index open |
+| 14 | Content depth | Substantially done — static glossary JSON, i18n scaffold, OCR language picker open |
+
+"Substantially done" means the phase's primary surface is built and wired;
+the open items are scoped follow-ups rather than net-new work.
+
+---
+
+## Open work, grouped by destination
+
+The roadmap below is organized by where the product is heading, not by
+phase number. Each bullet points to the backlog section that tracks the
+tickets.
+
+### Ship-readiness — getting 1.0 out the door
+
+- Lighthouse CI gates: a11y ≥95 and PWA ≥95 on every PR. (Phase 6)
+- Tauri desktop build + CI artifact. (Phase 6)
+- First-run onboarding tour that explains the local-first contract and
+  the OCR opt-in. (Phase 6)
+- Commercial-lease golden fixture that exercises tables + definitions +
+  cross-refs simultaneously. (Phase 8)
+
+### Perceived performance — stay snappy as leases grow
+
+- Streaming `PdfViewer` render: paint page N as soon as `getPage(N)`
+  resolves, instead of waiting for the whole document. (Phase 13)
+- Secondary IndexedDB index on `findingCount` + `rulePackVersion` so
+  `listLeases` filters cheaply without hydrating every `LeaseRecord`.
+  (Phase 13)
+
+### Content depth — more useful without phoning home
+
+- Static legal glossary shipped at `public/glossary/v1.json`, surfaced
+  via the existing hover-tooltip. (Phase 14)
+- i18n scaffold: externalize UI strings, ship an English baseline, wire
+  a locale picker. (Phase 14)
+- OCR language picker — activates once a second `*.traineddata.gz`
+  lands in `public/ocr/`. (Phase 14)
+
+### Tech debt — keep the codebase honest
+
+- Parser-side paragraph-index tracking for sections (currently
+  reconstructed downstream).
+- Decompose `App.tsx` (~1170 lines) into per-panel containers around
+  the `usePipeline` hook.
+- Fix reanalyze-staleness so `activeRules` is captured at render time,
+  not re-read when the callback fires.
+
+See [`BACKLOG.md`](./BACKLOG.md#cross-cutting-tech-debt) for the full
+list.
+
+### Risk register — review before 1.0
+
+Tracked in [`BACKLOG.md`](./BACKLOG.md#known-unknowns--risk-register):
+tesseract licensing audit, archive-format security review, release /
+versioning policy, crash-log privacy review, CSP regression tests,
+rule-pack rot review.
+
+---
+
+## Forward phases (15+)
+
+These are the next coherent moves given what's already built. They're
+deliberately scoped; speculative scope is listed under "Out of scope."
+
+### Phase 15 — Collaboration escape hatches
+
+The product is aggressively single-device today. Users still need to
+hand a lease to a co-tenant, a lawyer, or a counterparty. Phase 15
+keeps the local-first contract intact while making that handoff less
+painful than "email a ZIP."
+
+- **Signed review links** — an encrypted, time-bounded archive
+  (passphrase + expiry) that opens in any other LeaseGuard instance
+  with the same pack version and replays as a read-only view. Builds
+  on the replay-bundle exporter and signed-report primitives.
+- **Counter-sign-and-return flow** — recipient can accept / reject
+  individual redline edits, sign the result with their own key, and
+  export a patch that the original author's copy can apply. Reuses
+  `RedlineEdit` + version-history plumbing.
+- **Delta packets** — instead of re-sending the whole lease, export
+  just the diff between two version-history entries as a signed JSON
+  the other side can verify against their copy's `inputHash`.
+- **Share-link privacy review** — explicit doc in
+  [`SYSTEM_DESIGN.md`](./SYSTEM_DESIGN.md) covering what's inside the
+  encrypted archive and what isn't (no telemetry, no key escrow, no
+  network).
+
+### Phase 16 — Multi-lease intelligence
+
+The portfolio grid shipped in Phase 11 makes the library visible.
+Phase 16 makes it analytical.
+
+- **Portfolio-wide rule rollups** — "12 of 18 leases have auto-renewal;
+  4 waive jury trial" with drill-through to the individual findings.
+  Extends the `PortfolioPanel`.
+- **Clause similarity across leases** — shingled / normalized hashing
+  to cluster near-identical clauses across the library; useful for
+  "which of my leases share this bad indemnification paragraph."
+- **"My standard" clause suite** — promote any clause from any lease
+  into a named standard; compare future leases against the suite the
+  way rule findings are currently surfaced.
+- **Portfolio-level rule overrides** — extend the per-user severity
+  override model so a tenant can say "treat this rule as High across
+  my whole portfolio" without re-declaring it per lease.
+
+### Phase 17 — Trust infrastructure
+
+Phase 10 shipped signed packs. Phase 12 shipped signed reports. Phase
+17 turns those primitives into an ecosystem a third party can audit.
+
+- **Offline pack marketplace** — a curated, build-time-bundled static
+  directory of packs with publisher keys, install-with-one-click,
+  verified-author badges from Phase 10, and a visible pack-diff view
+  before adoption.
+- **Diff-vs-verified warnings** — if a user edits a signed pack (or
+  imports an unsigned one derived from a signed one), show an explicit
+  "this deviates from the verified baseline" warning in the
+  findings and report views.
+- **Reproducibility CLI** — package the deterministic `analyze` +
+  replay-bundle format as a Node CLI (no browser, no network) so
+  auditors can verify `{inputHash, rulePackVersion, findings}` from
+  the command line. Shares its test fixtures with the in-app
+  `reproducibility.test.ts`.
+- **Key-rotation workflow** — UX for rotating a user's signing key
+  without invalidating historical audit-log entries (hash chain
+  stays intact; new entries signed with the new key; old entries
+  remain independently verifiable).
+
+---
+
+## Out of scope (still)
+
 - Cloud sync, accounts, team collaboration — would violate the
-  local-first contract. Syncing via user-initiated encrypted archive
-  (Phase 4) is the escape hatch.
-- Telemetry / analytics of any kind, including "anonymous".
-- Runtime LLM inference over network. Build-time generation of static
-  content by the maintainer is fine (Phase 14); a live API call is not.
+  local-first contract. The escape hatch is the user-initiated
+  encrypted archive (Phase 4 / Phase 15).
+- Telemetry or analytics of any kind, including "anonymous."
+- Runtime LLM inference over the network. Build-time generation of
+  static content by the maintainer is fine (Phase 14); a live API
+  call is not.
 - Jurisdiction-specific legal *advice*. Jurisdiction-tagged rules
-  (Phase 10) are fine because they surface clauses, not conclusions.
+  (Phase 10) surface clauses, not conclusions.
 - Anything that requires a backend service to work.
