@@ -6,6 +6,7 @@ import { RULE_PACK_V1 } from '../rules/packV1';
 import type { Rule } from '../rules/types';
 import { getLease, getStandardId, saveLease, type LeaseRecord } from '../storage/storage';
 import { PasswordProtectedPdfError } from '../parser/types';
+import { copyBytes } from '../parser/copyBytes';
 
 export type PipelineStatus =
   | { kind: 'idle' }
@@ -88,7 +89,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
       try {
         // pdf.js transfers ownership of the ArrayBuffer during parse, so we
         // hand it a copy and keep the original for the viewer.
-        const result = await analyzeFile(new Uint8Array(bytes), activeRules);
+        const result = await analyzeFile(copyBytes(bytes), activeRules);
         const newId = await saveLease({
           name: fileName,
           doc: result.doc,
@@ -131,8 +132,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     try {
       // pdf.js transfers the ArrayBuffer during parse, so hand runOcr a copy
       // and keep the original for the viewer.
-      const copy = new Uint8Array(status.bytes);
-      const doc = await runOcr(copy, {
+      const doc = await runOcr(copyBytes(status.bytes), {
         onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
       });
       const findings = analyze(doc, activeRules);
