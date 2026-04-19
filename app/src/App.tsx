@@ -15,6 +15,17 @@ import { buildIcs, type IcsDateInput } from './workflow/buildIcs';
 import { buildSummary, copyToClipboard } from './workflow/copySummary';
 import { buildHandoffZip } from './workflow/buildHandoffZip';
 import type { LeaseFacts } from './facts/types';
+import { PackManagerPanel } from './ui/PackManagerPanel';
+import {
+  deleteInstalledPack,
+  listInstalledPacks,
+  saveInstalledPack,
+  setPackEnabled,
+  getPackEnabled,
+} from './rules/packStorage';
+import { validatePackFile, type RulePackFile } from './rules/packSchema';
+import { resolveActiveRules } from './rules/activePack';
+import { RULE_PACK_V1 } from './rules/packV1';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
@@ -53,6 +64,18 @@ export function App(): JSX.Element {
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   const [standardId, setStandardIdState] = useState<string | null>(null);
   const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
+  const [installedPacks, setInstalledPacks] = useState<RulePackFile[]>([]);
+  const [enabledPacks, setEnabledPacks] = useState<Set<string>>(new Set());
+
+  const refreshPacks = useCallback(async () => {
+    const packs = await listInstalledPacks();
+    const enabled = new Set<string>();
+    for (const p of packs) {
+      if (await getPackEnabled(p.id)) enabled.add(p.id);
+    }
+    setInstalledPacks(packs);
+    setEnabledPacks(enabled);
+  }, []);
 
   const refreshLibrary = useCallback(async () => {
     const [leases, std] = await Promise.all([listLeases(), getStandardId()]);
@@ -64,13 +87,15 @@ export function App(): JSX.Element {
     setTemplates(await listTemplates());
   }, []);
 
-  const pipeline = usePipeline({ onLibraryChange: refreshLibrary });
+  const activeRules = resolveActiveRules(RULE_PACK_V1, installedPacks, enabledPacks).rules;
+  const pipeline = usePipeline({ onLibraryChange: refreshLibrary, rules: activeRules });
   const { status, ocrState, comparison } = pipeline;
 
   useEffect(() => {
     void refreshLibrary();
     void refreshTemplates();
-  }, [refreshLibrary, refreshTemplates]);
+    void refreshPacks();
+  }, [refreshLibrary, refreshTemplates, refreshPacks]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -212,6 +237,28 @@ export function App(): JSX.Element {
   async function onDeleteTemplate(id: string): Promise<void> {
     await deleteTemplate(id);
     await refreshTemplates();
+  }
+
+  async function onImportPack(file: File): Promise<void> {
+    const text = await file.text();
+    const parsed: unknown = JSON.parse(text);
+    const result = validatePackFile(parsed);
+    if (!result.ok) {
+      throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
+    }
+    await saveInstalledPack(result.pack);
+    await setPackEnabled(result.pack.id, true);
+    await refreshPacks();
+  }
+
+  async function onTogglePack(id: string, enabled: boolean): Promise<void> {
+    await setPackEnabled(id, enabled);
+    await refreshPacks();
+  }
+
+  async function onDeletePack(id: string): Promise<void> {
+    await deleteInstalledPack(id);
+    await refreshPacks();
   }
 
   async function onAttemptOcr(): Promise<void> {
@@ -446,6 +493,19 @@ export function App(): JSX.Element {
         }}
         onDelete={(id) => {
           void onDeleteTemplate(id);
+        }}
+      />
+
+      <PackManagerPanel
+        builtInName="Built-in rules (v1)"
+        installed={installedPacks}
+        enabled={enabledPacks}
+        onImport={onImportPack}
+        onToggle={(id, enabled) => {
+          void onTogglePack(id, enabled);
+        }}
+        onDelete={(id) => {
+          void onDeletePack(id);
         }}
       />
 

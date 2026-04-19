@@ -3,6 +3,7 @@ import { analyzeFile, type AnalysisResult } from '../ui/analyzeFile';
 import { runOcr } from '../ocr/runOcr';
 import { analyze } from '../rules/analyze';
 import { RULE_PACK_V1 } from '../rules/packV1';
+import type { Rule } from '../rules/types';
 import { getLease, getStandardId, saveLease, type LeaseRecord } from '../storage/storage';
 import { PasswordProtectedPdfError } from '../parser/types';
 
@@ -38,6 +39,11 @@ export interface PipelineApi {
 export interface UsePipelineDeps {
   /** Called after a successful save so the caller can refresh their library view. */
   onLibraryChange?: () => void | Promise<void>;
+  /**
+   * Rules to run on upload + OCR. Defaults to the built-in pack. Phase 10
+   * rule-pack installs override this by resolving active rules at call time.
+   */
+  rules?: Rule[];
 }
 
 /**
@@ -58,7 +64,8 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     null,
   );
 
-  const { onLibraryChange } = deps;
+  const { onLibraryChange, rules } = deps;
+  const activeRules = rules ?? RULE_PACK_V1;
 
   const upload = useCallback(
     async (bytes: Uint8Array, fileName: string): Promise<void> => {
@@ -67,7 +74,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
       try {
         // pdf.js transfers ownership of the ArrayBuffer during parse, so we
         // hand it a copy and keep the original for the viewer.
-        const result = await analyzeFile(new Uint8Array(bytes));
+        const result = await analyzeFile(new Uint8Array(bytes), activeRules);
         const newId = await saveLease({
           name: fileName,
           doc: result.doc,
@@ -101,7 +108,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         setStatus({ kind: 'error', message: friendlyError(err) });
       }
     },
-    [onLibraryChange],
+    [onLibraryChange, activeRules],
   );
 
   const ocr = useCallback(async (): Promise<void> => {
@@ -114,7 +121,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
       const doc = await runOcr(copy, {
         onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
       });
-      const findings = analyze(doc, RULE_PACK_V1);
+      const findings = analyze(doc, activeRules);
       setStatus({
         kind: 'analyzed',
         fileName: status.fileName,
@@ -125,7 +132,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     } catch (err) {
       setOcrState({ kind: 'error', message: friendlyError(err) });
     }
-  }, [status]);
+  }, [status, activeRules]);
 
   const open = useCallback((record: LeaseRecord): void => {
     setStatus({
