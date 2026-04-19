@@ -16,10 +16,10 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Tests | 345 passing | `npm test` |
-| Coverage | 97.33% stmt · 87.53% branch · 95.04% func · 97.33% line | `npm run test:coverage` (thresholds 90/85/90/90) |
-| Bundles | app shell 197 KiB · pdf.js api 400 KiB · pdf.worker 1.3 MiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
-| IndexedDB | schema v3 (`leases` + `settings` + `clauseTemplates`) | migrations tested |
+| Tests | 474 passing | `npm test` |
+| Coverage | 96.47% stmt · 88.2% branch · 92.04% func · 96.47% line | `npm run test:coverage` (thresholds 90/85/90/90) |
+| Bundles | app shell 222 KiB · pdf.js api 400 KiB · pdf.worker 1.3 MiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
+| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); side dbs `leaseguard-packs` v2, `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1 | migrations tested |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js` | `npm run build` |
 | Lint / types | `tsc -b --noEmit` + ESLint clean (1 pre-existing react-refresh warn) | `npm run typecheck && npm run lint` |
 
@@ -136,21 +136,25 @@ Local-only, CSP-compatible.
 - [x] `LeaseFacts` object: base rent, deposit, term length, notice
       periods, commencement/expiration dates. Pure
       `extractLeaseFacts(doc: LeaseDocument): LeaseFacts`. Rendered by
-      the new `LeaseFactsPanel` (populated + empty stories). App wiring
-      left to follow-up PR.
+      the new `LeaseFactsPanel` (populated + empty stories). App wire-up
+      landed in `wire-panels`.
 - [ ] Hover-glossary in the findings panel (tooltip on defined terms).
 - [ ] Golden tests: a commercial lease fixture exercising table +
       definitions + references simultaneously.
 
 ## Phase 9 — Negotiation support
 
-- [ ] `Annotation` IndexedDB store (keyed by leaseId+paragraphIndex);
+- [x] `Annotation` IndexedDB store (keyed by leaseId+paragraphIndex);
       add/edit/delete UI anchored to the findings panel.
+      `src/annotations/annotations.ts` + `src/ui/AnnotationsPanel.tsx`;
+      App wire-up landed in `wire-panels`.
 - [ ] Redline edit mode: contentEditable paragraph rendering with
       tracked-changes diff, stored separately from the original.
 - [ ] Export redlined HTML with `<ins>`/`<del>` tags + print stylesheet.
-- [ ] Counter-offer library (extends Phase 5 clause templates):
+- [x] Counter-offer library (extends Phase 5 clause templates):
       per-rule "suggested replacement" field, editable per user.
+      `src/negotiation/counterOffers.ts` + `src/ui/CounterOfferPanel.tsx`;
+      App wire-up landed in `wire-panels`.
 - [ ] "Apply suggestion" button on a finding → inserts template text
       into the redline mode as a proposed change.
 - [ ] Version history: each save of a redlined doc creates a new
@@ -165,13 +169,13 @@ Local-only, CSP-compatible.
       validator in `src/rules/packSchema.ts` (no ajv dep); covers
       matcher-type / severity / category enums + regex compileability.
       Diff-vs-currently-loaded UI still open.
-- [~] Import/export UI: list installed packs; disable/enable per
+- [x] Import/export UI: list installed packs; disable/enable per
       pack; accept `.lgpack.json`. Implemented in
       `src/ui/PackManagerPanel.tsx`, backed by
       `src/rules/packStorage.ts` (separate `leaseguard-packs`
-      IndexedDB database). Drag-and-drop, export-to-disk, and
-      App.tsx wiring still open — panel shipped as a pure
-      props-driven component pending wire-up ticket.
+      IndexedDB database). App wire-up landed in `wire-panels`; enabled
+      packs now feed `resolveActiveRules` and drive both upload and OCR
+      analysis paths. Drag-and-drop and export-to-disk still open.
 - [ ] Custom-rule authoring UI: form-driven matcher builder with live
       "does this fire on the current lease?" preview.
 - [ ] `Rule.jurisdictions?: string[]` field (ISO-like codes, e.g.
@@ -187,10 +191,10 @@ Local-only, CSP-compatible.
 
 ## Phase 11 — Workflow & integrations
 
-- [~] `.ics` export — pure `buildIcs({leaseName, dates})` primitive
+- [x] `.ics` export — pure `buildIcs({leaseName, dates})` primitive
       landed in `src/workflow/buildIcs.ts` (RFC 5545, 75-octet folding,
-      escape handling, all-day events). Still pending: Phase 8
-      `LeaseFacts` → `IcsDateInput[]` adapter and the App wire-up.
+      escape handling, all-day events). `LeaseFacts` → `IcsDateInput[]`
+      adapter + App wire-up landed in `wire-panels`.
 - [x] "Copy summary" button → HTML + plain-text to the clipboard via
       `navigator.clipboard.write` + `ClipboardItem`, with `writeText`
       fallback. `buildSummary` + `copyToClipboard` in
@@ -198,13 +202,15 @@ Local-only, CSP-compatible.
 - [x] Lawyer handoff ZIP: original PDF + HTML report + JSON + readme,
       bundled via a hand-rolled STORE-only ZIP writer
       (`src/workflow/buildHandoffZip.ts`). No new deps.
-- [ ] Portfolio view: grid of leases across the library with counts
-      per rule id; filterable.
-- [ ] Bulk import: drop a zip/folder of PDFs; progress bar; per-file
-      status; deduplicate by content hash.
-- [~] `WorkflowPanel` UI primitive (`src/ui/WorkflowPanel.tsx` +
-      stories) with three action buttons and status. App wire-up is a
-      follow-up PR per the constraints of this pass.
+- [x] Portfolio view: grid of leases across the library with counts
+      per rule id; filterable. `src/ui/PortfolioPanel.tsx` mounted
+      behind a Current-lease / Portfolio view toggle in `wire-panels`.
+- [~] Bulk import: drop a zip/folder of PDFs; progress bar; per-file
+      status; deduplicate by content hash. `src/workflow/bulkImport.ts`
+      primitive landed; App wire-up still open.
+- [x] `WorkflowPanel` UI primitive (`src/ui/WorkflowPanel.tsx` +
+      stories) with three action buttons and status. App wire-up landed
+      in `wire-panels`.
 
 ## Phase 12 — Trust & verification
 
@@ -218,9 +224,9 @@ Local-only, CSP-compatible.
       `leaseguard-signing` IndexedDB.
 - [x] Signed JSON export: add `signature` field; include `inputHash`
       (SHA-256 of the PDF), `rulePackVersion`, `findings`.
-      (Schema pinned at `leaseguard.findings.v1`; `signature` is an
-      optional extension. UI wire-up of the panel in `App.tsx` is
-      pending and will land in a follow-up.)
+      Schema pinned at `leaseguard.findings.v1`; `signature` is an
+      optional extension. App wire-up (SigningKeyPanel + gated
+      "Export findings (signed JSON)" button) landed in `wire-panels`.
 - [ ] Append-only audit log in IndexedDB; hash-chained entries
       (`prevHash`); "Download audit log" button.
 - [ ] Replay bundle export: ZIP with PDF + packs + expected JSON +
@@ -259,10 +265,15 @@ Local-only, CSP-compatible.
 
 ## Cross-cutting tech debt
 
-- [ ] Extract a `usePipeline` hook — App's `handleBytes` is the tallest
+- [x] Extract a `usePipeline` hook — App's `handleBytes` is the tallest
       function in the codebase and now juggles OCR + auto-compare +
       save; promoting it to a hook would cut App.tsx by ~100 lines and
       free up branch coverage we're currently shoring up with App tests.
+      Landed in `wire-panels` as `src/App/usePipeline.ts` with a
+      dedicated test suite. Pre-wire-up App.tsx dropped from 527 to 452
+      lines; post-wire-up (seven panels mounted + their handlers) lands
+      around 835, which is still a win in per-concern clarity because
+      the pipeline + comparison + OCR state no longer live inline.
 - [ ] Sections track paragraph indices (not just `Paragraph` object
       refs) so `sectionAnchored` doesn't need `Array.indexOf`.
 - [ ] Fix the one react-refresh ESLint warning in

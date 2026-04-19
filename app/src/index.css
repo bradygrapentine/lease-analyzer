@@ -58,6 +58,27 @@ main {
   border-radius: 4px;
 }
 
+.view-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+.view-toggle button[aria-pressed='true'] {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.workflow-panel .actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.portfolio-scroll {
+  max-width: 100%;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

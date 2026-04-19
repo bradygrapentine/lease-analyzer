@@ -1,0 +1,188 @@
+import { useCallback, useState } from 'react';
+import { analyzeFile, type AnalysisResult } from '../ui/analyzeFile';
+import { runOcr } from '../ocr/runOcr';
+import { analyze } from '../rules/analyze';
+import { RULE_PACK_V1 } from '../rules/packV1';
+import type { Rule } from '../rules/types';
+import { getLease, getStandardId, saveLease, type LeaseRecord } from '../storage/storage';
+import { PasswordProtectedPdfError } from '../parser/types';
+
+export type PipelineStatus =
+  | { kind: 'idle' }
+  | { kind: 'loading'; fileName: string }
+  | {
+      kind: 'analyzed';
+      fileName: string;
+      result: AnalysisResult;
+      bytes: Uint8Array | null;
+      /** Storage id for this lease (used by Phase 9 annotations). */
+      leaseId: string | null;
+    }
+  | { kind: 'error'; message: string };
+
+export type OcrState =
+  | { kind: 'idle' }
+  | { kind: 'running'; pct: number; stage: string }
+  | { kind: 'error'; message: string };
+
+export interface PipelineApi {
+  status: PipelineStatus;
+  ocrState: OcrState;
+  comparison: { a: LeaseRecord; b: LeaseRecord } | null;
+  /** Upload + parse + analyze + save + auto-compare. */
+  upload: (bytes: Uint8Array, fileName: string) => Promise<void>;
+  /** Re-run analyze over the currently loaded doc via OCR. */
+  ocr: () => Promise<void>;
+  /** Overwrite status to `analyzed` with a pre-loaded LeaseRecord (e.g. opening from library). */
+  open: (record: LeaseRecord) => void;
+  /** Force status back to idle (used by clear-all / import archive). */
+  reset: () => void;
+  /** Set an external error (e.g. a failed sample fetch). */
+  setError: (message: string) => void;
+  /** Set the current comparison pair (used by the compare picker). */
+  setComparison: (pair: { a: LeaseRecord; b: LeaseRecord } | null) => void;
+}
+
+export interface UsePipelineDeps {
+  /** Called after a successful save so the caller can refresh their library view. */
+  onLibraryChange?: () => void | Promise<void>;
+  /**
+   * Rules to run on upload + OCR. Defaults to the built-in pack. Phase 10
+   * rule-pack installs override this by resolving active rules at call time.
+   */
+  rules?: Rule[];
+}
+
+/**
+ * Extraction of App's handleBytes + OCR + auto-compare + save pipeline.
+ *
+ * Every side effect here previously lived inline in `App.tsx`; behavior
+ * must be byte-identical so the existing App tests keep passing.
+ *
+ * The hook intentionally owns `status`, `ocrState`, and `comparison`:
+ * they all transition together (loading → analyzed resets comparison,
+ * OCR rewrites `status.result`, etc.) and leaking them to App as
+ * separate states re-invites the spaghetti we just untangled.
+ */
+export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
+  const [status, setStatus] = useState<PipelineStatus>({ kind: 'idle' });
+  const [ocrState, setOcrState] = useState<OcrState>({ kind: 'idle' });
+  const [comparison, setComparisonState] = useState<{ a: LeaseRecord; b: LeaseRecord } | null>(
+    null,
+  );
+
+  const { onLibraryChange, rules } = deps;
+  const activeRules = rules ?? RULE_PACK_V1;
+
+  const upload = useCallback(
+    async (bytes: Uint8Array, fileName: string): Promise<void> => {
+      setStatus({ kind: 'loading', fileName });
+      setComparisonState(null);
+      try {
+        // pdf.js transfers ownership of the ArrayBuffer during parse, so we
+        // hand it a copy and keep the original for the viewer.
+        const result = await analyzeFile(new Uint8Array(bytes), activeRules);
+        const newId = await saveLease({
+          name: fileName,
+          doc: result.doc,
+          findings: result.findings,
+        });
+        if (onLibraryChange) await onLibraryChange();
+        setStatus({ kind: 'analyzed', fileName, result, bytes, leaseId: newId });
+
+        // Auto-compare against the standard, if one exists and it isn't this lease.
+        const std = await getStandardId();
+        if (std && std !== newId) {
+          const standard = await getLease(std);
+          if (standard) {
+            setComparisonState({
+              a: standard,
+              b: {
+                id: newId,
+                name: fileName,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                rulePackVersion: result.findings[0]?.rulePackVersion ?? 'unknown',
+                pageCount: result.doc.pages.length,
+                findingCount: result.findings.length,
+                doc: result.doc,
+                findings: result.findings,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        setStatus({ kind: 'error', message: friendlyError(err) });
+      }
+    },
+    [onLibraryChange, activeRules],
+  );
+
+  const ocr = useCallback(async (): Promise<void> => {
+    if (status.kind !== 'analyzed' || !status.bytes) return;
+    setOcrState({ kind: 'running', pct: 0, stage: 'starting' });
+    try {
+      // pdf.js transfers the ArrayBuffer during parse, so hand runOcr a copy
+      // and keep the original for the viewer.
+      const copy = new Uint8Array(status.bytes);
+      const doc = await runOcr(copy, {
+        onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
+      });
+      const findings = analyze(doc, activeRules);
+      setStatus({
+        kind: 'analyzed',
+        fileName: status.fileName,
+        result: { doc, findings },
+        bytes: status.bytes,
+        leaseId: status.leaseId,
+      });
+      setOcrState({ kind: 'idle' });
+    } catch (err) {
+      setOcrState({ kind: 'error', message: friendlyError(err) });
+    }
+  }, [status, activeRules]);
+
+  const open = useCallback((record: LeaseRecord): void => {
+    setStatus({
+      kind: 'analyzed',
+      fileName: record.name,
+      result: { doc: record.doc, findings: record.findings },
+      bytes: null,
+      leaseId: record.id,
+    });
+  }, []);
+
+  const reset = useCallback((): void => {
+    setStatus({ kind: 'idle' });
+    setComparisonState(null);
+  }, []);
+
+  const setError = useCallback((message: string): void => {
+    setStatus({ kind: 'error', message });
+  }, []);
+
+  const setComparison = useCallback(
+    (pair: { a: LeaseRecord; b: LeaseRecord } | null): void => {
+      setComparisonState(pair);
+    },
+    [],
+  );
+
+  return {
+    status,
+    ocrState,
+    comparison,
+    upload,
+    ocr,
+    open,
+    reset,
+    setError,
+    setComparison,
+  };
+}
+
+function friendlyError(err: unknown): string {
+  if (err instanceof PasswordProtectedPdfError) return err.message;
+  if (err instanceof Error) return err.message;
+  return String(err);
+}

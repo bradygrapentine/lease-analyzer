@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { analyzeFile, type AnalysisResult } from './ui/analyzeFile';
+import { usePipeline } from './App/usePipeline';
 import { FindingsPanel } from './ui/FindingsPanel';
 import { LibraryPanel } from './ui/LibraryPanel';
 import { PdfViewer } from './ui/PdfViewer';
@@ -8,11 +8,45 @@ import { ComparePanel } from './ui/ComparePanel';
 import { LibraryCompareForm } from './ui/LibraryCompareForm';
 import { TemplatesPanel } from './ui/TemplatesPanel';
 import { TemplateMatchesPanel } from './ui/TemplateMatchesPanel';
-import { needsOcr } from './compare/needsOcr';
-import { runOcr } from './ocr/runOcr';
-import { analyze } from './rules/analyze';
+import { LeaseFactsPanel } from './ui/LeaseFactsPanel';
+import { extractLeaseFacts } from './facts/extractFacts';
+import { WorkflowPanel } from './ui/WorkflowPanel';
+import { buildIcs, type IcsDateInput } from './workflow/buildIcs';
+import { buildSummary, copyToClipboard } from './workflow/copySummary';
+import { buildHandoffZip } from './workflow/buildHandoffZip';
+import type { LeaseFacts } from './facts/types';
+import { PackManagerPanel } from './ui/PackManagerPanel';
+import {
+  deleteInstalledPack,
+  listInstalledPacks,
+  saveInstalledPack,
+  setPackEnabled,
+  getPackEnabled,
+} from './rules/packStorage';
+import { validatePackFile, type RulePackFile } from './rules/packSchema';
+import { resolveActiveRules } from './rules/activePack';
 import { RULE_PACK_V1 } from './rules/packV1';
-import type { LeaseRecord } from './storage/storage';
+import { SigningKeyPanel } from './ui/SigningKeyPanel';
+import { createSigningKey, exportPublicKey } from './security/signingKeys';
+import { signExport } from './storage/exportReport';
+import { sha256Hex } from './security/inputHash';
+import { AnnotationsPanel } from './ui/AnnotationsPanel';
+import {
+  deleteAnnotation,
+  listAnnotations,
+  saveAnnotation,
+  updateAnnotation,
+  type Annotation,
+} from './annotations/annotations';
+import { CounterOfferPanel } from './ui/CounterOfferPanel';
+import {
+  deleteCounterOffer,
+  listCounterOffers,
+  saveCounterOffer,
+  type CounterOffer,
+} from './negotiation/counterOffers';
+import { PortfolioPanel } from './ui/PortfolioPanel';
+import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
 import type { ClauseTemplate } from './templates/types';
@@ -33,7 +67,6 @@ import {
   listLeases,
   renameLease,
   replaceAllLeases,
-  saveLease,
   setStandardId,
   type LeaseMetadata,
 } from './storage/storage';
@@ -45,23 +78,50 @@ import {
 import { exportFindingsJson } from './storage/exportReport';
 import { exportFindingsHtml } from './storage/exportHtml';
 
-type Status =
-  | { kind: 'idle' }
-  | { kind: 'loading'; fileName: string }
-  | { kind: 'analyzed'; fileName: string; result: AnalysisResult; bytes: Uint8Array | null }
-  | { kind: 'error'; message: string };
-
 export function App(): JSX.Element {
-  const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [selected, setSelected] = useState<Finding | null>(null);
   const [library, setLibrary] = useState<LeaseMetadata[]>([]);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
-  const [comparison, setComparison] = useState<{ a: LeaseRecord; b: LeaseRecord } | null>(null);
   const [standardId, setStandardIdState] = useState<string | null>(null);
   const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
-  const [ocrState, setOcrState] = useState<
-    { kind: 'idle' } | { kind: 'running'; pct: number; stage: string } | { kind: 'error'; message: string }
-  >({ kind: 'idle' });
+  const [installedPacks, setInstalledPacks] = useState<RulePackFile[]>([]);
+  const [enabledPacks, setEnabledPacks] = useState<Set<string>>(new Set());
+  const [signingPublicKey, setSigningPublicKey] = useState<string | null>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [counterOffers, setCounterOffers] = useState<CounterOffer[]>([]);
+  const [view, setView] = useState<'current' | 'portfolio'>('current');
+  const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
+    new Map(),
+  );
+
+  const refreshPortfolioFindings = useCallback(async () => {
+    const records = await listAllLeaseRecords();
+    const map = new Map<string, Finding[]>();
+    for (const r of records) map.set(r.id, r.findings);
+    setPortfolioFindings(map);
+  }, []);
+
+  const refreshAnnotations = useCallback(async (leaseId: string) => {
+    setAnnotations(await listAnnotations(leaseId));
+  }, []);
+
+  const refreshCounterOffers = useCallback(async () => {
+    setCounterOffers(await listCounterOffers());
+  }, []);
+
+  const refreshSigningKey = useCallback(async () => {
+    setSigningPublicKey(await exportPublicKey());
+  }, []);
+
+  const refreshPacks = useCallback(async () => {
+    const packs = await listInstalledPacks();
+    const enabled = new Set<string>();
+    for (const p of packs) {
+      if (await getPackEnabled(p.id)) enabled.add(p.id);
+    }
+    setInstalledPacks(packs);
+    setEnabledPacks(enabled);
+  }, []);
 
   const refreshLibrary = useCallback(async () => {
     const [leases, std] = await Promise.all([listLeases(), getStandardId()]);
@@ -73,10 +133,41 @@ export function App(): JSX.Element {
     setTemplates(await listTemplates());
   }, []);
 
+  const activeRules = resolveActiveRules(RULE_PACK_V1, installedPacks, enabledPacks).rules;
+  const pipeline = usePipeline({ onLibraryChange: refreshLibrary, rules: activeRules });
+  const { status, ocrState, comparison } = pipeline;
+
   useEffect(() => {
     void refreshLibrary();
     void refreshTemplates();
-  }, [refreshLibrary, refreshTemplates]);
+    void refreshPacks();
+    void refreshSigningKey();
+    void refreshCounterOffers();
+  }, [
+    refreshLibrary,
+    refreshTemplates,
+    refreshPacks,
+    refreshSigningKey,
+    refreshCounterOffers,
+  ]);
+
+  // Re-index the portfolio whenever the library or the view changes.
+  useEffect(() => {
+    if (view === 'portfolio') {
+      void refreshPortfolioFindings();
+    }
+  }, [view, library, refreshPortfolioFindings]);
+
+  // Load annotations whenever the currently-analyzed lease changes.
+  const analyzedLeaseId =
+    status.kind === 'analyzed' ? status.leaseId : null;
+  useEffect(() => {
+    if (analyzedLeaseId) {
+      void refreshAnnotations(analyzedLeaseId);
+    } else {
+      setAnnotations([]);
+    }
+  }, [analyzedLeaseId, refreshAnnotations]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -100,45 +191,8 @@ export function App(): JSX.Element {
   }, []);
 
   async function handleBytes(bytes: Uint8Array, fileName: string): Promise<void> {
-    setStatus({ kind: 'loading', fileName });
     setSelected(null);
-    setComparison(null);
-    try {
-      // pdf.js transfers ownership of the ArrayBuffer during parse, so we
-      // hand it a copy and keep the original for the viewer.
-      const result = await analyzeFile(new Uint8Array(bytes));
-      const newId = await saveLease({
-        name: fileName,
-        doc: result.doc,
-        findings: result.findings,
-      });
-      await refreshLibrary();
-      setStatus({ kind: 'analyzed', fileName, result, bytes });
-
-      // Auto-compare against the standard, if one exists and it isn't this lease.
-      const std = await getStandardId();
-      if (std && std !== newId) {
-        const standard = await getLease(std);
-        if (standard) {
-          setComparison({
-            a: standard,
-            b: {
-              id: newId,
-              name: fileName,
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-              rulePackVersion: result.findings[0]?.rulePackVersion ?? 'unknown',
-              pageCount: result.doc.pages.length,
-              findingCount: result.findings.length,
-              doc: result.doc,
-              findings: result.findings,
-            },
-          });
-        }
-      }
-    } catch (err) {
-      setStatus({ kind: 'error', message: friendlyError(err) });
-    }
+    await pipeline.upload(bytes, fileName);
   }
 
   async function onFileChange(e: ChangeEvent<HTMLInputElement>): Promise<void> {
@@ -155,7 +209,7 @@ export function App(): JSX.Element {
       const buf = await res.arrayBuffer();
       await handleBytes(new Uint8Array(buf), 'Sample lease.pdf');
     } catch (err) {
-      setStatus({ kind: 'error', message: friendlyError(err) });
+      pipeline.setError(friendlyError(err));
     }
   }
 
@@ -163,12 +217,7 @@ export function App(): JSX.Element {
     const record = await getLease(id);
     if (!record) return;
     setSelected(null);
-    setStatus({
-      kind: 'analyzed',
-      fileName: record.name,
-      result: { doc: record.doc, findings: record.findings },
-      bytes: null,
-    });
+    pipeline.open(record);
   }
 
   async function onDeleteLibrary(id: string): Promise<void> {
@@ -190,7 +239,7 @@ export function App(): JSX.Element {
   async function onCompare(aId: string, bId: string): Promise<void> {
     const [a, b] = await Promise.all([getLease(aId), getLease(bId)]);
     if (!a || !b) return;
-    setComparison({ a, b });
+    pipeline.setComparison({ a, b });
   }
 
   async function onExportArchive(): Promise<void> {
@@ -227,15 +276,14 @@ export function App(): JSX.Element {
       }
       await replaceAllLeases(payload.leases, payload.standardId);
       await refreshLibrary();
-      setStatus({ kind: 'idle' });
+      pipeline.reset();
       setSelected(null);
-      setComparison(null);
     } catch (err) {
       const msg =
         err instanceof WrongPassphraseError
           ? err.message
           : `Import failed: ${friendlyError(err)}`;
-      setStatus({ kind: 'error', message: msg });
+      pipeline.setError(msg);
     }
   }
 
@@ -244,7 +292,7 @@ export function App(): JSX.Element {
     await clearAll();
     await refreshLibrary();
     await refreshTemplates();
-    setStatus({ kind: 'idle' });
+    pipeline.reset();
     setSelected(null);
   }
 
@@ -263,28 +311,106 @@ export function App(): JSX.Element {
     await refreshTemplates();
   }
 
-  async function onAttemptOcr(): Promise<void> {
-    if (status.kind !== 'analyzed' || !status.bytes) return;
-    setOcrState({ kind: 'running', pct: 0, stage: 'starting' });
+  async function onSaveAnnotation(text: string): Promise<void> {
+    if (!analyzedLeaseId || selected === null) return;
+    await saveAnnotation({
+      leaseId: analyzedLeaseId,
+      paragraphIndex: selected.paragraphIndex,
+      text,
+    });
+    await refreshAnnotations(analyzedLeaseId);
+  }
+
+  async function onUpdateAnnotation(id: string, text: string): Promise<void> {
+    await updateAnnotation(id, text);
+    if (analyzedLeaseId) await refreshAnnotations(analyzedLeaseId);
+  }
+
+  async function onDeleteAnnotation(id: string): Promise<void> {
+    await deleteAnnotation(id);
+    if (analyzedLeaseId) await refreshAnnotations(analyzedLeaseId);
+  }
+
+  async function onSaveCounterOffer(
+    ruleId: string,
+    name: string,
+    text: string,
+  ): Promise<void> {
+    await saveCounterOffer({ ruleId, name, text });
+    await refreshCounterOffers();
+  }
+
+  async function onDeleteCounterOffer(id: string): Promise<void> {
+    await deleteCounterOffer(id);
+    await refreshCounterOffers();
+  }
+
+  async function onCreateSigningKey(passphrase: string): Promise<void> {
+    await createSigningKey(passphrase);
+    await refreshSigningKey();
+  }
+
+  async function onExportSigningPublicKey(publicKey: string): Promise<void> {
+    // Copy base64 public key to the clipboard. Fall back silently (CSP-friendly).
     try {
-      // pdf.js transfers the ArrayBuffer during parse, so hand runOcr a copy
-      // and keep the original for the viewer.
-      const copy = new Uint8Array(status.bytes);
-      const doc = await runOcr(copy, {
-        onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
-      });
-      const findings = analyze(doc, RULE_PACK_V1);
-      setStatus({
-        kind: 'analyzed',
-        fileName: status.fileName,
-        result: { doc, findings },
-        bytes: status.bytes,
-      });
-      setSelected(null);
-      setOcrState({ kind: 'idle' });
-    } catch (err) {
-      setOcrState({ kind: 'error', message: friendlyError(err) });
+      const nav = globalThis.navigator as
+        | { clipboard?: { writeText?: (s: string) => Promise<void> } }
+        | undefined;
+      await nav?.clipboard?.writeText?.(publicKey);
+    } catch {
+      // swallow — exporting is best-effort
     }
+  }
+
+  async function onExportSignedJson(): Promise<void> {
+    if (status.kind !== 'analyzed') return;
+    const passphrase = window.prompt('Passphrase to unlock the signing key:');
+    if (!passphrase) return;
+    try {
+      const inputHash = status.bytes ? await sha256Hex(status.bytes) : null;
+      const unsigned = exportFindingsJson({
+        name: status.fileName,
+        doc: status.result.doc,
+        findings: status.result.findings,
+        inputHash,
+      });
+      const signed = await signExport(unsigned, passphrase);
+      downloadBlob(
+        signed,
+        'application/json',
+        `${status.fileName.replace(/\.pdf$/i, '')}-findings.signed.json`,
+      );
+    } catch (err) {
+      pipeline.setError(`Signing failed: ${friendlyError(err)}`);
+    }
+  }
+
+  async function onImportPack(file: File): Promise<void> {
+    const bytes = await readFileBytes(file);
+    const text = new TextDecoder().decode(bytes);
+    const parsed: unknown = JSON.parse(text);
+    const result = validatePackFile(parsed);
+    if (!result.ok) {
+      throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
+    }
+    await saveInstalledPack(result.pack);
+    await setPackEnabled(result.pack.id, true);
+    await refreshPacks();
+  }
+
+  async function onTogglePack(id: string, enabled: boolean): Promise<void> {
+    await setPackEnabled(id, enabled);
+    await refreshPacks();
+  }
+
+  async function onDeletePack(id: string): Promise<void> {
+    await deleteInstalledPack(id);
+    await refreshPacks();
+  }
+
+  async function onAttemptOcr(): Promise<void> {
+    setSelected(null);
+    await pipeline.ocr();
   }
 
   function onExportJson(): void {
@@ -313,6 +439,54 @@ export function App(): JSX.Element {
       'text/html',
       `${status.fileName.replace(/\.pdf$/i, '')}-findings.html`,
     );
+  }
+
+  function onBuildIcs(): void {
+    if (status.kind !== 'analyzed') return;
+    const facts = extractLeaseFacts(status.result.doc);
+    const dates = leaseFactsToIcsDates(facts);
+    if (dates.length === 0) {
+      // Nothing date-shaped to emit — surface via status so the user sees why.
+      pipeline.setError('No dates found in this lease to export to .ics.');
+      return;
+    }
+    const ics = buildIcs({ leaseName: status.fileName, dates });
+    downloadBlobBytes(
+      new TextEncoder().encode(ics),
+      'text/calendar',
+      `${status.fileName.replace(/\.pdf$/i, '')}.ics`,
+    );
+  }
+
+  async function onCopySummary(): Promise<void> {
+    if (status.kind !== 'analyzed') return;
+    const summary = buildSummary({
+      leaseName: status.fileName,
+      findings: status.result.findings,
+    });
+    await copyToClipboard(summary);
+  }
+
+  function onDownloadHandoff(): void {
+    if (status.kind !== 'analyzed') return;
+    const pdfBytes = status.bytes ?? new Uint8Array();
+    const findingsJson = exportFindingsJson({
+      name: status.fileName,
+      doc: status.result.doc,
+      findings: status.result.findings,
+    });
+    const findingsHtml = exportFindingsHtml({
+      name: status.fileName,
+      doc: status.result.doc,
+      findings: status.result.findings,
+    });
+    const readme =
+      `LeaseGuard handoff for ${status.fileName}\n\n` +
+      `- lease.pdf: original PDF (may be empty if opened from the library).\n` +
+      `- findings.html: printable findings report.\n` +
+      `- findings.json: machine-readable findings (schema leaseguard.findings.v1).\n`;
+    const zip = buildHandoffZip({ pdfBytes, findingsHtml, findingsJson, readme });
+    downloadBlobBytes(zip, 'application/zip', `${status.fileName.replace(/\.pdf$/i, '')}-handoff.zip`);
   }
 
   return (
@@ -347,19 +521,46 @@ export function App(): JSX.Element {
         <button type="button" onClick={() => void onTrySample()}>
           Try a sample lease
         </button>
+        <div role="group" aria-label="view mode" className="view-toggle">
+          <button
+            type="button"
+            aria-pressed={view === 'current'}
+            onClick={() => setView('current')}
+          >
+            Current lease
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === 'portfolio'}
+            onClick={() => setView('portfolio')}
+          >
+            Portfolio
+          </button>
+        </div>
       </header>
 
-      {status.kind === 'loading' && (
+      {view === 'current' && status.kind === 'loading' && (
         <p role="status" aria-live="polite">
           Analyzing {status.fileName}…
         </p>
       )}
 
-      {status.kind === 'error' && (
+      {view === 'current' && status.kind === 'error' && (
         <p role="alert">Could not analyze this file: {status.message}</p>
       )}
 
-      {status.kind === 'analyzed' && (
+      {view === 'portfolio' && (
+        <PortfolioPanel
+          leases={library}
+          findingsByLease={portfolioFindings}
+          onOpenLease={(id) => {
+            setView('current');
+            void onOpenLibrary(id);
+          }}
+        />
+      )}
+
+      {view === 'current' && status.kind === 'analyzed' && (
         <div className="results">
           <div className="results-actions">
             <button type="button" onClick={onExportJson}>
@@ -368,6 +569,11 @@ export function App(): JSX.Element {
             <button type="button" onClick={onExportHtml}>
               Export findings (printable HTML)
             </button>
+            {signingPublicKey !== null && (
+              <button type="button" onClick={() => void onExportSignedJson()}>
+                Export findings (signed JSON)
+              </button>
+            )}
           </div>
           {(() => {
             const ocr = needsOcr(status.result.doc);
@@ -420,7 +626,39 @@ export function App(): JSX.Element {
               <small>Page {selected.page}</small>
             </article>
           )}
+          <AnnotationsPanel
+            leaseId={analyzedLeaseId ?? ''}
+            paragraphIndex={selected ? selected.paragraphIndex : null}
+            annotations={annotations}
+            onSave={(text) => {
+              void onSaveAnnotation(text);
+            }}
+            onUpdate={(id, text) => {
+              void onUpdateAnnotation(id, text);
+            }}
+            onDelete={(id) => {
+              void onDeleteAnnotation(id);
+            }}
+          />
+          <CounterOfferPanel
+            finding={selected}
+            counters={counterOffers}
+            onSave={(ruleId, name, text) => {
+              void onSaveCounterOffer(ruleId, name, text);
+            }}
+            onDelete={(id) => {
+              void onDeleteCounterOffer(id);
+            }}
+          />
           <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
+          <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
+          <WorkflowPanel
+            leaseName={status.fileName}
+            findings={status.result.findings}
+            onBuildIcs={onBuildIcs}
+            onCopySummary={onCopySummary}
+            onDownloadHandoff={onDownloadHandoff}
+          />
         </div>
       )}
 
@@ -458,6 +696,29 @@ export function App(): JSX.Element {
         }}
         onDelete={(id) => {
           void onDeleteTemplate(id);
+        }}
+      />
+
+      <PackManagerPanel
+        builtInName="Built-in rules (v1)"
+        installed={installedPacks}
+        enabled={enabledPacks}
+        onImport={onImportPack}
+        onToggle={(id, enabled) => {
+          void onTogglePack(id, enabled);
+        }}
+        onDelete={(id) => {
+          void onDeletePack(id);
+        }}
+      />
+
+      <SigningKeyPanel
+        state={{ publicKey: signingPublicKey }}
+        onCreateKey={(pp) => {
+          void onCreateSigningKey(pp);
+        }}
+        onExportPublicKey={(pk) => {
+          void onExportSigningPublicKey(pk);
         }}
       />
 
@@ -516,6 +777,15 @@ async function readFileBytes(file: File): Promise<Uint8Array> {
 
 function downloadBlob(content: string, mime: string, filename: string): void {
   const blob = new Blob([content], { type: mime });
+  triggerDownload(blob, filename);
+}
+
+function downloadBlobBytes(bytes: Uint8Array, mime: string, filename: string): void {
+  const blob = new Blob([bytes as BlobPart], { type: mime });
+  triggerDownload(blob, filename);
+}
+
+function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -524,4 +794,42 @@ function downloadBlob(content: string, mime: string, filename: string): void {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Adapter from Phase 8 `LeaseFacts` to the date-shape `buildIcs` expects.
+ * We surface commencement + expiration + a 30-day-out notice reminder when
+ * the lease specifies a notice period. Skip anything we can't ISO-format.
+ */
+function leaseFactsToIcsDates(facts: LeaseFacts): IcsDateInput[] {
+  const out: IcsDateInput[] = [];
+  if (facts.commencementDate) {
+    out.push({ summary: 'Lease commences', date: facts.commencementDate });
+  }
+  if (facts.expirationDate) {
+    out.push({ summary: 'Lease expires', date: facts.expirationDate });
+  }
+  if (facts.expirationDate && facts.noticePeriodDays) {
+    const notice = subtractDaysIso(facts.expirationDate, facts.noticePeriodDays);
+    if (notice) {
+      out.push({
+        summary: `Notice deadline (${facts.noticePeriodDays} days before expiration)`,
+        date: notice,
+      });
+    }
+  }
+  return out;
+}
+
+function subtractDaysIso(iso: string, days: number): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  const t = Date.UTC(Number(y), Number(mo) - 1, Number(d));
+  if (Number.isNaN(t)) return null;
+  const shifted = new Date(t - days * 86_400_000);
+  const yy = shifted.getUTCFullYear();
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(shifted.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
 }
