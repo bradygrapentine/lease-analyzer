@@ -30,6 +30,21 @@ import { SigningKeyPanel } from './ui/SigningKeyPanel';
 import { createSigningKey, exportPublicKey } from './security/signingKeys';
 import { signExport } from './storage/exportReport';
 import { sha256Hex } from './security/inputHash';
+import { AnnotationsPanel } from './ui/AnnotationsPanel';
+import {
+  deleteAnnotation,
+  listAnnotations,
+  saveAnnotation,
+  updateAnnotation,
+  type Annotation,
+} from './annotations/annotations';
+import { CounterOfferPanel } from './ui/CounterOfferPanel';
+import {
+  deleteCounterOffer,
+  listCounterOffers,
+  saveCounterOffer,
+  type CounterOffer,
+} from './negotiation/counterOffers';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
@@ -71,6 +86,16 @@ export function App(): JSX.Element {
   const [installedPacks, setInstalledPacks] = useState<RulePackFile[]>([]);
   const [enabledPacks, setEnabledPacks] = useState<Set<string>>(new Set());
   const [signingPublicKey, setSigningPublicKey] = useState<string | null>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [counterOffers, setCounterOffers] = useState<CounterOffer[]>([]);
+
+  const refreshAnnotations = useCallback(async (leaseId: string) => {
+    setAnnotations(await listAnnotations(leaseId));
+  }, []);
+
+  const refreshCounterOffers = useCallback(async () => {
+    setCounterOffers(await listCounterOffers());
+  }, []);
 
   const refreshSigningKey = useCallback(async () => {
     setSigningPublicKey(await exportPublicKey());
@@ -105,7 +130,25 @@ export function App(): JSX.Element {
     void refreshTemplates();
     void refreshPacks();
     void refreshSigningKey();
-  }, [refreshLibrary, refreshTemplates, refreshPacks, refreshSigningKey]);
+    void refreshCounterOffers();
+  }, [
+    refreshLibrary,
+    refreshTemplates,
+    refreshPacks,
+    refreshSigningKey,
+    refreshCounterOffers,
+  ]);
+
+  // Load annotations whenever the currently-analyzed lease changes.
+  const analyzedLeaseId =
+    status.kind === 'analyzed' ? status.leaseId : null;
+  useEffect(() => {
+    if (analyzedLeaseId) {
+      void refreshAnnotations(analyzedLeaseId);
+    } else {
+      setAnnotations([]);
+    }
+  }, [analyzedLeaseId, refreshAnnotations]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -247,6 +290,40 @@ export function App(): JSX.Element {
   async function onDeleteTemplate(id: string): Promise<void> {
     await deleteTemplate(id);
     await refreshTemplates();
+  }
+
+  async function onSaveAnnotation(text: string): Promise<void> {
+    if (!analyzedLeaseId || selected === null) return;
+    await saveAnnotation({
+      leaseId: analyzedLeaseId,
+      paragraphIndex: selected.paragraphIndex,
+      text,
+    });
+    await refreshAnnotations(analyzedLeaseId);
+  }
+
+  async function onUpdateAnnotation(id: string, text: string): Promise<void> {
+    await updateAnnotation(id, text);
+    if (analyzedLeaseId) await refreshAnnotations(analyzedLeaseId);
+  }
+
+  async function onDeleteAnnotation(id: string): Promise<void> {
+    await deleteAnnotation(id);
+    if (analyzedLeaseId) await refreshAnnotations(analyzedLeaseId);
+  }
+
+  async function onSaveCounterOffer(
+    ruleId: string,
+    name: string,
+    text: string,
+  ): Promise<void> {
+    await saveCounterOffer({ ruleId, name, text });
+    await refreshCounterOffers();
+  }
+
+  async function onDeleteCounterOffer(id: string): Promise<void> {
+    await deleteCounterOffer(id);
+    await refreshCounterOffers();
   }
 
   async function onCreateSigningKey(passphrase: string): Promise<void> {
@@ -502,6 +579,30 @@ export function App(): JSX.Element {
               <small>Page {selected.page}</small>
             </article>
           )}
+          <AnnotationsPanel
+            leaseId={analyzedLeaseId ?? ''}
+            paragraphIndex={selected ? selected.paragraphIndex : null}
+            annotations={annotations}
+            onSave={(text) => {
+              void onSaveAnnotation(text);
+            }}
+            onUpdate={(id, text) => {
+              void onUpdateAnnotation(id, text);
+            }}
+            onDelete={(id) => {
+              void onDeleteAnnotation(id);
+            }}
+          />
+          <CounterOfferPanel
+            finding={selected}
+            counters={counterOffers}
+            onSave={(ruleId, name, text) => {
+              void onSaveCounterOffer(ruleId, name, text);
+            }}
+            onDelete={(id) => {
+              void onDeleteCounterOffer(id);
+            }}
+          />
           <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
           <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
           <WorkflowPanel

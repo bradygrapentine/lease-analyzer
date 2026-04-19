@@ -10,7 +10,14 @@ import { PasswordProtectedPdfError } from '../parser/types';
 export type PipelineStatus =
   | { kind: 'idle' }
   | { kind: 'loading'; fileName: string }
-  | { kind: 'analyzed'; fileName: string; result: AnalysisResult; bytes: Uint8Array | null }
+  | {
+      kind: 'analyzed';
+      fileName: string;
+      result: AnalysisResult;
+      bytes: Uint8Array | null;
+      /** Storage id for this lease (used by Phase 9 annotations). */
+      leaseId: string | null;
+    }
   | { kind: 'error'; message: string };
 
 export type OcrState =
@@ -81,7 +88,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
           findings: result.findings,
         });
         if (onLibraryChange) await onLibraryChange();
-        setStatus({ kind: 'analyzed', fileName, result, bytes });
+        setStatus({ kind: 'analyzed', fileName, result, bytes, leaseId: newId });
 
         // Auto-compare against the standard, if one exists and it isn't this lease.
         const std = await getStandardId();
@@ -127,6 +134,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         fileName: status.fileName,
         result: { doc, findings },
         bytes: status.bytes,
+        leaseId: status.leaseId,
       });
       setOcrState({ kind: 'idle' });
     } catch (err) {
@@ -140,6 +148,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
       fileName: record.name,
       result: { doc: record.doc, findings: record.findings },
       bytes: null,
+      leaseId: record.id,
     });
   }, []);
 
