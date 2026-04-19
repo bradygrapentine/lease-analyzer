@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { TemplateMatchesPanel, classifyMatch } from './TemplateMatchesPanel';
+import { TemplateMatchesPanel } from './TemplateMatchesPanel';
+import { classifyMatch } from './templateMatch';
 import type { ClauseTemplateMatch } from '../templates/types';
 
 function match(over: Partial<ClauseTemplateMatch>): ClauseTemplateMatch {
