@@ -32,61 +32,78 @@ export async function renderPageToCanvas(
   await page.render({ canvasContext: ctx, viewport }).promise;
 }
 
-export interface RenderHandle {
-  done: Promise<void>;
-  cancel: () => void;
+export interface RenderPdfPagesOptions {
+  signal?: AbortSignal;
 }
 
+function makeAbortError(): DOMException {
+  return new DOMException('renderPdfPages aborted', 'AbortError');
+}
+
+/**
+ * Render the given pdf bytes into `canvases` (one per page). Resolves when
+ * rendering completes. If `options.signal` aborts mid-flight, the returned
+ * promise rejects with a `DOMException` whose `name === 'AbortError'`. If the
+ * signal aborts after rendering has already resolved it is a no-op.
+ *
+ * Note: pdf.js transfers ownership of the ArrayBuffer underlying `bytes`;
+ * callers must pass a copy (see `copyBytes` in `parser/copyBytes.ts`).
+ */
 export function renderPdfPages(
   bytes: Uint8Array,
   canvases: Array<HTMLCanvasElement | null>,
-): RenderHandle {
-  let cancelled = false;
+  options: RenderPdfPagesOptions = {},
+): Promise<void> {
+  const { signal } = options;
   const tasks: Array<{ cancel: () => void }> = [];
 
-  const done = (async (): Promise<void> => {
-    const pdfjs = await loadPdfjs();
-    if (cancelled) return;
-    const loadingTask = pdfjs.getDocument({ data: bytes, isEvalSupported: false });
-    const doc = await loadingTask.promise;
-    if (cancelled) return;
-
-    const targetScale = devicePixelScale();
-    for (let i = 0; i < canvases.length; i++) {
-      if (cancelled) return;
-      const canvas = canvases[i];
-      if (!canvas) continue;
-      if (i + 1 > doc.numPages) break;
-
-      const page = await doc.getPage(i + 1);
-      if (cancelled) return;
-      const viewport = page.getViewport({ scale: targetScale });
-      const ctx = canvas.getContext('2d');
-      if (!ctx) continue;
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.width = `${viewport.width / targetScale}px`;
-      canvas.style.height = `${viewport.height / targetScale}px`;
-
-      const task = page.render({ canvasContext: ctx, viewport });
-      tasks.push(task);
-      await task.promise;
-    }
-  })();
-
-  return {
-    done,
-    cancel: (): void => {
-      cancelled = true;
-      for (const t of tasks) {
-        try {
-          t.cancel();
-        } catch {
-          // already completed; ignore
-        }
+  const onAbort = (): void => {
+    for (const t of tasks) {
+      try {
+        t.cancel();
+      } catch {
+        // already completed; ignore
       }
-    },
+    }
   };
+  if (signal) signal.addEventListener('abort', onAbort);
+
+  const run = async (): Promise<void> => {
+    try {
+      if (signal?.aborted) throw makeAbortError();
+      const pdfjs = await loadPdfjs();
+      if (signal?.aborted) throw makeAbortError();
+      const loadingTask = pdfjs.getDocument({ data: bytes, isEvalSupported: false });
+      const doc = await loadingTask.promise;
+      if (signal?.aborted) throw makeAbortError();
+
+      const targetScale = devicePixelScale();
+      for (let i = 0; i < canvases.length; i++) {
+        if (signal?.aborted) throw makeAbortError();
+        const canvas = canvases[i];
+        if (!canvas) continue;
+        if (i + 1 > doc.numPages) break;
+
+        const page = await doc.getPage(i + 1);
+        if (signal?.aborted) throw makeAbortError();
+        const viewport = page.getViewport({ scale: targetScale });
+        const ctx = canvas.getContext('2d');
+        if (!ctx) continue;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = `${viewport.width / targetScale}px`;
+        canvas.style.height = `${viewport.height / targetScale}px`;
+
+        const task = page.render({ canvasContext: ctx, viewport });
+        tasks.push(task);
+        await task.promise;
+      }
+    } finally {
+      if (signal) signal.removeEventListener('abort', onAbort);
+    }
+  };
+
+  return run();
 }
 
 function devicePixelScale(): number {

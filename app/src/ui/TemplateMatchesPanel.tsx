@@ -1,21 +1,10 @@
 import type { ClauseTemplateMatch } from '../templates/types';
+import { classifyMatch } from './templateMatch';
 
 interface TemplateMatchesPanelProps {
   matches: ClauseTemplateMatch[];
   matchedThreshold?: number;
   weakThreshold?: number;
-}
-
-export type TemplateMatchBadge = 'matched' | 'weak' | 'missing';
-
-export function classifyMatch(
-  score: number,
-  matchedThreshold: number,
-  weakThreshold: number,
-): TemplateMatchBadge {
-  if (score >= matchedThreshold) return 'matched';
-  if (score >= weakThreshold) return 'weak';
-  return 'missing';
 }
 
 export function TemplateMatchesPanel({

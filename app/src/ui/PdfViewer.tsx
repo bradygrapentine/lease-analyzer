@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { renderPdfPages } from './renderPdfPages';
+import { copyBytes } from '../parser/copyBytes';
 import type { BoundingBox, PageText } from '../parser/types';
 
 interface PdfViewerProps {
@@ -23,17 +24,16 @@ export function PdfViewer({
   useEffect(() => {
     if (!bytes || pageCount === 0) return;
     const canvases = canvasRefs.current.slice(0, pageCount);
+    const controller = new AbortController();
     // pdf.js detaches the ArrayBuffer during load, so each render call
     // gets its own copy.
-    const copy = new Uint8Array(bytes);
-    const handle = renderPdfPages(copy, canvases);
-    handle.done.catch((err: unknown) => {
+    renderPdfPages(copyBytes(bytes), canvases, { signal: controller.signal }).catch((err: unknown) => {
       const name = (err as { name?: string })?.name;
-      if (name === 'RenderingCancelledException') return;
+      if (name === 'AbortError' || name === 'RenderingCancelledException') return;
       console.error('[PdfViewer] render failed:', err);
     });
     return (): void => {
-      handle.cancel();
+      controller.abort();
     };
   }, [bytes, pageCount]);
 
