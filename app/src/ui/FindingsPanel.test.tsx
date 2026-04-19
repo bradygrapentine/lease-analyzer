@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FindingsPanel } from './FindingsPanel';
 import type { Finding } from '../rules/types';
@@ -288,5 +288,121 @@ describe('FindingsPanel', () => {
       screen.getByRole('button', { name: /apply suggestion for apply me/i }),
     );
     expect(onApplySuggestion).toHaveBeenCalledWith(finding, 4, 'Suggested replacement.');
+  });
+
+  // Phase 13 — virtualization.
+
+  describe('virtualization', () => {
+    type Cb = (entries: IntersectionObserverEntry[]) => void;
+    interface StubObserverHandle {
+      cb: Cb;
+      targets: Element[];
+      fire(target: Element, isIntersecting: boolean): void;
+    }
+    const instances: StubObserverHandle[] = [];
+
+    function installStubObserver(): void {
+      instances.length = 0;
+      class StubObserver {
+        cb: Cb;
+        targets: Element[] = [];
+        constructor(cb: Cb) {
+          this.cb = cb;
+          const handle: StubObserverHandle = {
+            cb,
+            targets: this.targets,
+            fire: (target, isIntersecting) => {
+              cb([
+                {
+                  target,
+                  isIntersecting,
+                } as unknown as IntersectionObserverEntry,
+              ]);
+            },
+          };
+          instances.push(handle);
+        }
+        observe(t: Element): void {
+          this.targets.push(t);
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+        takeRecords(): IntersectionObserverEntry[] {
+          return [];
+        }
+      }
+      (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver =
+        StubObserver as unknown as typeof IntersectionObserver;
+    }
+
+    function uninstallStubObserver(): void {
+      delete (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
+      instances.length = 0;
+    }
+
+    it('renders off-viewport items as placeholders while visible ones render full', async () => {
+      installStubObserver();
+      try {
+        const findings = [
+          f({ ruleId: 'a', severity: 'high', title: 'First finding' }),
+          f({ ruleId: 'b', severity: 'high', title: 'Second finding' }),
+          f({ ruleId: 'c', severity: 'high', title: 'Third finding' }),
+        ];
+        const { container } = render(
+          <FindingsPanel findings={findings} onSelect={() => {}} />,
+        );
+
+        // Before any intersection event, all three are "off viewport" in
+        // the observer-present branch — they should appear as placeholders
+        // (aria-hidden divs) and the finding titles should NOT be in the DOM.
+        expect(container.querySelectorAll('[data-finding-placeholder]')).toHaveLength(3);
+        expect(screen.queryByText('First finding')).not.toBeInTheDocument();
+        expect(screen.queryByText('Second finding')).not.toBeInTheDocument();
+
+        // Mark only the middle item as intersecting — it should mount full.
+        // Each row has its own observer instance (one per useInViewport).
+        const middle = instances[1];
+        expect(middle).toBeDefined();
+        const middleTarget = middle?.targets[0];
+        expect(middleTarget).toBeDefined();
+        await act(async () => {
+          middle?.fire(middleTarget as Element, true);
+        });
+
+        expect(screen.getByText('Second finding')).toBeInTheDocument();
+        expect(screen.queryByText('First finding')).not.toBeInTheDocument();
+        expect(screen.queryByText('Third finding')).not.toBeInTheDocument();
+        expect(container.querySelectorAll('[data-finding-placeholder]')).toHaveLength(2);
+      } finally {
+        uninstallStubObserver();
+      }
+    });
+
+    it('keeps initial DOM under a tight budget for a 300-finding synthetic scenario', () => {
+      installStubObserver();
+      try {
+        const findings = Array.from({ length: 300 }, (_, i) =>
+          f({
+            ruleId: `r-${i}`,
+            severity: 'medium',
+            title: `Finding number ${i}`,
+            paragraphIndex: i,
+            span: { start: i, end: i + 5 },
+          }),
+        );
+        const { container } = render(
+          <FindingsPanel findings={findings} onSelect={() => {}} />,
+        );
+        // With no intersections reported yet, every row is a placeholder.
+        const fullButtons = container.querySelectorAll('button.finding-btn');
+        expect(fullButtons.length).toBeLessThan(100);
+        // And the total <li> count equals the finding count — the list
+        // is still in the DOM, just swapped to placeholders.
+        const liCount = container.querySelectorAll('li[data-finding-key]').length;
+        expect(liCount).toBe(300);
+      } finally {
+        uninstallStubObserver();
+      }
+    });
   });
 });
