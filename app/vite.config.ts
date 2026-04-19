@@ -4,6 +4,11 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Phase 13: dedicated Web Worker at src/worker/leaseWorker.ts is imported
+  // via `new Worker(new URL(...), { type: 'module' })`. Use ES output so
+  // the worker chunk can participate in code-splitting (iife — the Vite
+  // default for workers — cannot).
+  worker: { format: 'es' },
   plugins: [
     react(),
     VitePWA({
@@ -51,6 +56,10 @@ export default defineConfig({
         'src/main.tsx',
         'src/parser/env.d.ts',
         'src/parser/testFixtures.ts',
+        // Phase 13 Web Worker entry. Pure self.onmessage binding; the logic
+        // is in handleRequest.ts which is fully covered. jsdom doesn't
+        // execute worker entries so any coverage here is unreachable.
+        'src/worker/leaseWorker.ts',
       ],
       thresholds: {
         statements: 90,

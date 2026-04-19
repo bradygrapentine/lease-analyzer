@@ -17,6 +17,9 @@ const BUDGETS = [
   { pattern: /^pdf-.+\.js$/, maxBytes: 600_000, label: 'pdf.js api' },
   // pdf.worker: the single biggest asset; precached offline
   { pattern: /^pdf\.worker-.+\.js$/, maxBytes: 1_800_000, label: 'pdf.worker' },
+  // Phase 13 lease-analysis Web Worker. Isolates parseLease + analyze off
+  // the main thread. No React / UI code should land here.
+  { pattern: /^leaseWorker-.+\.js$/, maxBytes: 50_000, label: 'lease worker' },
 ];
 
 // Same-origin tesseract runtime assets, served from /tesseract/. Tesseract
