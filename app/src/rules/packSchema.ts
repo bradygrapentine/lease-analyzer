@@ -142,7 +142,33 @@ function validateRule(rule: unknown, path: string, errs: string[]): void {
       errs.push(`${path}.jurisdictions must be an array of non-empty strings`);
     }
   }
+
+  // Phase 14: optional content-depth fields. Additive; packs without these
+  // deserialize unchanged.
+  if ('plainEnglish' in rule && rule['plainEnglish'] !== undefined) {
+    const p = rule['plainEnglish'];
+    if (typeof p !== 'string' || p.length === 0) {
+      errs.push(`${path}.plainEnglish must be a non-empty string when present`);
+    } else if (p.length > PLAIN_ENGLISH_MAX) {
+      errs.push(
+        `${path}.plainEnglish must be <= ${PLAIN_ENGLISH_MAX} characters`,
+      );
+    }
+  }
+  if ('suggestedEdit' in rule && rule['suggestedEdit'] !== undefined) {
+    const s = rule['suggestedEdit'];
+    if (typeof s !== 'string' || s.length === 0) {
+      errs.push(`${path}.suggestedEdit must be a non-empty string when present`);
+    } else if (s.length > SUGGESTED_EDIT_MAX) {
+      errs.push(
+        `${path}.suggestedEdit must be <= ${SUGGESTED_EDIT_MAX} characters`,
+      );
+    }
+  }
 }
+
+export const PLAIN_ENGLISH_MAX = 500;
+export const SUGGESTED_EDIT_MAX = 2000;
 
 export function validatePackFile(json: unknown): ValidationResult {
   const errors: string[] = [];

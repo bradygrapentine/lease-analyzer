@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FindingsPanel } from './FindingsPanel';
 import type { Finding } from '../rules/types';
+import type { DefinitionEntry } from '../facts/types';
 
 function f(over: Partial<Finding>): Finding {
   return {
@@ -129,5 +130,96 @@ describe('FindingsPanel', () => {
     await userEvent.click(toggle);
     expect(screen.queryByText('Arbitration')).not.toBeInTheDocument();
     expect(screen.getByText('Late fee')).toBeInTheDocument();
+  });
+
+  // Phase 14 — plainEnglish disclosure.
+
+  it('renders a "What this means" disclosure when plainEnglish is provided for a rule', async () => {
+    const finding = f({ ruleId: 'pe-rule', title: 'PE title' });
+    render(
+      <FindingsPanel
+        findings={[finding]}
+        onSelect={() => {}}
+        plainEnglishByRuleId={{ 'pe-rule': 'In practice, this means X.' }}
+      />,
+    );
+    const toggle = screen.getByRole('button', {
+      name: /what this means for pe title/i,
+    });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('In practice, this means X.')).not.toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(screen.getByText('In practice, this means X.')).toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('omits the "What this means" disclosure when plainEnglish is absent', () => {
+    const finding = f({ ruleId: 'no-pe', title: 'No PE' });
+    render(<FindingsPanel findings={[finding]} onSelect={() => {}} />);
+    expect(
+      screen.queryByRole('button', { name: /what this means/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('omits the "What this means" disclosure when the map has no entry for this rule', () => {
+    const finding = f({ ruleId: 'missing', title: 'Missing PE' });
+    render(
+      <FindingsPanel
+        findings={[finding]}
+        onSelect={() => {}}
+        plainEnglishByRuleId={{ 'other-rule': 'not this one' }}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /what this means/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  // Phase 14 — hover glossary on snippets.
+
+  it('wraps defined terms in the snippet with a dfn when definitions are provided', () => {
+    const finding = f({
+      ruleId: 'def',
+      title: 'Glossary hit',
+      snippet: 'The Premises shall be delivered on time.',
+    });
+    const definitions: DefinitionEntry[] = [
+      { term: 'Premises', definition: 'the leased building.', page: 1, paragraphIndex: 0 },
+    ];
+    const { container } = render(
+      <FindingsPanel
+        findings={[finding]}
+        onSelect={() => {}}
+        definitions={definitions}
+      />,
+    );
+    const dfn = container.querySelector('dfn');
+    expect(dfn).not.toBeNull();
+    expect(dfn?.textContent).toBe('Premises');
+    expect(dfn?.getAttribute('title')).toBe('the leased building.');
+  });
+
+  it('renders plain snippet text when no definitions prop is provided', () => {
+    const finding = f({
+      ruleId: 'no-def',
+      title: 'No glossary',
+      snippet: 'The Premises shall be delivered on time.',
+    });
+    const { container } = render(
+      <FindingsPanel findings={[finding]} onSelect={() => {}} />,
+    );
+    expect(container.querySelector('dfn')).toBeNull();
+  });
+
+  it('renders plain snippet text when definitions is an empty array', () => {
+    const finding = f({
+      ruleId: 'empty-def',
+      title: 'Empty glossary',
+      snippet: 'The Premises shall be delivered on time.',
+    });
+    const { container } = render(
+      <FindingsPanel findings={[finding]} onSelect={() => {}} definitions={[]} />,
+    );
+    expect(container.querySelector('dfn')).toBeNull();
   });
 });

@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Category, Finding, Severity } from '../rules/types';
+import type { DefinitionEntry } from '../facts/types';
+import { highlightDefinedTerms } from './highlightDefinedTerms';
 
 const SEVERITY_ORDER: Severity[] = ['high', 'medium', 'low', 'info'];
 const SEVERITY_LABEL: Record<Severity, string> = {
@@ -13,13 +15,30 @@ const SEVERITY_LABEL: Record<Severity, string> = {
 interface FindingsPanelProps {
   findings: Finding[];
   onSelect: (finding: Finding) => void;
+  /**
+   * Optional plain-English summaries keyed by rule id. When provided, a
+   * "What this means" disclosure is rendered under the explanation. Kept
+   * separate from Finding so analysis output stays lean.
+   */
+  plainEnglishByRuleId?: Record<string, string>;
+  /**
+   * Optional defined-term glossary; if present, occurrences of each term
+   * in a finding's snippet are wrapped with a hover tooltip.
+   */
+  definitions?: DefinitionEntry[];
 }
 
-export function FindingsPanel({ findings, onSelect }: FindingsPanelProps): JSX.Element {
+export function FindingsPanel({
+  findings,
+  onSelect,
+  plainEnglishByRuleId,
+  definitions,
+}: FindingsPanelProps): JSX.Element {
   const [query, setQuery] = useState('');
   const [hiddenSeverities, setHiddenSeverities] = useState<Set<Severity>>(new Set());
   const [hiddenCategories, setHiddenCategories] = useState<Set<Category>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<Severity>>(new Set());
+  const [openExplainers, setOpenExplainers] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const categories = useMemo(
@@ -111,22 +130,47 @@ export function FindingsPanel({ findings, onSelect }: FindingsPanelProps): JSX.E
               </h2>
               {!isCollapsed && (
                 <ul>
-                  {group.map((finding) => (
-                    <li key={`${finding.ruleId}-${finding.paragraphIndex}-${finding.span.start}`}>
-                      <button
-                        type="button"
-                        className="finding-btn"
-                        onClick={() => onSelect(finding)}
-                      >
-                        <strong>{finding.title}</strong>
-                        {finding.negated && (
-                          <span aria-label="negated"> (possibly not applicable)</span>
-                        )}
-                        <div>{finding.explanation}</div>
-                        <small>Page {finding.page}</small>
-                      </button>
-                    </li>
-                  ))}
+                  {group.map((finding) => {
+                    const findingKey = `${finding.ruleId}-${finding.paragraphIndex}-${finding.span.start}`;
+                    const plain = plainEnglishByRuleId?.[finding.ruleId];
+                    const isOpen = openExplainers.has(findingKey);
+                    return (
+                      <li key={findingKey}>
+                        <button
+                          type="button"
+                          className="finding-btn"
+                          onClick={() => onSelect(finding)}
+                        >
+                          <strong>{finding.title}</strong>
+                          {finding.negated && (
+                            <span aria-label="negated"> (possibly not applicable)</span>
+                          )}
+                          <div>{finding.explanation}</div>
+                          {definitions && definitions.length > 0 ? (
+                            <small className="finding-snippet">
+                              {highlightDefinedTerms(finding.snippet, definitions)}
+                            </small>
+                          ) : null}
+                          <small>Page {finding.page}</small>
+                        </button>
+                        {plain ? (
+                          <div className="finding-plain-english">
+                            <button
+                              type="button"
+                              aria-expanded={isOpen}
+                              aria-label={`what this means for ${finding.title}`}
+                              onClick={() =>
+                                toggleInSet(openExplainers, findingKey, setOpenExplainers)
+                              }
+                            >
+                              What this means
+                            </button>
+                            {isOpen ? <p>{plain}</p> : null}
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>

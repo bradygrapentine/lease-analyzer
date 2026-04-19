@@ -44,6 +44,19 @@ export interface Rule {
    * purely additive so existing packs deserialize unchanged.
    */
   jurisdictions?: string[];
+  /**
+   * Optional plain-English summary shown to end-users under the existing
+   * explanation ("What this means"). Should be 1-2 sentences, no legalese,
+   * no judgmental language. Max ~500 chars (enforced by pack schema).
+   * Phase 14 addition — purely additive.
+   */
+  plainEnglish?: string;
+  /**
+   * Optional safe, neutral suggested replacement clause (one paragraph).
+   * Consumed by the counter-offer library to pre-populate edits. Phase 14
+   * addition — purely additive.
+   */
+  suggestedEdit?: string;
 }
 
 export interface Span {
