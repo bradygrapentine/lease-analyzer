@@ -26,6 +26,10 @@ import {
 import { validatePackFile, type RulePackFile } from './rules/packSchema';
 import { resolveActiveRules } from './rules/activePack';
 import { RULE_PACK_V1 } from './rules/packV1';
+import { SigningKeyPanel } from './ui/SigningKeyPanel';
+import { createSigningKey, exportPublicKey } from './security/signingKeys';
+import { signExport } from './storage/exportReport';
+import { sha256Hex } from './security/inputHash';
 import { needsOcr } from './compare/needsOcr';
 import { PasswordProtectedPdfError } from './parser/types';
 import type { Finding } from './rules/types';
@@ -66,6 +70,11 @@ export function App(): JSX.Element {
   const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
   const [installedPacks, setInstalledPacks] = useState<RulePackFile[]>([]);
   const [enabledPacks, setEnabledPacks] = useState<Set<string>>(new Set());
+  const [signingPublicKey, setSigningPublicKey] = useState<string | null>(null);
+
+  const refreshSigningKey = useCallback(async () => {
+    setSigningPublicKey(await exportPublicKey());
+  }, []);
 
   const refreshPacks = useCallback(async () => {
     const packs = await listInstalledPacks();
@@ -95,7 +104,8 @@ export function App(): JSX.Element {
     void refreshLibrary();
     void refreshTemplates();
     void refreshPacks();
-  }, [refreshLibrary, refreshTemplates, refreshPacks]);
+    void refreshSigningKey();
+  }, [refreshLibrary, refreshTemplates, refreshPacks, refreshSigningKey]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -237,6 +247,46 @@ export function App(): JSX.Element {
   async function onDeleteTemplate(id: string): Promise<void> {
     await deleteTemplate(id);
     await refreshTemplates();
+  }
+
+  async function onCreateSigningKey(passphrase: string): Promise<void> {
+    await createSigningKey(passphrase);
+    await refreshSigningKey();
+  }
+
+  async function onExportSigningPublicKey(publicKey: string): Promise<void> {
+    // Copy base64 public key to the clipboard. Fall back silently (CSP-friendly).
+    try {
+      const nav = globalThis.navigator as
+        | { clipboard?: { writeText?: (s: string) => Promise<void> } }
+        | undefined;
+      await nav?.clipboard?.writeText?.(publicKey);
+    } catch {
+      // swallow — exporting is best-effort
+    }
+  }
+
+  async function onExportSignedJson(): Promise<void> {
+    if (status.kind !== 'analyzed') return;
+    const passphrase = window.prompt('Passphrase to unlock the signing key:');
+    if (!passphrase) return;
+    try {
+      const inputHash = status.bytes ? await sha256Hex(status.bytes) : null;
+      const unsigned = exportFindingsJson({
+        name: status.fileName,
+        doc: status.result.doc,
+        findings: status.result.findings,
+        inputHash,
+      });
+      const signed = await signExport(unsigned, passphrase);
+      downloadBlob(
+        signed,
+        'application/json',
+        `${status.fileName.replace(/\.pdf$/i, '')}-findings.signed.json`,
+      );
+    } catch (err) {
+      pipeline.setError(`Signing failed: ${friendlyError(err)}`);
+    }
   }
 
   async function onImportPack(file: File): Promise<void> {
@@ -395,6 +445,11 @@ export function App(): JSX.Element {
             <button type="button" onClick={onExportHtml}>
               Export findings (printable HTML)
             </button>
+            {signingPublicKey !== null && (
+              <button type="button" onClick={() => void onExportSignedJson()}>
+                Export findings (signed JSON)
+              </button>
+            )}
           </div>
           {(() => {
             const ocr = needsOcr(status.result.doc);
@@ -506,6 +561,16 @@ export function App(): JSX.Element {
         }}
         onDelete={(id) => {
           void onDeletePack(id);
+        }}
+      />
+
+      <SigningKeyPanel
+        state={{ publicKey: signingPublicKey }}
+        onCreateKey={(pp) => {
+          void onCreateSigningKey(pp);
+        }}
+        onExportPublicKey={(pk) => {
+          void onExportSigningPublicKey(pk);
         }}
       />
 
