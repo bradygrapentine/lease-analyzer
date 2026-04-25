@@ -86,8 +86,20 @@ import {
   type LeaseMetadata,
 } from './storage/storage';
 import { OnboardingTour } from './ui/OnboardingTour';
+import { I18nProvider } from './i18n/I18nProvider';
+import { useI18n } from './i18n/I18nContext';
+import { LocalePickerPanel } from './ui/LocalePickerPanel';
 
 export function App(): JSX.Element {
+  return (
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
+  );
+}
+
+function AppContent(): JSX.Element {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<Finding | null>(null);
   const [library, setLibrary] = useState<LeaseMetadata[]>([]);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
@@ -370,10 +382,11 @@ export function App(): JSX.Element {
         />
       )}
       <header>
-        <h1>LeaseGuard</h1>
-        <p>Private, local-first lease analyzer. Nothing leaves your device.</p>
+        <h1>{t('app.title')}</h1>
+        <p>{t('app.tagline')}</p>
+        <LocalePickerPanel />
         <details className="privacy">
-          <summary>Privacy &amp; how this works</summary>
+          <summary>{t('header.privacy.summary')}</summary>
           <ul>
             <li>The PDF is parsed entirely in your browser via pdf.js.</li>
             <li>All storage is in IndexedDB on this device. No account, no sync.</li>
@@ -398,17 +411,17 @@ export function App(): JSX.Element {
             }}
           />
         </label>
-        <button type="button" onClick={() => void onTrySample()}>Try a sample lease</button>
+        <button type="button" onClick={() => void onTrySample()}>{t('header.trySample')}</button>
         <div role="group" aria-label="view mode" className="view-toggle">
           <button type="button" aria-pressed={view === 'current'} onClick={() => setView('current')}>
-            Current lease
+            {t('header.view.current')}
           </button>
           <button type="button" aria-pressed={view === 'portfolio'} onClick={() => setView('portfolio')}>
-            Portfolio
+            {t('header.view.portfolio')}
           </button>
           {status.kind === 'analyzed' && (
             <button type="button" aria-pressed={view === 'redline'} onClick={() => setView('redline')}>
-              Redline
+              {t('header.view.redline')}
             </button>
           )}
         </div>
@@ -501,7 +514,7 @@ export function App(): JSX.Element {
       {view === 'current' && status.kind === 'analyzed' && (
         <div className="results">
           <div className="results-actions">
-            <button type="button" onClick={onExportJson}>Export findings (JSON)</button>
+            <button type="button" onClick={onExportJson}>{t('findings.export.json')}</button>
             <button
               type="button"
               onClick={() => {
@@ -513,11 +526,11 @@ export function App(): JSX.Element {
                 });
               }}
             >
-              Export findings (printable HTML)
+              {t('findings.export.html')}
             </button>
             {signingKey.publicKey !== null && (
               <button type="button" onClick={() => void onExportSignedJson()}>
-                Export findings (signed JSON)
+                {t('findings.export.signed')}
               </button>
             )}
           </div>
@@ -749,7 +762,7 @@ export function App(): JSX.Element {
 
       <footer>
         <button type="button" onClick={() => void exportEncryptedArchiveFlow()}>
-          Export encrypted archive
+          {t('footer.archive.export')}
         </button>
         <label>
           <span className="visually-hidden">Import encrypted archive</span>
@@ -774,7 +787,7 @@ export function App(): JSX.Element {
             });
           }}
         >
-          Clear all saved data
+          {t('footer.clearAll')}
         </button>
       </footer>
     </main>

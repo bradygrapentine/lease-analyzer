@@ -289,6 +289,32 @@ table for the authoritative figures):
 - Archive export/import uses WebCrypto AES-GCM. No handshake ever
   leaves the device.
 
+## i18n (Wave 11 / Phase 14)
+
+Hand-rolled, dependency-free localization. The `Messages` type in
+`src/i18n/messages.ts` is derived from the `en` baseline catalog so
+every locale is forced — via `satisfies Partial<Messages>` — to use a
+known key. Translation files live at `src/i18n/locales/<code>.ts` and
+may be partial.
+
+`I18nProvider.tsx` exposes `useI18n()` returning `{ locale, setLocale,
+t }`. Resolution chain on each `t(key, params?)` call:
+
+1. Active locale catalog.
+2. `en` baseline.
+3. The key string itself, with a one-time `console.warn` so a
+   missing-in-both case surfaces in QA without console spam.
+
+Locale persists in `localStorage.leaseguard.locale`; default `'en'`.
+`{name}` placeholder substitution is the only formatting affordance —
+no ICU, no pluralization. Date/number formatting still uses the
+platform `toLocaleDateString` / `toLocaleString` APIs.
+
+The Wave 11 scaffold migrates ~10 representative `App.tsx` strings
+(header, view-mode toggle, top-level export buttons, footer
+clear-all). Full panel-by-panel migration is a tracked Phase 14
+follow-up.
+
 ## Collaboration escape hatches (Wave 9 / Phase 15)
 
 Phase 15 adds three user-initiated sharing surfaces on top of the
