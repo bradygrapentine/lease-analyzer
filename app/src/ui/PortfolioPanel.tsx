@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { LeaseMetadata } from '../storage/storage';
 import {
   listLeasesFiltered,
   type ListLeasesFilter,
 } from '../storage/listLeasesFiltered';
 import type { Finding, Severity } from '../rules/types';
+import { PortfolioRollupsPanel } from './PortfolioRollupsPanel';
+import { aggregateFindings } from '../portfolio/ruleRollups';
 
 export interface PortfolioPanelProps {
   leases: LeaseMetadata[];
@@ -17,6 +19,12 @@ export interface PortfolioPanelProps {
    * `leases` as-is (caller-supplied).
    */
   filter?: ListLeasesFilter;
+  /**
+   * Wave 10 Part A — when set, restrict the visible rows to these lease
+   * ids (drill-through from the rollup panel). Applied after `filter` /
+   * the caller-supplied `leases` list. Unset → no extra restriction.
+   */
+  filterLeaseIds?: string[];
 }
 
 interface RuleColumn {
@@ -39,8 +47,10 @@ export function PortfolioPanel({
   findingsByLease,
   onOpenLease,
   filter,
+  filterLeaseIds,
 }: PortfolioPanelProps): JSX.Element {
   const [filtered, setFiltered] = useState<LeaseMetadata[] | null>(null);
+  const [drillIds, setDrillIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (!filter) {
@@ -56,7 +66,25 @@ export function PortfolioPanel({
     };
   }, [filter]);
 
-  const visible = filter && filtered ? filtered : leases;
+  const baseVisible = filter && filtered ? filtered : leases;
+  const restrictIds = drillIds ?? filterLeaseIds ?? null;
+  const visible = restrictIds
+    ? baseVisible.filter((l) => restrictIds.includes(l.id))
+    : baseVisible;
+
+  // Rollups computed from the unrestricted base set so users can always
+  // see the cross-portfolio picture even after drilling through.
+  const rollups = useMemo(
+    () =>
+      aggregateFindings(
+        baseVisible.map((m) => ({
+          id: m.id,
+          findings: findingsByLease.get(m.id) ?? [],
+        })),
+      ),
+    [baseVisible, findingsByLease],
+  );
+
   if (visible.length === 0) {
     return (
       <section aria-label="portfolio">
@@ -71,6 +99,17 @@ export function PortfolioPanel({
   return (
     <section aria-label="portfolio">
       <h2>Portfolio</h2>
+      <PortfolioRollupsPanel
+        rollups={rollups}
+        onDrillThrough={(ids) => setDrillIds(ids)}
+      />
+      {drillIds !== null && (
+        <p>
+          <button type="button" onClick={() => setDrillIds(null)}>
+            Clear rollup filter
+          </button>
+        </p>
+      )}
       <div className="portfolio-scroll" style={{ overflowX: 'auto' }}>
         <table aria-label="portfolio">
           <thead>
