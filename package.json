@@ -1,0 +1,12 @@
+{
+  "name": "lease-analyzer-workspace",
+  "private": true,
+  "description": "Repo-root package for git hooks (husky + lint-staged). Application code lives in app/.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10"
+  }
+}
