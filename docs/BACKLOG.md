@@ -16,8 +16,8 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Source | 117 non-test files (~13.0k LOC) + 90 test files (~12.4k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests | ~790 passing across 90 files | `npm test` |
+| Source | 117 non-test files (~13.0k LOC) + 91 test files (~12.5k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
+| Tests | ~803 passing across 91 files | `npm test` |
 | Coverage | 97.02% stmt · 88.06% branch · 93.21% func · 97.02% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
 | IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); 8 side dbs: `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1 | migrations tested |
