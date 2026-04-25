@@ -20,7 +20,14 @@ vi.mock('./ocr/runOcr', () => ({
 vi.mock('./ui/renderPdfPages', () => ({
   loadPdfjs: vi.fn(async () => ({})),
   renderPageToCanvas: vi.fn(async () => {}),
-  renderPdfPages: vi.fn(async () => {}),
+  renderPdfPages: vi.fn(
+    (): AsyncIterable<{ pageIndex: number }> => ({
+      // Empty async iterator: no pages to yield; Promise-style consumers (e.g.
+      // `for await (…)` in PdfViewer) complete immediately.
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async *[Symbol.asyncIterator]() {},
+    }),
+  ),
 }));
 
 import { App } from './App';

@@ -26,12 +26,24 @@ export function PdfViewer({
     const canvases = canvasRefs.current.slice(0, pageCount);
     const controller = new AbortController();
     // pdf.js detaches the ArrayBuffer during load, so each render call
-    // gets its own copy.
-    renderPdfPages(copyBytes(bytes), canvases, { signal: controller.signal }).catch((err: unknown) => {
-      const name = (err as { name?: string })?.name;
-      if (name === 'AbortError' || name === 'RenderingCancelledException') return;
-      console.error('[PdfViewer] render failed:', err);
+    // gets its own copy. `renderPdfPages` streams: each iteration corresponds
+    // to a single page finishing. First-paint latency is ~1 page, not N.
+    const iterable = renderPdfPages(copyBytes(bytes), canvases, {
+      signal: controller.signal,
     });
+    void (async () => {
+      try {
+        for await (const _page of iterable) {
+          // Canvas already painted inside renderPdfPages; nothing to do per
+          // page today. Hook placeholder for future per-page reactions.
+          void _page;
+        }
+      } catch (err: unknown) {
+        const name = (err as { name?: string })?.name;
+        if (name === 'AbortError' || name === 'RenderingCancelledException') return;
+        console.error('[PdfViewer] render failed:', err);
+      }
+    })();
     return (): void => {
       controller.abort();
     };
