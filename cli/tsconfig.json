@@ -17,5 +17,15 @@
       "@app/*": ["../app/src/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../app/src/parser/**/*.ts",
+    "../app/src/rules/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "../app/src/**/*.test.ts",
+    "../app/src/**/*.bench.test.ts",
+    "../app/src/parser/testFixtures.ts"
+  ]
 }
