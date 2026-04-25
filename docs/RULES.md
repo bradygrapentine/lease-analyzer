@@ -235,6 +235,17 @@ key. Trust policy (whose key is trusted) is outside the MVP.
   worth a real severity. `info` is reserved for strictly advisory items.
 - **Judgmental `plainEnglish`.** Describe; don't advise.
 
+## Canonical multi-feature regression check
+
+`app/src/golden/commercial.golden.test.ts` is the canonical multi-feature
+regression check. It exercises `parseLease`, `analyze`, `extractLeaseFacts`,
+table extraction, and the cross-reference resolver simultaneously against a
+synthetic enterprise commercial lease (built by `buildEnterpriseCommercialPdf()`
+in `src/parser/testFixtures.ts`). Pinned counts assert ≥3 tables, ≥6
+defined terms, ≥4 cross-references, and exactly 4 `RentSchedulePeriod`
+entries — any parser change that drops a feature on this fixture must
+update the snapshot deliberately, not silently regress.
+
 ## Rule pack version
 
 Bump `RULE_PACK_VERSION` in `src/rules/analyze.ts` whenever the set of
