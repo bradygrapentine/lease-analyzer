@@ -44,6 +44,13 @@ npm run storybook         # panel previews on :6006
 ```
 
 Default gate sequence before a commit: `typecheck && lint && test:coverage`.
+
+A repo-root `package.json` wires `husky` + `lint-staged` so a `pre-commit`
+hook runs `eslint --fix` and `prettier --write` on staged `app/**` files.
+Run `npm install` at the **repo root** once after cloning to install the
+hook (`prepare` script). CI is still authoritative — the hook is a fast
+local feedback loop. Escape hatch is `git commit --no-verify`; do not use
+it by default.
 Coverage floors move with the test-hardening work — see `docs/TESTING.md`
 for the authoritative numbers rather than hardcoding them here. For UI
 changes, also `npm run dev` + browser sanity walk; jsdom doesn't cover

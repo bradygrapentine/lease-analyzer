@@ -1,0 +1,9 @@
+{
+  "app/**/*.{ts,tsx}": [
+    "app/node_modules/.bin/eslint --fix --max-warnings=0",
+    "app/node_modules/.bin/prettier --write"
+  ],
+  "app/**/*.{json,md,css,html}": [
+    "app/node_modules/.bin/prettier --write"
+  ]
+}
