@@ -59,6 +59,9 @@ import { AnnotationsPanel } from './ui/AnnotationsPanel';
 import { CounterOfferPanel } from './ui/CounterOfferPanel';
 import type { CounterOffer } from './negotiation/counterOffers';
 import { PortfolioPanel } from './ui/PortfolioPanel';
+import { ClauseSimilarityPanel } from './ui/ClauseSimilarityPanel';
+import { clusterParagraphs, type ClauseCluster } from './portfolio/clauseClusters';
+import { paragraphShingles } from './portfolio/shingles';
 import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
 import { RedlinePanel } from './ui/RedlinePanel';
 import { VersionHistoryPanel } from './ui/VersionHistoryPanel';
@@ -83,15 +86,36 @@ import {
   getStandardId,
   listAllLeaseRecords,
   listLeases,
+  putParagraphShingles,
   renameLease,
   setOnboardingDismissedAt,
   setStandardId,
   type LeaseMetadata,
+  type LeaseRecord,
 } from './storage/storage';
 import { OnboardingTour } from './ui/OnboardingTour';
 import { I18nProvider } from './i18n/I18nProvider';
 import { useI18n } from './i18n/I18nContext';
 import { LocalePickerPanel } from './ui/LocalePickerPanel';
+
+async function persistShingles(records: LeaseRecord[]): Promise<void> {
+  for (const record of records) {
+    const paragraphs = record.doc?.paragraphs ?? [];
+    for (let i = 0; i < paragraphs.length; i++) {
+      const text = paragraphs[i]?.text ?? '';
+      const shingles = paragraphShingles(text);
+      try {
+        await putParagraphShingles({
+          leaseId: record.id,
+          paragraphIndex: i,
+          shingles,
+        });
+      } catch {
+        // Ignore individual write failures — clustering already succeeded.
+      }
+    }
+  }
+}
 
 export function App(): JSX.Element {
   return (
@@ -114,6 +138,7 @@ function AppContent(): JSX.Element {
   const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
     new Map(),
   );
+  const [clauseClusters, setClauseClusters] = useState<ClauseCluster[]>([]);
   // `undefined` = "not yet loaded from IDB" — we render nothing for the tour
   // until we know, so first-run users don't see a flash-of-modal followed by
   // dismissal. `null` = first run, show the tour. number = already dismissed.
@@ -257,6 +282,19 @@ function AppContent(): JSX.Element {
         const map = new Map<string, Finding[]>();
         for (const r of records) map.set(r.id, r.findings);
         setPortfolioFindings(map);
+        // Wave 10-B: cluster paragraphs and write-through shingles to IDB so
+        // a future cross-cluster pass can read them without re-tokenizing.
+        // Failures are logged and dropped — clustering must not block the
+        // portfolio view.
+        try {
+          const clusters = clusterParagraphs(records);
+          setClauseClusters(clusters);
+          await persistShingles(records);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('clause similarity failed', err);
+          setClauseClusters([]);
+        }
       })();
     }
   }, [view, library]);
@@ -457,14 +495,23 @@ function AppContent(): JSX.Element {
       )}
 
       {view === 'portfolio' && (
-        <PortfolioPanel
-          leases={library}
-          findingsByLease={portfolioFindings}
-          onOpenLease={(id) => {
-            setView('current');
-            void onOpenLibrary(id);
-          }}
-        />
+        <>
+          <PortfolioPanel
+            leases={library}
+            findingsByLease={portfolioFindings}
+            onOpenLease={(id) => {
+              setView('current');
+              void onOpenLibrary(id);
+            }}
+          />
+          <ClauseSimilarityPanel
+            clusters={clauseClusters}
+            onOpenParagraph={(leaseId, _paragraphIndex) => {
+              setView('current');
+              void onOpenLibrary(leaseId);
+            }}
+          />
+        </>
       )}
 
       {view === 'redline' && status.kind === 'analyzed' && (

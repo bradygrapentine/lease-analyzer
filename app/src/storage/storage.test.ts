@@ -308,12 +308,13 @@ describe('storage', () => {
       req.onerror = (): void => reject(req.error);
     });
 
-    // Open via the v4 path. _resetDbForTests ensures we re-open through the
-    // module's upgrade ladder rather than reusing a cached v3 handle.
+    // Open via the latest path. _resetDbForTests ensures we re-open through
+    // the module's upgrade ladder rather than reusing a cached v3 handle.
+    // The v3→v4 migration runs as part of the ladder up to current (v5).
     _resetDbForTests();
     const db = await openLeaseDb();
 
-    expect(db.version).toBe(4);
+    expect(db.version).toBe(5);
     // Existing rows preserved.
     const survivors = await db.getAll('leases');
     expect(survivors).toHaveLength(2);
