@@ -32,7 +32,12 @@ vi.mock('./ui/renderPdfPages', () => ({
 
 import { App } from './App';
 import { makePdf } from './parser/testFixtures';
-import { _resetDbForTests, openLeaseDb, listLeases } from './storage/storage';
+import {
+  _resetDbForTests,
+  openLeaseDb,
+  listLeases,
+  setOnboardingDismissedAt,
+} from './storage/storage';
 import {
   _resetPacksDbForTests,
   listInstalledPacks,
@@ -161,6 +166,8 @@ beforeEach(async () => {
   await wipeDb(BULK_DEDUP_DB_NAME);
   await wipeDb('leaseguard-redlines');
   await wipeDb('leaseguard-versions');
+  // Mark the onboarding tour dismissed so it never intercepts these tests.
+  await setOnboardingDismissedAt(Date.now());
 });
 
 async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {

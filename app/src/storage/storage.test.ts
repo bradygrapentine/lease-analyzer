@@ -3,13 +3,16 @@ import { beforeEach, describe, it, expect } from 'vitest';
 import {
   _resetDbForTests,
   clearAll,
+  clearOnboardingDismissedAt,
   deleteLease,
   getLease,
+  getOnboardingDismissedAt,
   listLeases,
   openLeaseDb,
   renameLease,
   replaceAllLeases,
   saveLease,
+  setOnboardingDismissedAt,
 } from './storage';
 import type { LeaseDocument } from '../parser/types';
 import type { Finding } from '../rules/types';
@@ -132,6 +135,32 @@ describe('storage', () => {
     await clearAll();
     expect(await listLeases()).toEqual([]);
     expect(id).toBeTruthy();
+  });
+
+  it('onboardingDismissedAt is null on a fresh DB', async () => {
+    expect(await getOnboardingDismissedAt()).toBeNull();
+  });
+
+  it('round-trips a numeric onboardingDismissedAt timestamp', async () => {
+    const ts = 1_700_000_000_000;
+    await setOnboardingDismissedAt(ts);
+    expect(await getOnboardingDismissedAt()).toBe(ts);
+  });
+
+  it('clearOnboardingDismissedAt resets to null', async () => {
+    await setOnboardingDismissedAt(Date.now());
+    await clearOnboardingDismissedAt();
+    expect(await getOnboardingDismissedAt()).toBeNull();
+  });
+
+  it('migration preserves leases when onboarding key is added later', async () => {
+    // Seed a lease, then simulate "later" by setting + reading the new key.
+    // This guards against a future v-bump dropping rows when adding the key.
+    const id = await saveLease({ name: 'Mig.pdf', doc: makeDoc(), findings: [] });
+    await setOnboardingDismissedAt(42);
+    const list = await listLeases();
+    expect(list.find((l) => l.id === id)).toBeDefined();
+    expect(await getOnboardingDismissedAt()).toBe(42);
   });
 
   it('stamps createdAt', async () => {

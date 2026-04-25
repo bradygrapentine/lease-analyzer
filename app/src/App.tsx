@@ -76,13 +76,16 @@ import {
   clearStandardId,
   deleteLease,
   getLease,
+  getOnboardingDismissedAt,
   getStandardId,
   listAllLeaseRecords,
   listLeases,
   renameLease,
+  setOnboardingDismissedAt,
   setStandardId,
   type LeaseMetadata,
 } from './storage/storage';
+import { OnboardingTour } from './ui/OnboardingTour';
 
 export function App(): JSX.Element {
   const [selected, setSelected] = useState<Finding | null>(null);
@@ -96,6 +99,22 @@ export function App(): JSX.Element {
   const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
     new Map(),
   );
+  // `undefined` = "not yet loaded from IDB" — we render nothing for the tour
+  // until we know, so first-run users don't see a flash-of-modal followed by
+  // dismissal. `null` = first run, show the tour. number = already dismissed.
+  const [onboardingDismissedAt, setOnboardingDismissedAtState] = useState<
+    number | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    void getOnboardingDismissedAt().then((ts) => setOnboardingDismissedAtState(ts));
+  }, []);
+
+  const dismissOnboarding = useCallback(async (): Promise<void> => {
+    const ts = Date.now();
+    setOnboardingDismissedAtState(ts);
+    await setOnboardingDismissedAt(ts);
+  }, []);
 
   const refreshAuditLog = useCallback(async (): Promise<void> => {
     setAuditEntries(await listAuditEntries());
@@ -342,6 +361,14 @@ export function App(): JSX.Element {
 
   return (
     <main>
+      {onboardingDismissedAt !== undefined && (
+        <OnboardingTour
+          dismissedAt={onboardingDismissedAt}
+          onDismiss={() => {
+            void dismissOnboarding();
+          }}
+        />
+      )}
       <header>
         <h1>LeaseGuard</h1>
         <p>Private, local-first lease analyzer. Nothing leaves your device.</p>
