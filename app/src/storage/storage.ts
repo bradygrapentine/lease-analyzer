@@ -8,6 +8,7 @@ const DB_VERSION = 3;
 const STORE = 'leases';
 const SETTINGS = 'settings';
 const STANDARD_KEY = 'standardLeaseId';
+const ONBOARDING_DISMISSED_KEY = 'onboardingDismissedAt';
 export const CLAUSE_TEMPLATES_STORE = 'clauseTemplates';
 
 export interface LeaseRecord {
@@ -178,6 +179,27 @@ export async function getStandardId(): Promise<string | undefined> {
 export async function clearStandardId(): Promise<void> {
   const db = await openLeaseDb();
   await db.delete(SETTINGS, STANDARD_KEY);
+}
+
+// Onboarding tour dismissal timestamp. Stored as a JSON-encoded number in
+// the existing SETTINGS store (value type: string), so no schema bump is
+// required. `null` (or unset) means "first run, show the tour".
+export async function getOnboardingDismissedAt(): Promise<number | null> {
+  const db = await openLeaseDb();
+  const raw = await db.get(SETTINGS, ONBOARDING_DISMISSED_KEY);
+  if (raw === undefined) return null;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export async function setOnboardingDismissedAt(ts: number): Promise<void> {
+  const db = await openLeaseDb();
+  await db.put(SETTINGS, String(ts), ONBOARDING_DISMISSED_KEY);
+}
+
+export async function clearOnboardingDismissedAt(): Promise<void> {
+  const db = await openLeaseDb();
+  await db.delete(SETTINGS, ONBOARDING_DISMISSED_KEY);
 }
 
 export function randomId(): string {
