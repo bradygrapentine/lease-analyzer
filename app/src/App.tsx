@@ -59,8 +59,6 @@ import { AnnotationsPanel } from './ui/AnnotationsPanel';
 import { CounterOfferPanel } from './ui/CounterOfferPanel';
 import type { CounterOffer } from './negotiation/counterOffers';
 import { PortfolioPanel } from './ui/PortfolioPanel';
-import { ClauseSimilarityPanel } from './ui/ClauseSimilarityPanel';
-import { clusterParagraphs, type ClauseCluster } from './portfolio/clauseClusters';
 import { paragraphShingles } from './portfolio/shingles';
 import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
 import { RedlinePanel } from './ui/RedlinePanel';
@@ -72,12 +70,7 @@ import { OcrLanguagePickerPanel } from './ui/OcrLanguagePickerPanel';
 import type { Finding } from './rules/types';
 import type { ClauseTemplate } from './templates/types';
 import { matchTemplates } from './templates/matchTemplates';
-import {
-  saveTemplate,
-  listTemplates,
-  updateTemplate,
-  deleteTemplate,
-} from './storage/templates';
+import { saveTemplate, listTemplates, updateTemplate, deleteTemplate } from './storage/templates';
 import {
   clearStandardId,
   deleteLease,
@@ -142,9 +135,7 @@ function AppContent(): JSX.Element {
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [auditVerification, setAuditVerification] = useState<ChainVerification | null>(null);
   const [view, setView] = useState<'current' | 'portfolio' | 'redline'>('current');
-  const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
-    new Map(),
-  );
+  const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(new Map());
   const [standardSuite, setStandardSuite] = useState<StandardClause[]>([]);
 
   const refreshStandardSuite = useCallback(async (): Promise<void> => {
@@ -294,18 +285,14 @@ function AppContent(): JSX.Element {
         const map = new Map<string, Finding[]>();
         for (const r of records) map.set(r.id, r.findings);
         setPortfolioFindings(map);
-        // Wave 10-B: cluster paragraphs and write-through shingles to IDB so
-        // a future cross-cluster pass can read them without re-tokenizing.
-        // Failures are logged and dropped — clustering must not block the
-        // portfolio view.
+        // Wave 10-B: write-through shingles to IDB so a future cross-cluster
+        // pass can read them without re-tokenizing. Failures are logged and
+        // dropped — shingle persistence must not block the portfolio view.
         try {
-          const clusters = clusterParagraphs(records);
-          setClauseClusters(clusters);
           await persistShingles(records);
         } catch (err) {
           // eslint-disable-next-line no-console
-          console.warn('clause similarity failed', err);
-          setClauseClusters([]);
+          console.warn('shingle persistence failed', err);
         }
       })();
     }
@@ -442,12 +429,12 @@ function AppContent(): JSX.Element {
     [status],
   );
 
-
   return (
     <main>
       {onboardingDismissedAt !== undefined && (
         <OnboardingTour
           dismissedAt={onboardingDismissedAt}
+          viewMode={view}
           onDismiss={() => {
             void dismissOnboarding();
           }}
@@ -463,9 +450,8 @@ function AppContent(): JSX.Element {
             <li>The PDF is parsed entirely in your browser via pdf.js.</li>
             <li>All storage is in IndexedDB on this device. No account, no sync.</li>
             <li>
-              A strict Content-Security-Policy (<code>default-src &apos;self&apos;</code>)
-              blocks this page from loading scripts, fonts, or data from any other
-              origin.
+              A strict Content-Security-Policy (<code>default-src &apos;self&apos;</code>) blocks
+              this page from loading scripts, fonts, or data from any other origin.
             </li>
             <li>LeaseGuard is not legal advice. Findings are heuristic pattern matches.</li>
           </ul>
@@ -483,16 +469,30 @@ function AppContent(): JSX.Element {
             }}
           />
         </label>
-        <button type="button" onClick={() => void onTrySample()}>{t('header.trySample')}</button>
+        <button type="button" onClick={() => void onTrySample()}>
+          {t('header.trySample')}
+        </button>
         <div role="group" aria-label="view mode" className="view-toggle">
-          <button type="button" aria-pressed={view === 'current'} onClick={() => setView('current')}>
+          <button
+            type="button"
+            aria-pressed={view === 'current'}
+            onClick={() => setView('current')}
+          >
             {t('header.view.current')}
           </button>
-          <button type="button" aria-pressed={view === 'portfolio'} onClick={() => setView('portfolio')}>
+          <button
+            type="button"
+            aria-pressed={view === 'portfolio'}
+            onClick={() => setView('portfolio')}
+          >
             {t('header.view.portfolio')}
           </button>
           {status.kind === 'analyzed' && (
-            <button type="button" aria-pressed={view === 'redline'} onClick={() => setView('redline')}>
+            <button
+              type="button"
+              aria-pressed={view === 'redline'}
+              onClick={() => setView('redline')}
+            >
               {t('header.view.redline')}
             </button>
           )}
@@ -500,7 +500,9 @@ function AppContent(): JSX.Element {
       </header>
 
       {view === 'current' && status.kind === 'loading' && (
-        <p role="status" aria-live="polite">Analyzing {status.fileName}…</p>
+        <p role="status" aria-live="polite">
+          Analyzing {status.fileName}…
+        </p>
       )}
       {view === 'current' && status.kind === 'error' && (
         <p role="alert">Could not analyze this file: {status.message}</p>
@@ -536,9 +538,7 @@ function AppContent(): JSX.Element {
             edits={redline.redlineEdits}
             onEditParagraph={(pIdx, after) => {
               const before =
-                status.kind === 'analyzed'
-                  ? (status.result.doc.paragraphs[pIdx]?.text ?? '')
-                  : '';
+                status.kind === 'analyzed' ? (status.result.doc.paragraphs[pIdx]?.text ?? '') : '';
               void redline.editParagraph({ paragraphIndex: pIdx, before, after });
             }}
             onDeleteEdit={(pIdx) => void redline.deleteParagraphEdit(pIdx)}
@@ -598,7 +598,9 @@ function AppContent(): JSX.Element {
       {view === 'current' && status.kind === 'analyzed' && (
         <div className="results">
           <div className="results-actions">
-            <button type="button" onClick={onExportJson}>{t('findings.export.json')}</button>
+            <button type="button" onClick={onExportJson}>
+              {t('findings.export.json')}
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -624,11 +626,17 @@ function AppContent(): JSX.Element {
             return (
               <div role="status" className="ocr-banner">
                 <p>
-                  This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page).
-                  Text extraction may be incomplete.
+                  This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page). Text
+                  extraction may be incomplete.
                 </p>
                 {status.bytes && ocrState.kind !== 'running' && (
-                  <button type="button" onClick={() => { setSelected(null); void pipeline.ocr(ocrLanguage); }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelected(null);
+                      void pipeline.ocr(ocrLanguage);
+                    }}
+                  >
                     Attempt OCR
                   </button>
                 )}
@@ -649,7 +657,10 @@ function AppContent(): JSX.Element {
           <div className="split">
             <FindingsPanel
               findings={status.result.findings}
-              onSelect={(f) => { setSelected(f); setSelectedPage(f.page); }}
+              onSelect={(f) => {
+                setSelected(f);
+                setSelectedPage(f.page);
+              }}
               definitions={extractLeaseFacts(status.result.doc).definitions}
               glossary={glossaryEntries}
               plainEnglishByRuleId={plainEnglishByRuleId}
@@ -670,7 +681,12 @@ function AppContent(): JSX.Element {
                 void (async (): Promise<void> => {
                   const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
                   const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
-                  await promoteToStandard({ name, sourceLeaseId: leaseId, sourceParagraphIndex: paragraphIndex, normalizedText: text });
+                  await promoteToStandard({
+                    name,
+                    sourceLeaseId: leaseId,
+                    sourceParagraphIndex: paragraphIndex,
+                    normalizedText: text,
+                  });
                   await refreshStandardSuite();
                   void refreshAuditLog();
                 })();
@@ -682,7 +698,9 @@ function AppContent(): JSX.Element {
               selectedPage={selectedPage}
               pages={status.result.doc.pages}
               highlight={
-                selected ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null) : null
+                selected
+                  ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null)
+                  : null
               }
             />
           </div>
@@ -797,9 +815,8 @@ function AppContent(): JSX.Element {
       <section aria-label="diff rule pack">
         <h2>Diff rule pack</h2>
         <p>
-          Load a <code>.lgpack.json</code> file to see how it differs from the
-          currently active rule set. Nothing is saved until you import it via
-          the pack manager above.
+          Load a <code>.lgpack.json</code> file to see how it differs from the currently active rule
+          set. Nothing is saved until you import it via the pack manager above.
         </p>
         <label>
           <span className="visually-hidden">Pack file to diff</span>
