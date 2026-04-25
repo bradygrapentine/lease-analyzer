@@ -52,7 +52,7 @@ export function detectSections(paragraphs: Paragraph[]): Section[] {
       };
     }
     current.paragraphs.push(para);
-    current.paragraphIndices.push(idx);
+    current.paragraphIndices!.push(idx);
   });
 
   if (current) sections.push(current);

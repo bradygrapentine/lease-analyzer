@@ -1,4 +1,4 @@
-import type { LeaseDocument, Paragraph } from '../parser/types';
+import type { LeaseDocument, Paragraph, Section } from '../parser/types';
 import type { CompiledMatcherCache } from './compileRules';
 import type {
   KeywordProximityMatcher,
@@ -127,7 +127,8 @@ function runSectionAnchored(
   const filtered: Paragraph[] = [];
   for (const section of doc.sections) {
     if (!heading.test(section.heading)) continue;
-    for (const idx of section.paragraphIndices) {
+    const indices = sectionIndices(section, doc);
+    for (const idx of indices) {
       const para = doc.paragraphs[idx];
       if (para === undefined) continue;
       allowedIndices.push(idx);
@@ -140,6 +141,16 @@ function runSectionAnchored(
     ...hit,
     paragraphIndex: allowedIndices[hit.paragraphIndex] ?? hit.paragraphIndex,
   }));
+}
+
+// Use the section's persisted paragraphIndices when present and consistent.
+// Persisted/imported leases predating that field fall back to a one-shot
+// indexOf per section paragraph — still O(n·m) per section rather than
+// O(n) per hit, and only on legacy data.
+function sectionIndices(section: Section, doc: LeaseDocument): number[] {
+  const stored = section.paragraphIndices;
+  if (stored && stored.length === section.paragraphs.length) return stored;
+  return section.paragraphs.map((p) => doc.paragraphs.indexOf(p));
 }
 
 function findAll(haystack: string, needle: string): number[] {

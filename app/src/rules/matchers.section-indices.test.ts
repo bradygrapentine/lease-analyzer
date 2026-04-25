@@ -72,6 +72,39 @@ describe('Section.paragraphIndices contract', () => {
     expect(at(hits, 0).paragraphIndex).toBe(2);
   });
 
+  it('falls back to deriving indices when paragraphIndices is absent (legacy persisted lease)', () => {
+    // Simulates re-analyzing a LeaseDocument that was serialized to IndexedDB
+    // before paragraphIndices existed. Section.paragraphIndices is undefined
+    // but section.paragraphs still references the same Paragraph objects in
+    // doc.paragraphs.
+    const paragraphs: Paragraph[] = [
+      p('1. Rent'),
+      p('Tenant shall pay rent of $2000.'),
+      p('Other clause.'),
+    ];
+
+    const legacySection: Section = {
+      heading: 'Rent',
+      number: '1',
+      paragraphs: [at(paragraphs, 1)],
+      // paragraphIndices intentionally omitted
+      startPage: 1,
+    };
+
+    const doc: LeaseDocument = { pages: [], paragraphs, sections: [legacySection], raw: '' };
+
+    const matcher: SectionAnchoredMatcher = {
+      type: 'sectionAnchored',
+      headingPattern: '^Rent$',
+      child: { type: 'regex', pattern: 'rent of \\$2000', flags: 'i' },
+    };
+
+    const hits = runMatcher(matcher, doc);
+
+    expect(hits).toHaveLength(1);
+    expect(at(hits, 0).paragraphIndex).toBe(1);
+  });
+
   it('does not call doc.paragraphs.indexOf in runSectionAnchored', () => {
     const paragraphs: Paragraph[] = [
       p('1. Rent'),
