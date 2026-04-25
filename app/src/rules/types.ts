@@ -78,6 +78,13 @@ export interface Finding {
   confidence: number;
   negated: boolean;
   rulePackVersion: string;
+  /**
+   * Wave 8 Part B — when set, this finding's underlying rule body has
+   * drifted from the signed baseline that was last verified. UI surfaces
+   * a "deviates from verified pack" badge. Optional + additive so all
+   * existing finding consumers keep working unchanged.
+   */
+  deviation?: { fromFingerprint: string };
 }
 
 export interface RuleMatch {
