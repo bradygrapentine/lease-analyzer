@@ -380,6 +380,32 @@ Local-only, CSP-compatible.
 - [ ] OCR language picker once a second `*.traineddata.gz` lands —
       today `runOcr` is hard-coded to English.
 
+## Wave 7 — Ship-readiness
+
+Plan: [`plans/wave7-ship-readiness.md`](./plans/wave7-ship-readiness.md). Five
+parallel-safe parts that close out Phase 6 (Lighthouse CI, Tauri build,
+onboarding tour, commercial golden) and clear the two largest cross-cutting
+tech-debt rocks (App.tsx decomposition + reanalyze-staleness guard, secondary
+IDB index). After Wave 7 lands, no ticket older than Phase 13 should be open.
+
+- [ ] Wave 7 Part A — Lighthouse + Tauri CI gates (`wave7-ci-gates`)
+- [ ] Wave 7 Part B — First-run onboarding tour (`wave7-onboarding`)
+- [ ] Wave 7 Part C — Commercial golden fixture (`wave7-golden-commercial`)
+- [ ] Wave 7 Part D — App.tsx decomposition + reanalyze-staleness guard (`wave7-appHooks`)
+- [ ] Wave 7 Part E — Secondary IndexedDB index (`wave7-idb-index`)
+
+## Wave 8 — Trust infrastructure (Phase 17)
+
+Plan: [`plans/wave8-trust-infra.md`](./plans/wave8-trust-infra.md). Four
+parallel-safe parts that turn the existing trust primitives (signed packs,
+signed reports, hash-chained audit log, replay bundles) into an
+externally-auditable ecosystem. Pre-flight requires Wave 7 to be fully merged.
+
+- [ ] Wave 8 Part A — Offline pack marketplace (`wave8-marketplace`)
+- [ ] Wave 8 Part B — Diff-vs-verified warnings (`wave8-deviation-warnings`)
+- [ ] Wave 8 Part C — Reproducibility CLI (`wave8-cli`)
+- [ ] Wave 8 Part D — Key-rotation workflow (`wave8-key-rotation`)
+
 ## Cross-cutting tech debt
 
 - [x] Extract a `usePipeline` hook — App's `handleBytes` was the
