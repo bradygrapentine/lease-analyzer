@@ -39,6 +39,7 @@ npm run build             # tsc + vite build; emits sw.js + leaseWorker chunk
 npm run build:sample      # regenerate public/sample.pdf
 npm run build:example-pack # regenerate the example rule pack fixture
 npm run check:budget      # size-budget gate for app shell / pdf.worker / OCR
+npm run lhci              # Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits); see app/lighthouserc.json
 npm run storybook         # panel previews on :6006
 ```
 

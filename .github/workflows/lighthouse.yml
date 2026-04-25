@@ -1,0 +1,30 @@
+name: lighthouse
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lhci:
+    name: Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build production bundle
+        run: npm run build
+      - name: Install Lighthouse CI
+        run: npm install --no-save @lhci/cli@0.14.x
+      - name: Run Lighthouse CI
+        run: npx --no-install lhci autorun --config=./lighthouserc.json
+        env:
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
