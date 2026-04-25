@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseLease } from '../parser/parseLease';
-import { makePdf, type PdfFixturePage } from '../parser/testFixtures';
+import { makePdf, makeCommercialTableLease, type PdfFixturePage } from '../parser/testFixtures';
 import { analyze } from './analyze';
 import { RULE_PACK_V1 } from './packV1';
 
@@ -75,5 +75,25 @@ describe('golden fixtures', () => {
     const ids = new Set(analyze(doc, RULE_PACK_V1).map((f) => f.ruleId));
     expect(ids.has('personal-guaranty')).toBe(false);
     expect(ids.has('rent-escalation')).toBe(false);
+  });
+
+  it('commercial-table lease: same commercial rules fire across rent-schedule + escalator-grid pages', async () => {
+    const doc = await parseLease(await makeCommercialTableLease());
+    const ids = new Set(analyze(doc, RULE_PACK_V1).map((f) => f.ruleId));
+    // The four commercial-only ids fire on prose AND survive a multi-page
+    // body whose 2nd and 3rd pages are tables. (Regression guard: a parser
+    // change that drops table cells from the document body would silently
+    // demote rent-escalation back to "prose only".)
+    expect(ids).toContain('rent-escalation');
+    expect(ids).toContain('early-termination-fee');
+    expect(ids).toContain('indemnification');
+    expect(ids).toContain('personal-guaranty');
+    // Same not-in-residential invariant as the textual fixture.
+    const residentialIds = new Set(
+      analyze(await parseLease(await residentialLease()), RULE_PACK_V1).map((f) => f.ruleId),
+    );
+    expect(residentialIds.has('rent-escalation')).toBe(false);
+    expect(residentialIds.has('early-termination-fee')).toBe(false);
+    expect(residentialIds.has('personal-guaranty')).toBe(false);
   });
 });
