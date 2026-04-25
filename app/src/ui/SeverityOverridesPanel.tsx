@@ -12,6 +12,15 @@ interface SeverityOverridesPanelProps {
    * means "clear the override; fall back to the rule's built-in severity."
    */
   onChange: (ruleId: string, severity: OverrideSeverity | null) => void;
+  /**
+   * Wave 10 Part D — optional portfolio-scope override map. When provided
+   * (alongside `onScopeChange`), the panel renders an "Apply across portfolio"
+   * checkbox per row whose checked state mirrors the presence of `ruleId` in
+   * `portfolioOverrides`. Existing call sites that omit these props see no
+   * behavior change.
+   */
+  portfolioOverrides?: Record<string, OverrideSeverity>;
+  onScopeChange?: (ruleId: string, scope: 'lease' | 'portfolio') => void;
 }
 
 const SEVERITY_LABEL: Record<OverrideSeverity, string> = {
@@ -30,7 +39,11 @@ export function SeverityOverridesPanel({
   rules,
   overrides,
   onChange,
+  portfolioOverrides,
+  onScopeChange,
 }: SeverityOverridesPanelProps): JSX.Element {
+  const showScopeToggle =
+    portfolioOverrides !== undefined && onScopeChange !== undefined;
   if (rules.length === 0) {
     return (
       <section aria-label="severity overrides">
@@ -62,6 +75,7 @@ export function SeverityOverridesPanel({
             <th scope="col">Rule</th>
             <th scope="col">Built-in</th>
             <th scope="col">Override</th>
+            {showScopeToggle ? <th scope="col">Scope</th> : null}
             <th scope="col">
               <span className="visually-hidden">Actions</span>
             </th>
@@ -98,6 +112,26 @@ export function SeverityOverridesPanel({
                     </select>
                   </label>
                 </td>
+                {showScopeToggle ? (
+                  <td>
+                    <label>
+                      <input
+                        type="checkbox"
+                        aria-label={`apply across portfolio for ${r.id}`}
+                        checked={portfolioOverrides?.[r.id] !== undefined}
+                        onChange={(e) =>
+                          onScopeChange?.(
+                            r.id,
+                            e.target.checked ? 'portfolio' : 'lease',
+                          )
+                        }
+                      />
+                      <span className="visually-hidden">
+                        Apply across portfolio for {r.title}
+                      </span>
+                    </label>
+                  </td>
+                ) : null}
                 <td>
                   <button
                     type="button"
