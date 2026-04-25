@@ -6,7 +6,7 @@ on:
 
 jobs:
   lhci:
-    name: Lighthouse CI (a11y >=95, PWA >=95, best-practices >=90)
+    name: Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
     runs-on: ubuntu-latest
     defaults:
       run:
