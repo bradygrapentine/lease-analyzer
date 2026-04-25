@@ -76,6 +76,7 @@ Each phase links to its backlog section.
 | 12 | Trust & verification | Done |
 | 13 | Performance & scale | Done |
 | 14 | Content depth | Substantially done — static glossary JSON, i18n scaffold, OCR language picker open |
+| 15 | Collaboration escape hatches | Done — Wave 9 shipped review links, counter-sign, delta packets, CLI verifier |
 | 17 | Trust infrastructure | Done — Wave 8 shipped marketplace, deviation warnings, repro CLI, key rotation |
 
 "Substantially done" means the phase's primary surface is built and wired;
@@ -122,28 +123,29 @@ rule-pack rot review.
 These are the next coherent moves given what's already built. They're
 deliberately scoped; speculative scope is listed under "Out of scope."
 
-### Phase 15 — Collaboration escape hatches
+### Phase 15 — Collaboration escape hatches (shipped, Wave 9)
 
-The product is aggressively single-device today. Users still need to
-hand a lease to a co-tenant, a lawyer, or a counterparty. Phase 15
-keeps the local-first contract intact while making that handoff less
-painful than "email a ZIP."
+Phase 15 turned LeaseGuard's signing + replay primitives into a way to
+hand a lease to a co-tenant, lawyer, or counterparty without breaking
+the local-first contract. See [`REPRODUCIBILITY.md`](./REPRODUCIBILITY.md)
+and the "Collaboration escape hatches" section of
+[`SYSTEM_DESIGN.md`](./SYSTEM_DESIGN.md).
 
-- **Signed review links** — an encrypted, time-bounded archive
-  (passphrase + expiry) that opens in any other LeaseGuard instance
-  with the same pack version and replays as a read-only view. Builds
-  on the replay-bundle exporter and signed-report primitives.
-- **Counter-sign-and-return flow** — recipient can accept / reject
-  individual redline edits, sign the result with their own key, and
-  export a patch that the original author's copy can apply. Reuses
-  `RedlineEdit` + version-history plumbing.
-- **Delta packets** — instead of re-sending the whole lease, export
-  just the diff between two version-history entries as a signed JSON
-  the other side can verify against their copy's `inputHash`.
-- **Share-link privacy review** — explicit doc in
-  [`SYSTEM_DESIGN.md`](./SYSTEM_DESIGN.md) covering what's inside the
-  encrypted archive and what isn't (no telemetry, no key escrow, no
-  network).
+- **Signed review links** (`.lgreview`) — AES-GCM-256 + PBKDF2-SHA256
+  (250k iter) envelope wrapping a replay bundle, plus an in-app
+  `OpenReviewPanel` that mounts the lease in a read-only review mode
+  via `useReviewMode`.
+- **Counter-sign-and-return** (`.lgpatch`) — `redlinePatch.ts` signs
+  per-edit accept/reject decisions with the recipient's Ed25519 key;
+  the original author's `applyPatch.ts` verifies and writes one
+  `patch-applied` audit entry.
+- **Delta packets** (`.lgdelta`) — `deltaPacket.ts` emits a signed
+  line-diff between two `LeaseVersion` records; `applyDelta.ts`
+  verifies, hash-checks `baseInputHash`, applies, and re-runs analyze.
+- **Privacy review + CLI verifier** — `leaseguard open-review` extracts
+  a `.lgreview` from outside the browser using the same envelope shape;
+  `SYSTEM_DESIGN.md` documents the privacy contract (no telemetry, no
+  key escrow, no IDB dump beyond the chosen lease, no network).
 
 ### Phase 16 — Multi-lease intelligence
 
