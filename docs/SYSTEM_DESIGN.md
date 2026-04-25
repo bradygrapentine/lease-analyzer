@@ -160,7 +160,7 @@ in one concern never forces a migration on another.
 | `leaseguard-redlines`      | v1      | `edits`                                    | Redline paragraph replacements |
 | `leaseguard-versions`      | v1      | `versions`                                 | Lease version snapshots |
 | `leaseguard-audit`         | v1      | `entries`                                  | Append-only hash-chained audit log |
-| `leaseguard-signing`       | v1      | `keypair`                                  | Ed25519 keypair; private key passphrase-wrapped |
+| `leaseguard-signing`       | v2      | `keypair`                                  | Ed25519 keypairs (multi-key, see "Key rotation"); private key passphrase-wrapped |
 | `leaseguard-bulk-dedup`    | v1      | `hashes`                                   | SHA-256 content hashes for bulk-import dedup |
 
 ## Signing
@@ -185,15 +185,47 @@ Two consumers:
 Canonical JSON (sorted keys at every depth, no whitespace) is shared
 with the audit log — see `canonicalJsonStringify` in `audit/auditLog.ts`.
 
+### Key rotation
+
+The signing store is multi-key (v2). Records are keyed by stable ids
+(`k0`, `k1`, ...). The active key is the single record with
+`retiredAt === null`; rotated-out keys are kept in the same store with
+`retiredAt` set to the rotation timestamp.
+
+- `getActiveKey()` — current signing key (used by all new signatures).
+- `rotateKey(passphrase)` — generates a new Ed25519 keypair, marks the
+  prior active key as retired, and returns the new key id + public key.
+  The new key uses a freshly prompted passphrase; the prior passphrase
+  is still required if the caller wants to re-sign with the retired key.
+- `signWithKey(payload, passphrase, keyId)` — sign with a specific
+  (typically retired) key. Used by audit-export verification paths.
+- `listKeys()` — full history (active + retired) for the
+  `SigningKeyPanel` history UI.
+
+Retired keys remain usable for **verification** of historical
+signatures but are never auto-selected for new signing. The v1 → v2
+storage migration is lossless: the legacy single record (`id: 'active'`)
+is rewritten as `k0` with `retiredAt: null`.
+
+The audit log's hash chain stays intact across rotations because
+`signedByKeyId` (the per-entry key id) is intentionally NOT covered by
+`entryHash`. Pre-rotation entries verify against the retired key's
+public key (looked up by `signedByKeyId`); post-rotation entries verify
+against the new active key. Old entries that predate the field default
+to `'k0'` for back-compat with v1 audit logs.
+
 ## Audit log
 
 `src/audit/auditLog.ts` — append-only, hash-chained.
 
 Each `AuditEntry` = `{ seq, timestamp, kind, payload, prevHash,
-entryHash }`. `entryHash` = SHA-256 of canonical JSON over
-`{seq, timestamp, kind, payload, prevHash}`. `prevHash` links to the
-tail of the chain. `verifyAuditChain()` re-hashes every row and
-reports the first gap or mismatch.
+entryHash, signedByKeyId? }`. `entryHash` = SHA-256 of canonical JSON
+over `{seq, timestamp, kind, payload, prevHash}` — `signedByKeyId` is
+deliberately excluded so the field can be added back-compatibly without
+breaking v1 chain verification. `prevHash` links to the tail of the
+chain. `verifyAuditChain()` re-hashes every row and reports the first
+gap or mismatch. New entries record the active signing-key id; legacy
+entries with no `signedByKeyId` default to `'k0'` (see "Key rotation").
 
 Writes fan out from `App.tsx`'s `safeAudit()` wrapper (try/catch;
 console.warn on failure; never aborts the caller). Known event kinds:
