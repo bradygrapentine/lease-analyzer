@@ -1,0 +1,88 @@
+LeaseGuard — third-party asset attributions
+============================================
+
+LeaseGuard runs entirely in the browser and bundles a small number of
+third-party runtime assets to keep its CSP (`default-src 'self'`)
+satisfied — no CDN fetches at runtime. This file enumerates the
+attributions required for redistribution.
+
+This NOTICE file is required by Apache License 2.0 §4(d) for the
+tesseract.js OCR runtime and trained-data files. It is shipped as-is
+inside the precached PWA and is reachable at the URL `/NOTICE`.
+
+
+tesseract.js
+------------
+
+- Files:
+  - app/public/tesseract/worker.min.js
+  - (build-time copy from `node_modules/tesseract.js/dist/worker.min.js`)
+- Upstream: https://github.com/naptha/tesseract.js
+- Version: 7.0.0
+- License: Apache License, Version 2.0
+- Source-of-truth license text: https://www.apache.org/licenses/LICENSE-2.0
+
+  Copyright (c) The tesseract.js authors and contributors.
+
+  Licensed under the Apache License, Version 2.0 (the "License"); you
+  may not use this file except in compliance with the License. You may
+  obtain a copy of the License at:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+  implied. See the License for the specific language governing
+  permissions and limitations under the License.
+
+  No upstream NOTICE file is published for tesseract.js. This file is
+  copied verbatim from the upstream release artifact.
+
+
+tesseract.js-core (WebAssembly engine)
+--------------------------------------
+
+- Files:
+  - app/public/tesseract/tesseract-core.wasm
+  - app/public/tesseract/tesseract-core.wasm.js
+  - (build-time copies from `node_modules/tesseract.js-core/`)
+- Upstream: https://github.com/naptha/tesseract.js-core
+- Version: 7.0.0
+- License: Apache License, Version 2.0
+
+  Copyright (c) The tesseract.js-core authors and contributors.
+  Licensed under the Apache License, Version 2.0; full text at the URL
+  above. No upstream NOTICE file is published. Files are copied verbatim
+  from the upstream release artifact.
+
+  tesseract.js-core is itself a WebAssembly build of the Tesseract OCR
+  engine (https://github.com/tesseract-ocr/tesseract), which is
+  Apache-2.0 licensed:
+
+      Copyright (c) Google LLC and the Tesseract OCR contributors.
+      Licensed under the Apache License, Version 2.0.
+
+
+Tesseract trained-data files (language models)
+----------------------------------------------
+
+- Files: `app/public/tesseract/<code>.traineddata.gz` for every
+  language code listed in `app/public/tesseract/languages.json`.
+  At time of writing the bundle includes:
+  - `eng.traineddata.gz` — English (Apache-2.0)
+- Upstream: https://github.com/tesseract-ocr/tessdata_fast
+- License: Apache License, Version 2.0
+
+  Copyright (c) Google LLC and the Tesseract OCR contributors.
+  Licensed under the Apache License, Version 2.0. Files are
+  redistributed unmodified.
+
+
+Re-review trigger
+-----------------
+
+This NOTICE must be re-reviewed and updated before any new tesseract
+asset is added to `app/public/tesseract/` (new traineddata language,
+upstream major-version bump, or replacement WebAssembly engine). See
+`docs/SECURITY.md` §5 for the full re-review checklist.

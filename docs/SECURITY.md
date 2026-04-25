@@ -197,3 +197,61 @@ annual cadences are the human review the test cannot replace. When a
 review pass completes, append a `Decision:` line to the
 `docs/BACKLOG.md` risk-register entry rather than removing the bullet
 — the audit trail matters more than the line count.
+
+## 5. Third-party assets and licensing
+
+### What we redistribute
+
+LeaseGuard's CSP is `default-src 'self'`, which means every runtime
+asset must be served from the app's own origin. The OCR feature is the
+only place where this forces us to redistribute third-party binaries
+inside the PWA bundle:
+
+- `app/public/tesseract/worker.min.js` (tesseract.js, Apache-2.0)
+- `app/public/tesseract/tesseract-core.wasm` and
+  `app/public/tesseract/tesseract-core.wasm.js` (tesseract.js-core,
+  Apache-2.0)
+- `app/public/tesseract/<code>.traineddata.gz` for every entry in
+  `app/public/tesseract/languages.json` (tessdata_fast, Apache-2.0)
+
+All four asset families are Apache-2.0. Apache-2.0 §4(d) requires that
+distributions include a copy of the upstream NOTICE attributions; none
+of the upstreams publish a separate NOTICE file, but we still need to
+preserve the copyright + license-pointer text.
+
+### How we satisfy Apache-2.0 §4(d)
+
+`app/public/NOTICE` enumerates each asset, its upstream, version, and
+the Apache-2.0 attribution text. The file is precached by the service
+worker and reachable at `/NOTICE` from any installed instance of the
+PWA. `README.md` cross-references it from the OCR feature paragraph;
+this section cross-references it from the security/threat-model side.
+
+### What counts as "redistribution" for a precached PWA
+
+A user installing LeaseGuard as a PWA (`Add to home screen`) receives a
+local copy of every precached asset, including the tesseract binaries
+and `/NOTICE`. That installation is a redistribution under Apache-2.0
+§4 — the licence obligations attach to the installed copy, not to the
+HTTP fetch from the host. As long as `/NOTICE` is present in the
+precache manifest and reachable from the installed PWA, §4(d) is
+satisfied.
+
+### Re-review trigger
+
+Re-review this section AND `app/public/NOTICE` whenever any of the
+following changes:
+
+1. A new tesseract trained-data file is added to
+   `app/public/tesseract/` (new language).
+2. `tesseract.js` or `tesseract.js-core` is bumped past a major
+   version, or replaced with a different WebAssembly OCR engine.
+3. A new third-party runtime asset of any kind is precached by the
+   service worker (icon font, model file, etc.).
+
+Routine patch-version bumps of the existing eng-only tesseract bundle
+do not require a re-review — they ship the same Apache-2.0 obligations
+the NOTICE already attributes. The unit test in
+`app/src/security/notice.test.ts` asserts that the NOTICE file is
+reachable at build time and contains the expected attribution
+strings; a refactor that drops or empties the file fails CI.
