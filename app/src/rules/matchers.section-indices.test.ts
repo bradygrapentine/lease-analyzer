@@ -105,6 +105,42 @@ describe('Section.paragraphIndices contract', () => {
     expect(at(hits, 0).paragraphIndex).toBe(1);
   });
 
+  it('survives JSON round-trip of a legacy lease (no paragraphIndices, broken object identity)', () => {
+    // Simulates an encrypted-archive import: the LeaseDocument was serialized
+    // to JSON before paragraphIndices existed, then parsed back. section.paragraphs
+    // and doc.paragraphs no longer share object identity, so indexOf-based
+    // fallback would silently drop every hit. Content-keyed fallback must work.
+    const original: LeaseDocument = {
+      pages: [],
+      paragraphs: [
+        p('1. Rent'),
+        p('Tenant shall pay rent of $3000.'),
+      ],
+      sections: [
+        {
+          heading: 'Rent',
+          number: '1',
+          paragraphs: [p('Tenant shall pay rent of $3000.')],
+          startPage: 1,
+        } satisfies Section,
+      ],
+      raw: '',
+    };
+
+    const restored = JSON.parse(JSON.stringify(original)) as LeaseDocument;
+
+    const matcher: SectionAnchoredMatcher = {
+      type: 'sectionAnchored',
+      headingPattern: '^Rent$',
+      child: { type: 'regex', pattern: 'rent of \\$3000', flags: 'i' },
+    };
+
+    const hits = runMatcher(matcher, restored);
+
+    expect(hits).toHaveLength(1);
+    expect(at(hits, 0).paragraphIndex).toBe(1);
+  });
+
   it('does not call doc.paragraphs.indexOf in runSectionAnchored', () => {
     const paragraphs: Paragraph[] = [
       p('1. Rent'),
