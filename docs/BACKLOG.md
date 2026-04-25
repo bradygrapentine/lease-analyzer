@@ -17,11 +17,12 @@ enough to land in one PR.
 | Axis | Value | Gate |
 |------|-------|------|
 | Source | 117 non-test files (~13.0k LOC) + 91 test files (~12.5k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests | ~803 passing across 91 files | `npm test` |
+| Tests | ~856 passing across 110 files (app) + 3 in `cli/` | `npm test` |
 | Coverage | 97.02% stmt · 88.06% branch · 93.21% func · 97.02% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
-| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); 8 side dbs: `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1 | migrations tested |
-| App.tsx | ~1540 lines (panels + handlers inline); see "Cross-cutting tech debt" for the decomposition ticket | — |
+| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); 8 side dbs: `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key store, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1 | migrations tested |
+| App.tsx | decomposed into per-panel containers around `usePipeline` (Wave 7-D) | — |
+| CLI | `leaseguard-verify` (Node, no browser, no network) — `cli/` workspace, 3 tests | `cd cli && npm test` |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze | `npm run build` |
 | Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings) | `npm run typecheck && npm run lint` |
 
@@ -388,23 +389,23 @@ onboarding tour, commercial golden) and clear the two largest cross-cutting
 tech-debt rocks (App.tsx decomposition + reanalyze-staleness guard, secondary
 IDB index). After Wave 7 lands, no ticket older than Phase 13 should be open.
 
-- [ ] Wave 7 Part A — Lighthouse + Tauri CI gates (`wave7-ci-gates`)
-- [ ] Wave 7 Part B — First-run onboarding tour (`wave7-onboarding`)
-- [ ] Wave 7 Part C — Commercial golden fixture (`wave7-golden-commercial`)
-- [ ] Wave 7 Part D — App.tsx decomposition + reanalyze-staleness guard (`wave7-appHooks`)
-- [ ] Wave 7 Part E — Secondary IndexedDB index (`wave7-idb-index`)
+- [x] Wave 7 Part A — Lighthouse + Tauri CI gates (`wave7-ci-gates`, PR #7)
+- [x] Wave 7 Part B — First-run onboarding tour (`wave7-onboarding`, PR #8)
+- [x] Wave 7 Part C — Commercial golden fixture (`wave7-golden-commercial`, PR #10)
+- [x] Wave 7 Part D — App.tsx decomposition + reanalyze-staleness guard (`wave7-appHooks`, PR #6)
+- [x] Wave 7 Part E — Secondary IndexedDB index (`wave7-idb-index`, PR #9)
 
 ## Wave 8 — Trust infrastructure (Phase 17)
 
 Plan: [`plans/wave8-trust-infra.md`](./plans/wave8-trust-infra.md). Four
 parallel-safe parts that turn the existing trust primitives (signed packs,
 signed reports, hash-chained audit log, replay bundles) into an
-externally-auditable ecosystem. Pre-flight requires Wave 7 to be fully merged.
+externally-auditable ecosystem.
 
-- [ ] Wave 8 Part A — Offline pack marketplace (`wave8-marketplace`)
-- [ ] Wave 8 Part B — Diff-vs-verified warnings (`wave8-deviation-warnings`)
-- [ ] Wave 8 Part C — Reproducibility CLI (`wave8-cli`)
-- [ ] Wave 8 Part D — Key-rotation workflow (`wave8-key-rotation`)
+- [x] Wave 8 Part A — Offline pack marketplace (`wave8-marketplace`, PR #11)
+- [x] Wave 8 Part B — Diff-vs-verified warnings (`wave8-deviation-warnings`, PR #12)
+- [x] Wave 8 Part C — Reproducibility CLI (`wave8-cli`, PR #12)
+- [x] Wave 8 Part D — Key-rotation workflow (`wave8-key-rotation`, PR #12)
 
 ## Cross-cutting tech debt
 
