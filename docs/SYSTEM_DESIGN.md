@@ -289,35 +289,87 @@ table for the authoritative figures):
 - Archive export/import uses WebCrypto AES-GCM. No handshake ever
   leaves the device.
 
-## Collaboration escape hatches
+## Collaboration escape hatches (Wave 9 / Phase 15)
 
-Wave 9 adds three offline-first sharing surfaces. None of them open a
-network socket; archives travel over user-initiated file export, and
-recipients open them by drag/drop. The **review archive** (Part A) is
-the foundational primitive:
+Phase 15 adds three user-initiated sharing surfaces on top of the
+existing local-first primitives: signed review links (`.lgreview`),
+counter-sign-and-return patches (`.lgpatch`), and inter-version delta
+packets (`.lgdelta`). All three move through the user's filesystem —
+LeaseGuard never opens a network connection on the user's behalf.
 
-- File extension: `.lgreview`. On-disk shape is a UTF-8 JSON envelope:
-  `{ magic: "LGREVIEW", version: 1, packFingerprint, expiresAt, salt,
-  iv, ciphertext }` with `salt`, `iv`, `ciphertext` base64-encoded so
-  the CLI verifier (Part D) can read metadata without a binary parser.
-- Encryption: AES-GCM, 256-bit key, fresh 12-byte random IV per
-  archive. The 128-bit auth tag is the AES-GCM tag baked into the
-  ciphertext output by WebCrypto — there is no separate HMAC. A
-  single-bit flip anywhere in the ciphertext fails decrypt with an
-  authentication error and the archive is rejected.
-- Key derivation: PBKDF2-HMAC-SHA-256, 250 000 iterations, fresh
-  16-byte random salt per archive. Salt is stored in the envelope; the
-  passphrase is held only in memory and is never persisted.
-- Expiry: ISO-8601 timestamp checked against `Date.now()` (or an
-  injected `now` for tests) before decrypt is attempted. Expired
-  archives surface a clear "expired" error.
-- What is NOT included: telemetry, key escrow, IDB dumps beyond the
-  chosen lease's replay bundle, network egress, server-side
-  share-link hosting.
-- Recipient trust model: the recipient sees a read-only review session;
-  audit writes back to the original lease are gated off (Part B may
-  route a separate "review-session" audit log). Possession of the
-  passphrase + a matching signed pack is the only authentication.
+### `.lgreview` archive format
+
+A `.lgreview` file is a single UTF-8 JSON envelope wrapping an AES-GCM
+ciphertext. Both the in-app encoder (`app/src/storage/reviewArchive.ts`)
+and the CLI decoder (`cli/src/openReview.ts`) implement this exact
+shape:
+
+```
+{
+  "magic": "LGREVIEW",
+  "version": 1,
+  "packFingerprint": "<sha256 hex of the rule pack>",
+  "expiresAt":       "<ISO-8601>",
+  "salt":            "<base64 16 bytes>",
+  "iv":              "<base64 12 bytes>",
+  "ciphertext":      "<base64; includes the trailing 16-byte GCM tag>"
+}
+```
+
+Crypto parameters are pinned to a single profile (no algorithm
+negotiation in the envelope): PBKDF2-HMAC-SHA-256 at 250,000
+iterations, a 256-bit AES-GCM key, a fresh 16-byte salt and 12-byte IV
+per archive, and the WebCrypto convention of appending the 16-byte
+auth tag to the ciphertext.
+
+### What is and is NOT in the archive
+
+Inside the encrypted plaintext is a single replay-bundle (the same
+artifact `buildReplayBundle()` produces for the verifier CLI): the
+chosen lease PDF, the `pack.lgpack.json`, an `expected.json` of
+findings, and the rule-pack version. That is the entire payload.
+
+Explicitly **not** included:
+
+- No telemetry, no install ID, no clock drift report — the envelope
+  carries only the four metadata fields above.
+- No key escrow. The passphrase is the only way to decrypt; lose it
+  and the archive is a brick. LeaseGuard cannot recover a `.lgreview`.
+- No IndexedDB dump beyond the chosen lease. Other saved leases, the
+  audit log, the rule-pack library, and any custom rules stay on the
+  sender's device.
+- No network. Both the encoder and the CLI decoder import zero
+  `fetch` / `XMLHttpRequest` / DNS-resolving APIs.
+
+### Expiry semantics
+
+`expiresAt` is enforced at decode time only: the in-app `OpenReviewPanel`
+and the CLI both compute `Date.now() > Date.parse(expiresAt)` and refuse
+the archive with `reason: 'expired'`. There is no server-side
+revocation, no key rotation that backdates an issued archive, and no
+"phone home" expiry check. A recipient with a tampered system clock can
+extend the window — that is the recipient-trust model below.
+
+### Recipient-trust model
+
+The `.lgreview` envelope is integrity-protected (AES-GCM auth tag) but
+not recipient-bound. Anyone with the bytes and the passphrase can
+decrypt. Therefore:
+
+- The sender must transport the passphrase out-of-band (signal, voice,
+  in-person) — never in the same channel as the file.
+- The recipient is trusted to honor `expiresAt`, not to redistribute the
+  bundle, and to install the matching signed rule pack
+  (`packFingerprint` lets them verify they have the right one).
+- The signed rule pack and the inner replay-bundle are independently
+  verifiable: a recipient who suspects the sender can re-run
+  `leaseguard verify` on the extracted bundle to confirm the findings
+  reproduce byte-identically from the same pack.
+
+The same trust model applies to `.lgpatch` (Part B) and `.lgdelta`
+(Part C), with the additional protection that those two are signed by
+the recipient's / sender's Ed25519 key respectively, so the author can
+verify the patch / delta really came from the holder of that key.
 
 ## Performance
 

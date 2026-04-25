@@ -1,10 +1,16 @@
-# `leaseguard-verify` — reproducibility CLI
+# `leaseguard` — reproducibility + share-link CLI
 
-`leaseguard-verify` lets a third party (auditor, regulator, paranoid
-tenant) re-run a LeaseGuard analysis from a `.replay.zip` bundle and
-prove the bundled `expected.json` is the byte-identical output of
-`parseLease + analyze` on the bundled `lease.pdf` with the bundled
-`pack.lgpack.json`.
+The `leaseguard` CLI lets a third party (auditor, regulator, paranoid
+tenant) verify a LeaseGuard analysis without trusting the browser app.
+Two subcommands ship today:
+
+- `leaseguard verify <replay-bundle.zip>` — re-runs `parseLease +
+  analyze` on a `.replay.zip` and proves the bundled `expected.json` is
+  the byte-identical output (Wave 8 Part C).
+- `leaseguard open-review <archive.lgreview> --passphrase <pp> [--out
+  <path>]` — decrypts a share-link archive and extracts the inner
+  replay bundle (Wave 9 Part D). Pipe the result into `verify` to do a
+  full end-to-end reproducibility check on a received lease.
 
 ## Guarantees
 
@@ -21,15 +27,27 @@ prove the bundled `expected.json` is the byte-identical output of
 ## Usage
 
 ```bash
-node cli/dist/cli/src/index.js <path/to/your.replay.zip>
-# or, after `npm link` / install:
-leaseguard-verify <path/to/your.replay.zip>
+# verify (Wave 8 Part C)
+node cli/dist/cli/src/index.js verify <path/to/your.replay.zip>
+
+# open-review (Wave 9 Part D)
+npx tsx cli/src/index.ts open-review <path/to/share.lgreview> \
+  --passphrase '<the-passphrase>' \
+  --out /tmp/extracted.replay.zip
+
+# end-to-end: decrypt then verify
+npx tsx cli/src/index.ts open-review share.lgreview --passphrase 'pp' \
+  --out /tmp/x.zip && \
+  npx tsx cli/src/index.ts verify /tmp/x.zip
 ```
 
-Exit codes:
-- `0` — byte-identical reproduction. Bundle verifies.
-- `1` — mismatch. A plain-text diff is written to stderr.
-- `2` — usage error (missing file, unreadable bundle, bad CLI args).
+Exit codes (uniform across subcommands):
+- `0` — success (bundle verified, or archive decoded and written).
+- `1` — semantic failure: `verify` mismatch, or `open-review` returned
+  `wrong-passphrase` / `expired` / `tampered` / `malformed`. The reason
+  is printed to stderr.
+- `2` — usage / IO error (missing file, missing `--passphrase`, bad
+  CLI args).
 
 ## Build
 
@@ -43,19 +61,24 @@ npx tsc             # builds to cli/dist/
 
 The CLI is plain TypeScript compiled by `tsc`; no Vite, no bundler.
 
-## Fixture
+## Fixtures
 
-`cli/fixtures/sample-replay.zip` is a checked-in canonical bundle used
-by `cli/src/verifyReplay.test.ts`. Regenerate with:
+- `cli/fixtures/sample-replay.zip` — canonical replay bundle used by
+  `cli/src/verifyReplay.test.ts`. Regenerate with
+  `cli/node_modules/.bin/tsx cli/scripts/build-fixture.mjs`. The
+  script uses the same code path the app uses (`buildReplayBundle`)
+  on a small synthetic residential lease PDF produced by `pdf-lib`.
+- `cli/fixtures/sample-review.lgreview` and
+  `cli/fixtures/sample-review-expired.lgreview` — canonical share-link
+  archives used by `cli/src/openReview.test.ts`. Regenerate with
+  `node cli/scripts/build-review-fixture.mjs`. Both fixtures use a
+  pinned salt + IV so the on-disk bytes stay stable across
+  regenerations; the passphrase is `review-test-passphrase-12345`.
 
-```bash
-cli/node_modules/.bin/tsx cli/scripts/build-fixture.mjs
-```
-
-The script uses the same code path the app uses
-(`buildReplayBundle`) on a small synthetic residential lease PDF
-produced by `pdf-lib`. Regeneration is only required if the rule pack
-or parser pipeline changes the deterministic output.
+Regeneration is only required if the rule pack / parser pipeline
+changes the deterministic output (for `sample-replay.zip`) or the
+envelope schema changes (for `.lgreview`). The envelope shape is
+documented in `docs/SYSTEM_DESIGN.md` ("Collaboration escape hatches").
 
 ## How it works
 

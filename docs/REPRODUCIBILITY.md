@@ -81,3 +81,51 @@ If a user edits a curated rule, Wave 8-B's `packBaseline` resolver
 flags the deviation in `FindingsPanel` and on the signed export
 (`deviations[]` field). Auditors get a machine-readable signal that the
 rule body diverges from the verified baseline.
+
+## Verifying a `.lgreview` archive without the in-app UI
+
+Wave 9 Part D adds a second CLI subcommand for the share-link surface.
+A recipient who has been handed a `.lgreview` file and a passphrase
+can extract the inner replay bundle without ever opening the app:
+
+```sh
+cd cli
+npm install
+# Print the inner replay-bundle to a file (recommended; the bundle is binary)
+npx tsx src/index.ts open-review /path/to/share.lgreview \
+  --passphrase 'the-passphrase' \
+  --out /tmp/extracted.replay.zip
+
+# Or stream the bundle bytes to stdout (pipe to a file or another tool)
+npx tsx src/index.ts open-review /path/to/share.lgreview \
+  --passphrase 'the-passphrase' > /tmp/extracted.replay.zip
+```
+
+Exit codes:
+
+| Exit | Meaning |
+| ---- | ------- |
+| 0    | Decoded successfully; bundle written / streamed. |
+| 1    | Wrong passphrase, expired archive, tampered envelope, or malformed file. The reason is printed to stderr. |
+| 2    | Usage or IO error (missing file, missing `--passphrase`). |
+
+After a successful `open-review`, run `leaseguard verify` on the
+extracted bundle to confirm the findings reproduce byte-identically:
+
+```sh
+npx tsx src/index.ts verify /tmp/extracted.replay.zip
+```
+
+This two-step flow gives a recipient the same trust they would get
+from the in-app `OpenReviewPanel`, but without trusting any browser
+JavaScript or any LeaseGuard UI code path. The CLI imports zero
+network APIs — see `cli/src/openReview.ts` for the deterministic
+`node:crypto` decoder.
+
+The envelope shape is documented in `docs/SYSTEM_DESIGN.md`
+("Collaboration escape hatches"). The CLI fixture
+(`cli/fixtures/sample-review.lgreview`, regenerable via
+`node cli/scripts/build-review-fixture.mjs`) is a worked example a
+third-party auditor can decrypt with the passphrase
+`review-test-passphrase-12345` to inspect the on-disk format byte by
+byte.
