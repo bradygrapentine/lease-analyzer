@@ -1,0 +1,48 @@
+name: cli
+
+on:
+  pull_request:
+    paths:
+      - 'cli/**'
+      - 'app/src/parser/**'
+      - 'app/src/rules/**'
+      - 'app/src/workflow/**'
+      - '.github/workflows/cli.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cli/**'
+      - 'app/src/parser/**'
+      - 'app/src/rules/**'
+      - 'app/src/workflow/**'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            cli/package-lock.json
+            app/package-lock.json
+      # The CLI imports source files from app/src — need app's runtime
+      # deps (pdfjs-dist, pdf-lib) installed so node resolution finds
+      # them when walking up from app/src/parser/*.
+      - name: Install app deps
+        working-directory: app
+        run: npm ci
+      - name: Install cli deps
+        working-directory: cli
+        run: npm ci
+      - name: Typecheck cli
+        working-directory: cli
+        run: npm run typecheck
+      - name: Test cli
+        working-directory: cli
+        run: npm test
+      - name: Build cli (tsc)
+        working-directory: cli
+        run: npx tsc
