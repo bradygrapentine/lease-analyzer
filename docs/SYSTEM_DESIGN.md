@@ -147,21 +147,22 @@ compiled inline, already-compiled arrays skip the step.
 
 ## IndexedDB landscape
 
-Nine databases, each with an independent migration history and an
+Ten databases, each with an independent migration history and an
 `_reset<Name>DbForTests` hook. Separation is deliberate: a schema bump
 in one concern never forces a migration on another.
 
-| DB name                    | Version | Stores                                     | Purpose |
-|----------------------------|--------:|--------------------------------------------|---------|
-| `leaseguard`               | v3      | `leases`, `settings`, `clauseTemplates`    | Primary lease library + standard-lease pointer + clause templates |
-| `leaseguard-packs`         | v3      | `packs`, `enabled`, `settings`, `signatures` | Installed rule packs, enabled flags, jurisdiction / severity settings, signed-envelope records |
-| `leaseguard-annotations`   | v1      | `annotations`                              | Per-paragraph user annotations |
-| `leaseguard-counters`      | v1      | `counters`                                 | User's counter-offer library |
-| `leaseguard-redlines`      | v1      | `edits`                                    | Redline paragraph replacements |
-| `leaseguard-versions`      | v1      | `versions`                                 | Lease version snapshots |
-| `leaseguard-audit`         | v1      | `entries`                                  | Append-only hash-chained audit log |
-| `leaseguard-signing`       | v2      | `keypair`                                  | Ed25519 keypairs (multi-key, see "Key rotation"); private key passphrase-wrapped |
-| `leaseguard-bulk-dedup`    | v1      | `hashes`                                   | SHA-256 content hashes for bulk-import dedup |
+| DB name                    | Version | Stores                                                                | Purpose |
+|----------------------------|--------:|-----------------------------------------------------------------------|---------|
+| `leaseguard`               | **v5**  | `leases`, `settings`, `clauseTemplates`, `paragraphShingles`          | Primary lease library + standard-lease pointer + clause templates. v4 added the `(findingCount, rulePackVersion)` index on `leases` (Wave 7-E). v5 added the `paragraphShingles` store keyed by `[leaseId, paragraphIndex]`, populated lazily on first portfolio-similarity render (Wave 10-B). |
+| `leaseguard-packs`         | v3      | `packs`, `enabled`, `settings`, `signatures`                          | Installed rule packs, enabled flags, jurisdiction / severity settings, signed-envelope records. The `settings` store now holds both `severityOverrides` (portfolio-scope flat map; legacy rows are implicitly portfolio-scope) and a sibling `severityOverridesByLease` key keyed `Record<leaseId, Record<ruleId, Severity>>` (Wave 10-D). No schema bump. |
+| `leaseguard-annotations`   | v1      | `annotations`                                                         | Per-paragraph user annotations |
+| `leaseguard-counters`      | v1      | `counters`                                                            | User's counter-offer library |
+| `leaseguard-redlines`      | v1      | `edits`                                                               | Redline paragraph replacements |
+| `leaseguard-versions`      | v1      | `versions`                                                            | Lease version snapshots |
+| `leaseguard-audit`         | v1      | `entries`                                                             | Append-only hash-chained audit log |
+| `leaseguard-signing`       | v2      | `keypair`                                                             | Ed25519 keypairs (multi-key, see "Key rotation"); private key passphrase-wrapped |
+| `leaseguard-bulk-dedup`    | v1      | `hashes`                                                              | SHA-256 content hashes for bulk-import dedup |
+| `leaseguard-standards`     | v1      | `standards`                                                           | "My standard" clause suite — promoted paragraphs as named standards (Wave 10-C) |
 
 ## Signing
 
@@ -323,6 +324,50 @@ The Wave 11 scaffold migrates ~10 representative `App.tsx` strings
 (header, view-mode toggle, top-level export buttons, footer
 clear-all). Full panel-by-panel migration is a tracked Phase 14
 follow-up.
+
+## Multi-lease intelligence (Wave 10 / Phase 16)
+
+Phase 16 promotes the portfolio grid (Phase 11) from a list view into an
+analytical surface. All four pieces run entirely over IDB-resident data;
+there is no new network egress.
+
+**Rule rollups.** `app/src/portfolio/ruleRollups.ts` exports a pure
+`aggregateFindings(leases) -> RuleRollup[]` returning
+`{ ruleId, leaseCount, severityCounts, leaseIds[] }`, sorted
+deterministically by `leaseCount desc, ruleId asc`. Severity overrides
+are resolved through the same path `FindingsPanel` uses, so a portfolio
+rollup sees the same severities a single-lease view would.
+`PortfolioRollupsPanel` renders the table above the existing grid; clicking
+a row passes `filterLeaseIds` back into `PortfolioPanel`.
+
+**Clause similarity.** `app/src/portfolio/shingles.ts` exports
+`paragraphShingles(text, k=5)` (lowercased, whitespace-collapsed,
+punctuation-stripped) and `jaccard(a, b)`. `clauseClusters.ts` clusters
+paragraphs across leases at Jaccard ≥ 0.8 with deterministic ordering.
+The `paragraphShingles` IDB store (`leaseguard` v5) is populated lazily
+on first `ClauseSimilarityPanel` render — the lease-save path is
+unchanged. Hashing is applied to original `LeaseDocument.paragraphs`
+only; redlined edits are intentionally out of scope.
+
+**"My standard" clause suite.** `leaseguard-standards` v1 holds promoted
+clauses (`{ id, name, sourceLeaseId, sourceParagraphIndex,
+normalizedText, createdAt }`). `compareToStandard.ts` reuses
+`shingles.jaccard` to surface matches above 0.8 against the suite.
+`FindingsPanel` accepts an optional `onPromoteToStandard` callback — when
+absent, behavior is identical to pre-Wave-10. `safeAudit` records
+`standard-promote` and `standard-delete` entries.
+
+**Portfolio-scope severity overrides.** `app/src/rules/portfolioOverrides.ts`
+extends the existing per-user override model with a
+`scope: 'lease' | 'portfolio'` discriminator. Resolution order is **lease
+> portfolio > pack default**; `applySeverityOverrides` threads the resolver
+internally so existing call sites are unchanged. Storage encoding lives in
+`packStorage`: portfolio-scope rows in the existing `severityOverrides`
+SETTINGS key (so legacy rows read as portfolio-scope), lease-scope rows in
+the new sibling `severityOverridesByLease` key. Both keys live in the v3
+SETTINGS store — no IDB schema bump. The `SeverityOverridesPanel` adds an
+"Apply across portfolio" toggle column gated on the new props being
+provided.
 
 ## Collaboration escape hatches (Wave 9 / Phase 15)
 
