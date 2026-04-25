@@ -247,6 +247,46 @@ describe('Section.paragraphIndices contract', () => {
     expect(at(hits, 0).paragraphIndex).toBe(1); // recovered, not the corrupt 2
   });
 
+  it('rejects stored indices when (page,text) is ambiguous and recovers via fallback', () => {
+    // Two sections share the same body text on the same page. Section B's
+    // stored paragraphIndices wrongly point at Section A's occurrence.
+    // (page,text) check alone would pass — the ambiguity guard must reject
+    // and force the consume-in-order fallback to recover correct anchoring.
+    const paragraphs: Paragraph[] = [
+      p('Section A'),
+      p('Tenant shall pay $900.'),
+      p('Section B'),
+      p('Tenant shall pay $900.'),
+    ];
+
+    const sectionA: Section = {
+      heading: 'Section A',
+      number: null,
+      paragraphs: [at(paragraphs, 1)],
+      paragraphIndices: [1],
+      startPage: 1,
+    };
+    const sectionB: Section = {
+      heading: 'Section B',
+      number: null,
+      paragraphs: [at(paragraphs, 3)],
+      paragraphIndices: [1], // wrong: points at Section A's paragraph (same text)
+      startPage: 1,
+    };
+
+    const doc: LeaseDocument = { pages: [], paragraphs, sections: [sectionA, sectionB], raw: '' };
+
+    const matcher: SectionAnchoredMatcher = {
+      type: 'sectionAnchored',
+      headingPattern: '^Section ',
+      child: { type: 'regex', pattern: 'pay \\$900', flags: 'i' },
+    };
+
+    const hits = runMatcher(matcher, doc);
+    const indices = hits.map((h) => h.paragraphIndex).sort((a, b) => a - b);
+    expect(indices).toEqual([1, 3]); // not [1, 1]
+  });
+
   it('does not call doc.paragraphs.indexOf in runSectionAnchored', () => {
     const paragraphs: Paragraph[] = [
       p('1. Rent'),
