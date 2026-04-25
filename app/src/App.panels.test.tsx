@@ -2,6 +2,12 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, it, expect, vi } 
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+// This file is the panel-smoke aggregate (~20 panels mounted under <App/>)
+// and runs slower than the rest of the suite under v8 coverage
+// instrumentation. Per-file timeout bump only — the global default in
+// `vite.config.ts` stays at 5s. See `docs/TESTING.md` § Coverage thresholds.
+vi.setConfig({ testTimeout: 15_000 });
+
 vi.mock('./ocr/runOcr', () => ({
   runOcr: vi.fn(async () => ({
     pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
@@ -750,17 +756,20 @@ describe('App panel wire-ups', () => {
     await waitFor(async () => {
       expect((await listVersionsForLease(lease!.id)).length).toBe(1);
     });
-    // Export — triggers a download.
-    await userEvent.click(screen.getByRole('button', { name: /export version v1/i }));
+    // Export — triggers a download. `findByRole` here (and below) absorbs
+    // the React render tick that follows VersionHistoryPanel's IDB
+    // hydration; the synchronous `getByRole` flaked when the version
+    // row hadn't repainted yet.
+    await userEvent.click(await screen.findByRole('button', { name: /export version v1/i }));
     expect(aClicks.some((n) => n.includes('VersionCrud-redline'))).toBe(true);
     // Restore — no-op on snapshot equal to current state, but exercises path.
-    await userEvent.click(screen.getByRole('button', { name: /restore version v1/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /restore version v1/i }));
     await waitFor(async () => {
       const entries = await listAuditEntries();
       expect(entries.some((e) => e.kind === 'version-restore')).toBe(true);
     });
     // Delete — timeline drops back to empty.
-    await userEvent.click(screen.getByRole('button', { name: /delete version v1/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /delete version v1/i }));
     await waitFor(async () => {
       expect((await listVersionsForLease(lease!.id)).length).toBe(0);
     });

@@ -99,6 +99,18 @@ Excludes: test/bench/stories files, barrels (`index.ts`), `main.tsx`,
 `parser/env.d.ts`, `parser/testFixtures.ts`, and
 `worker/leaseWorker.ts` (not reachable from jsdom).
 
+### Per-file timeout exemption
+
+`src/App.panels.test.tsx` is the only file that opts out of the global
+5s per-test default. It mounts the full `<App />` with ~20 panels and
+runs slower under v8 coverage instrumentation. The exemption is set via
+`vi.setConfig({ testTimeout: 15_000 })` at the top of the file and
+applies only to that file — the global default in `vite.config.ts`
+stays at the Vitest 5s baseline. Don't extend this exemption to other
+files without an equivalently explicit reason; the v8-coverage cost is
+roughly proportional to the number of mounted panels per test, so most
+files don't need it.
+
 ## Known flaky / noisy patterns to avoid
 
 - **Don't render `<PdfViewer>` with real bytes in a jsdom test.** The

@@ -40,6 +40,76 @@ export async function makePdf(
 }
 
 /**
+ * Smaller table-rich commercial lease used by `src/rules/golden.test.ts`
+ * to exercise the rules engine against text that spans an actual rent
+ * schedule + escalator grid (not just inline prose). Pages:
+ *   1 — heading + the four prose clauses that fire commercial-only
+ *       rule ids (rent-escalation, early-termination-fee,
+ *       indemnification, personal-guaranty).
+ *   2 — Schedule 1: rent schedule with monthly amount + escalator %
+ *       columns.
+ *   3 — Escalator-grid table (year × bump %).
+ * The rent-schedule + escalator-grid columns repeat the "$" / "%"
+ * tokens that the rule pack matches on, so the rules-side assertions
+ * cover the table cells in addition to prose.
+ */
+export async function makeCommercialTableLease(
+  opts: { years?: number; baseRent?: number } = {},
+): Promise<Uint8Array> {
+  const years = opts.years ?? 4;
+  const baseRent = opts.baseRent ?? 10_000;
+  const rentRows: PdfTextBlock[] = [];
+  const escRows: PdfTextBlock[] = [];
+  for (let i = 0; i < years; i++) {
+    const yearStart = 2026 + i;
+    const monthly = Math.round(baseRent * Math.pow(1.03, i));
+    rentRows.push({ text: `${yearStart}-01-01 to ${yearStart}-12-31`, x: 72, y: 162 + i * 30 });
+    rentRows.push({ text: `$${monthly.toLocaleString()}.00`, x: 260, y: 162 + i * 30 });
+    rentRows.push({ text: '3%', x: 440, y: 162 + i * 30 });
+    escRows.push({ text: `Year ${i + 1}`, x: 72, y: 162 + i * 30 });
+    escRows.push({ text: '3%', x: 260, y: 162 + i * 30 });
+    escRows.push({ text: `+$${(monthly * 0.03).toFixed(0)}`, x: 440, y: 162 + i * 30 });
+  }
+  return makePdf([
+    {
+      blocks: [
+        { text: 'COMMERCIAL LEASE', x: 72, y: 60 },
+        { text: '1. Rent', x: 72, y: 110 },
+        {
+          text: 'Base rent shall increase by 3% per year per Schedule 1.',
+          x: 72,
+          y: 146,
+        },
+        { text: '2. Termination', x: 72, y: 200 },
+        { text: 'Early termination fee equals three months rent.', x: 72, y: 236 },
+        { text: '3. Liability', x: 72, y: 290 },
+        { text: 'Tenant shall indemnify landlord against all claims.', x: 72, y: 326 },
+        { text: '4. Guaranty', x: 72, y: 380 },
+        { text: 'Signer agrees to be personally guarantor of all obligations.', x: 72, y: 416 },
+      ],
+    },
+    {
+      blocks: [
+        { text: 'Schedule 1 — Rent Schedule', x: 72, y: 60 },
+        { text: 'Period', x: 72, y: 132 },
+        { text: 'Monthly Rent', x: 260, y: 132 },
+        { text: 'Escalator', x: 440, y: 132 },
+        ...rentRows,
+      ],
+    },
+    {
+      blocks: [
+        { text: 'Schedule 2 — Escalator Grid', x: 72, y: 60 },
+        { text: 'Year', x: 72, y: 132 },
+        { text: 'Bump', x: 260, y: 132 },
+        { text: 'Delta', x: 440, y: 132 },
+        ...escRows,
+      ],
+    },
+  ]);
+}
+
+/**
  * Multi-feature synthetic commercial lease used as the canonical golden
  * regression check. Embeds simultaneously:
  *
