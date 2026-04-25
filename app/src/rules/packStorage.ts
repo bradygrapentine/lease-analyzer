@@ -20,7 +20,14 @@ const SIGNATURES = 'signatures';
 
 // Singleton keys inside the SETTINGS store.
 const KEY_JURISDICTIONS = 'selectedJurisdictions';
+// Wave 10 Part D — the legacy `severityOverrides` key holds the portfolio-
+// scope map (Record<ruleId, Severity>). Pre-existing rows (no scope concept)
+// are implicitly portfolio-scope, matching `migrateLegacyOverrides`. Lease-
+// scope overrides live in a sibling key, keyed by leaseId →
+// Record<ruleId, Severity>. No IDB schema bump — both keys live in the
+// existing v3 SETTINGS store.
 const KEY_SEVERITY_OVERRIDES = 'severityOverrides';
+const KEY_SEVERITY_OVERRIDES_BY_LEASE = 'severityOverridesByLease';
 
 export type PackSignatureStatus = 'verified' | 'unsigned' | 'invalid' | 'unknown';
 
@@ -36,9 +43,14 @@ interface PacksSchema extends DBSchema {
   [SETTINGS]: {
     key: string;
     // Heterogeneous singleton store: jurisdictions is string[], severity
-    // overrides is Record<string, Severity>. Keyed by the constants above
+    // overrides is Record<string, Severity>; Wave 10 Part D adds a
+    // Record<leaseId, Record<ruleId, Severity>> entry under the
+    // KEY_SEVERITY_OVERRIDES_BY_LEASE key. Keyed by the constants above
     // so reads narrow the type at the call site.
-    value: string[] | Record<string, Severity>;
+    value:
+      | string[]
+      | Record<string, Severity>
+      | Record<string, Record<string, Severity>>;
   };
   [SIGNATURES]: {
     // Keyed by packId. Value is the full envelope plus the verify result
@@ -272,8 +284,27 @@ function isSeverityMap(v: unknown): v is Record<string, Severity> {
   );
 }
 
-export async function getSeverityOverrides(): Promise<Record<string, Severity>> {
+/**
+ * Read severity overrides. Behavior:
+ *
+ *  - No filter (or `{ scope: 'portfolio' }`) — returns the flat portfolio-
+ *    scope map (legacy rows are implicitly portfolio-scope).
+ *  - `{ scope: 'lease', leaseId }` — returns the override map for that lease
+ *    only. Returns `{}` if no lease-scope rows exist for the given leaseId.
+ *
+ * Schema version is unchanged; lease-scope rows live under a sibling key.
+ */
+export async function getSeverityOverrides(
+  filter?: { scope: 'portfolio' } | { scope: 'lease'; leaseId: string },
+): Promise<Record<string, Severity>> {
   const db = await openPacksDb();
+  if (filter?.scope === 'lease') {
+    const v = await db.get(SETTINGS, KEY_SEVERITY_OVERRIDES_BY_LEASE);
+    if (v === null || typeof v !== 'object' || Array.isArray(v)) return {};
+    const byLease = v as unknown as Record<string, unknown>;
+    const row = byLease[filter.leaseId];
+    return isSeverityMap(row) ? { ...row } : {};
+  }
   const v = await db.get(SETTINGS, KEY_SEVERITY_OVERRIDES);
   return isSeverityMap(v) ? { ...v } : {};
 }
