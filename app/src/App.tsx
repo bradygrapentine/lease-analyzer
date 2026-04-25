@@ -92,6 +92,13 @@ import { OnboardingTour } from './ui/OnboardingTour';
 import { I18nProvider } from './i18n/I18nProvider';
 import { useI18n } from './i18n/I18nContext';
 import { LocalePickerPanel } from './ui/LocalePickerPanel';
+import { StandardSuitePanel } from './ui/StandardSuitePanel';
+import {
+  deleteStandard,
+  listStandards,
+  promoteToStandard,
+  type StandardClause,
+} from './clauseStandard/standardSuite';
 
 export function App(): JSX.Element {
   return (
@@ -114,6 +121,11 @@ function AppContent(): JSX.Element {
   const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
     new Map(),
   );
+  const [standardSuite, setStandardSuite] = useState<StandardClause[]>([]);
+
+  const refreshStandardSuite = useCallback(async (): Promise<void> => {
+    setStandardSuite(await listStandards());
+  }, []);
   // `undefined` = "not yet loaded from IDB" — we render nothing for the tour
   // until we know, so first-run users don't see a flash-of-modal followed by
   // dismissal. `null` = first run, show the tour. number = already dismissed.
@@ -248,7 +260,8 @@ function AppContent(): JSX.Element {
     void refreshLibrary();
     void refreshTemplates();
     void refreshAuditLog();
-  }, [refreshLibrary, refreshTemplates, refreshAuditLog]);
+    void refreshStandardSuite();
+  }, [refreshLibrary, refreshTemplates, refreshAuditLog, refreshStandardSuite]);
 
   useEffect(() => {
     if (view === 'portfolio') {
@@ -457,14 +470,26 @@ function AppContent(): JSX.Element {
       )}
 
       {view === 'portfolio' && (
-        <PortfolioPanel
-          leases={library}
-          findingsByLease={portfolioFindings}
-          onOpenLease={(id) => {
-            setView('current');
-            void onOpenLibrary(id);
-          }}
-        />
+        <>
+          <PortfolioPanel
+            leases={library}
+            findingsByLease={portfolioFindings}
+            onOpenLease={(id) => {
+              setView('current');
+              void onOpenLibrary(id);
+            }}
+          />
+          <StandardSuitePanel
+            standards={standardSuite}
+            onDelete={(id) => {
+              void (async (): Promise<void> => {
+                await deleteStandard(id);
+                await refreshStandardSuite();
+                void refreshAuditLog();
+              })();
+            }}
+          />
+        </>
       )}
 
       {view === 'redline' && status.kind === 'analyzed' && (
@@ -602,6 +627,16 @@ function AppContent(): JSX.Element {
                     doc: status.result.doc,
                   })
                   .then(() => setView('redline'));
+              }}
+              onPromoteToStandard={(leaseId, paragraphIndex) => {
+                if (status.kind !== 'analyzed') return;
+                void (async (): Promise<void> => {
+                  const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
+                  const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
+                  await promoteToStandard({ name, sourceLeaseId: leaseId, sourceParagraphIndex: paragraphIndex, normalizedText: text });
+                  await refreshStandardSuite();
+                  void refreshAuditLog();
+                })();
               }}
             />
             <PdfViewer
