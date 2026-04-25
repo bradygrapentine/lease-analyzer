@@ -185,6 +185,68 @@ describe('Section.paragraphIndices contract', () => {
     expect(at(hits, 0).paragraphIndex).toBe(1);
   });
 
+  it('routes duplicate-text matches to the right section when the heading regex matches multiple sections (legacy JSON)', () => {
+    // Heading pattern matches BOTH sections. Each section has the same body
+    // paragraph text on the same page. Fallback must split the two occurrences
+    // across the two sections, not collapse both onto paragraph index 1.
+    const original: LeaseDocument = {
+      pages: [],
+      paragraphs: [
+        p('Section A'),
+        p('Tenant shall pay $700.'),
+        p('Section B'),
+        p('Tenant shall pay $700.'),
+      ],
+      sections: [
+        { heading: 'Section A', number: null, paragraphs: [p('Tenant shall pay $700.')], startPage: 1 } satisfies Section,
+        { heading: 'Section B', number: null, paragraphs: [p('Tenant shall pay $700.')], startPage: 1 } satisfies Section,
+      ],
+      raw: '',
+    };
+
+    const restored = JSON.parse(JSON.stringify(original)) as LeaseDocument;
+
+    const matcher: SectionAnchoredMatcher = {
+      type: 'sectionAnchored',
+      headingPattern: '^Section ',
+      child: { type: 'regex', pattern: 'pay \\$700', flags: 'i' },
+    };
+
+    const hits = runMatcher(matcher, restored);
+    const indices = hits.map((h) => h.paragraphIndex).sort((a, b) => a - b);
+    expect(indices).toEqual([1, 3]);
+  });
+
+  it('discards stored paragraphIndices when content does not match (stale/corrupt persisted data)', () => {
+    // Stored indices point at the wrong paragraphs (length matches but content
+    // doesn't). Validator must reject and fall back to content lookup.
+    const paragraphs: Paragraph[] = [
+      p('1. Rent'),
+      p('Tenant shall pay rent of $4000.'),
+      p('Other clause text.'),
+    ];
+
+    const corruptSection: Section = {
+      heading: 'Rent',
+      number: '1',
+      paragraphs: [at(paragraphs, 1)],
+      paragraphIndices: [2], // wrong: points at "Other clause text."
+      startPage: 1,
+    };
+
+    const doc: LeaseDocument = { pages: [], paragraphs, sections: [corruptSection], raw: '' };
+
+    const matcher: SectionAnchoredMatcher = {
+      type: 'sectionAnchored',
+      headingPattern: '^Rent$',
+      child: { type: 'regex', pattern: 'rent of \\$4000', flags: 'i' },
+    };
+
+    const hits = runMatcher(matcher, doc);
+    expect(hits).toHaveLength(1);
+    expect(at(hits, 0).paragraphIndex).toBe(1); // recovered, not the corrupt 2
+  });
+
   it('does not call doc.paragraphs.indexOf in runSectionAnchored', () => {
     const paragraphs: Paragraph[] = [
       p('1. Rent'),
