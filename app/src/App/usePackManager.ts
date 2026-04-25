@@ -148,11 +148,13 @@ export function usePackManager(deps: UsePackManagerDeps = {}): UsePackManagerApi
     setSeverityOverridesState(ov);
   }, []);
 
-  const baseResolvedRules = resolveActiveRules(
-    RULE_PACK_V1,
-    installedPacks,
-    enabledPacks,
-  ).rules;
+  // Memoize the resolved-rules base so `activeRules`'s identity is stable
+  // across unrelated re-renders. Without this, every render produces a new
+  // base array and any downstream `[activeRules]` effect would loop.
+  const baseResolvedRules = useMemo(
+    () => resolveActiveRules(RULE_PACK_V1, installedPacks, enabledPacks).rules,
+    [installedPacks, enabledPacks],
+  );
 
   const activeRules = useMemo(
     () =>

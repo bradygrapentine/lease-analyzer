@@ -153,11 +153,18 @@ export function App(): JSX.Element {
   const counters = useCounterOffers();
   const signingKey = useSigningKey();
 
-  // Keystone: replaces every manual `pipeline.reanalyze()` call. Skip-first-mount
-  // dedupes the redundant analyze right after upload already analyzed.
+  // Keystone: replaces every manual `pipeline.reanalyze()` call. Uses a
+  // content fingerprint of the underlying inputs (not the derived
+  // `activeRules` array) so an unmemoized base array upstream cannot
+  // cause an infinite render loop. Skip-first-mount dedupes the
+  // redundant analyze right after upload already analyzed.
   useReanalyzeOnRulesChange({
-    activeRules: packs.activeRules,
+    statusKind: pipeline.status.kind,
     reanalyze: pipeline.reanalyze,
+    installedPacks: packs.installedPacks,
+    enabledPackIds: packs.enabledPacks,
+    selectedJurisdictions: packs.selectedJurisdictions,
+    severityOverrides: packs.severityOverrides,
   });
 
   const plainEnglishByRuleId = useMemo<Record<string, string>>(() => {
