@@ -28,7 +28,10 @@ describe('DeltaPanel', () => {
 
   it('happy path: pick base + target + passphrase invokes onGenerate with those ids', async () => {
     const user = userEvent.setup();
-    const onGenerate = vi.fn(async () => new Uint8Array([1]));
+    const onGenerate = vi.fn<
+      [{ baseVersionId: string; targetVersionId: string; passphrase: string }],
+      Promise<Uint8Array>
+    >(async () => new Uint8Array([1]));
     render(<DeltaPanel versions={versions} onGenerate={onGenerate} />);
     await user.selectOptions(screen.getByLabelText(/base/i), 'v1');
     await user.selectOptions(screen.getByLabelText(/target/i), 'v2');
