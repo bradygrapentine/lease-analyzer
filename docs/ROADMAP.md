@@ -75,12 +75,10 @@ Each phase links to its backlog section.
 | 11 | Workflow & integrations | Done |
 | 12 | Trust & verification | Done |
 | 13 | Performance & scale | Done |
-| 14 | Content depth | Substantially done — static glossary JSON, i18n scaffold, OCR language picker open |
+| 14 | Content depth | Done — Wave 11 shipped static glossary, i18n scaffold (en + es stub), OCR language picker |
 | 15 | Collaboration escape hatches | Done — Wave 9 shipped review links, counter-sign, delta packets, CLI verifier |
+| 16 | Multi-lease intelligence | Done — Wave 10 shipped portfolio rule rollups, clause similarity (IDB v5), "my standard" suite, portfolio-scope severity overrides |
 | 17 | Trust infrastructure | Done — Wave 8 shipped marketplace, deviation warnings, repro CLI, key rotation |
-
-"Substantially done" means the phase's primary surface is built and wired;
-the open items are scoped follow-ups rather than net-new work.
 
 ---
 
@@ -89,15 +87,6 @@ the open items are scoped follow-ups rather than net-new work.
 The roadmap below is organized by where the product is heading, not by
 phase number. Each bullet points to the backlog section that tracks the
 tickets.
-
-### Content depth — more useful without phoning home
-
-- Static legal glossary shipped at `public/glossary/v1.json`, surfaced
-  via the existing hover-tooltip. (Phase 14)
-- i18n scaffold: externalize UI strings, ship an English baseline, wire
-  a locale picker. (Phase 14)
-- OCR language picker — activates once a second `*.traineddata.gz`
-  lands in `public/ocr/`. (Phase 14)
 
 ### Tech debt — keep the codebase honest
 
@@ -111,10 +100,11 @@ list.
 
 ### Risk register — review before 1.0
 
-Tracked in [`BACKLOG.md`](./BACKLOG.md#known-unknowns--risk-register):
-tesseract licensing audit, archive-format security review, release /
-versioning policy, crash-log privacy review, CSP regression tests,
-rule-pack rot review.
+Tracked in [`BACKLOG.md`](./BACKLOG.md#known-unknowns--risk-register).
+Wave 11-D closed the encrypted-archive security review, crash-log
+privacy review, CSP regression tests, and rule-pack rot review (see
+[`SECURITY.md`](./SECURITY.md)). Open: tesseract licensing audit,
+release / versioning policy.
 
 ---
 
@@ -147,23 +137,31 @@ and the "Collaboration escape hatches" section of
   `SYSTEM_DESIGN.md` documents the privacy contract (no telemetry, no
   key escrow, no IDB dump beyond the chosen lease, no network).
 
-### Phase 16 — Multi-lease intelligence
+### Phase 16 — Multi-lease intelligence (shipped, Wave 10)
 
-The portfolio grid shipped in Phase 11 makes the library visible.
-Phase 16 makes it analytical.
+The portfolio grid shipped in Phase 11 made the library visible. Wave 10
+made it analytical. See "Multi-lease intelligence" in
+[`SYSTEM_DESIGN.md`](./SYSTEM_DESIGN.md).
 
-- **Portfolio-wide rule rollups** — "12 of 18 leases have auto-renewal;
-  4 waive jury trial" with drill-through to the individual findings.
-  Extends the `PortfolioPanel`.
-- **Clause similarity across leases** — shingled / normalized hashing
-  to cluster near-identical clauses across the library; useful for
-  "which of my leases share this bad indemnification paragraph."
-- **"My standard" clause suite** — promote any clause from any lease
-  into a named standard; compare future leases against the suite the
-  way rule findings are currently surfaced.
-- **Portfolio-level rule overrides** — extend the per-user severity
-  override model so a tenant can say "treat this rule as High across
-  my whole portfolio" without re-declaring it per lease.
+- **Portfolio-wide rule rollups** — `app/src/portfolio/ruleRollups.ts`
+  aggregates findings across the library with severity-override
+  resolution; `PortfolioRollupsPanel` renders a sortable table with
+  drill-through filtering of the existing grid by `leaseIds[]`.
+- **Clause similarity across leases** — `app/src/portfolio/shingles.ts`
+  (5-shingles + Jaccard) and `clauseClusters.ts` cluster
+  near-identical paragraphs across the library at threshold ≥ 0.8.
+  IDB v5 adds a `paragraphShingles` store keyed by
+  `[leaseId, paragraphIndex]`, populated lazily on first
+  similarity-panel render.
+- **"My standard" clause suite** — `app/src/clauseStandard/standardSuite.ts`
+  owns a new `leaseguard-standards` v1 IDB; FindingsPanel gains an
+  optional "Promote to standard" button; `compareToStandard.ts`
+  surfaces matches above 0.8 against the suite. Audit kinds
+  `standard-promote` / `standard-delete`.
+- **Portfolio-level rule overrides** — `portfolioOverrides.ts`
+  introduces a `scope: 'lease' | 'portfolio'` discriminator. Resolution
+  order: lease > portfolio > pack default. Encoded as a sibling
+  `severityOverridesByLease` SETTINGS key — no IDB schema bump.
 
 ### Phase 17 — Trust infrastructure (shipped, Wave 8)
 

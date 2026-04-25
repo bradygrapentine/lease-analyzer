@@ -16,11 +16,11 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Source | 117 non-test files (~13.0k LOC) + 91 test files (~12.5k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests | ~890 passing across 121 files (app) + 8 in `cli/` | `npm test` |
-| Coverage | 97.02% stmt · 88.06% branch · 93.21% func · 97.02% line | `npm run test:coverage` (thresholds 90/85/90/90) |
+| Source | ~135 non-test files + ~105 test files | `find app/src -name '*.ts' -o -name '*.tsx'` |
+| Tests | ~960 passing (app) + 8 in `cli/` | `npm test` |
+| Coverage | thresholds 90/85/90/90 (see `docs/TESTING.md` for current numbers) | `npm run test:coverage` |
 | Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
-| IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); 8 side dbs: `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key store, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1 | migrations tested |
+| IndexedDB | main `leaseguard` **v5** (`leases` + `settings` + `clauseTemplates` + `paragraphShingles`, post Wave 10-B); 9 side dbs: `leaseguard-packs` v3 (`signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1, `leaseguard-standards` **v1** (Wave 10-C). `leaseguard-packs` `settings` store also gains a `severityOverridesByLease` key (Wave 10-D) without a schema bump. | migrations tested |
 | App.tsx | decomposed into per-panel containers around `usePipeline` (Wave 7-D) | — |
 | CLI | `leaseguard-verify` (Node, no browser, no network) — `cli/` workspace, 3 tests | `cd cli && npm test` |
 | Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze | `npm run build` |
@@ -371,15 +371,18 @@ Local-only, CSP-compatible.
       counter-offer flow. Landed wave 2 — field in
       `src/rules/types.ts`; CounterOfferPanel pre-fills its textarea
       with `rule.suggestedEdit` (wave2-wireup).
-- [ ] Static legal-term glossary at `app/public/glossary/v1.json`;
-      consumed by the defined-terms tooltip in
-      `src/ui/highlightDefinedTerms.ts`. Directory does not yet exist.
-- [ ] i18n scaffold: lift UI strings to a typed `messages` object;
-      locale picker; pilot with en + one other locale. Today the app
-      has no `i18n/` module; only `toLocaleDateString` sprinkled
-      through panels.
-- [ ] OCR language picker once a second `*.traineddata.gz` lands —
-      today `runOcr` is hard-coded to English.
+- [x] Static legal-term glossary at `app/public/glossary/v1.json`,
+      surfaced via `src/ui/highlightDefinedTerms.ts` over the existing
+      tooltip. Landed Wave 11-A (PR #33).
+- [x] i18n scaffold: hand-rolled typed `messages` catalog
+      (`src/i18n/messages.ts`) with en baseline + es stub via
+      `satisfies Partial<Messages>`; `I18nProvider` wraps `<App>` and
+      `LocalePickerPanel` exposes the locale toggle. Landed Wave 11-B
+      (PR #34). See "i18n" in `docs/SYSTEM_DESIGN.md`.
+- [x] OCR language picker — `discoverOcrLanguages()` lists every
+      `*.traineddata.gz` present under `public/tesseract/`;
+      `OcrLanguagePickerPanel` lets the user pick before kicking off
+      OCR. Landed Wave 11-C (PR #35).
 
 ## Wave 7 — Ship-readiness
 
@@ -419,6 +422,52 @@ format.
 - [x] Wave 9 Part B — Counter-sign-and-return (`wave9-counter-sign`, PR #20)
 - [x] Wave 9 Part C — Delta packets (`wave9-delta-packets`, PR #19)
 - [x] Wave 9 Part D — Review-archive CLI verifier + privacy review (`wave9-privacy-review`, PR #22)
+
+## Phase 16 — Multi-lease intelligence
+
+Plan: [`plans/wave10-portfolio-intelligence.md`](./plans/wave10-portfolio-intelligence.md).
+Turns the portfolio grid (Phase 11) and per-user severity overrides (Phase
+10) into actual analytical leverage across a tenant's library.
+
+- [x] Portfolio-wide rule rollups — `app/src/portfolio/ruleRollups.ts` +
+      `PortfolioRollupsPanel` with severity-resolved aggregation and
+      drill-through filtering of the existing grid.
+- [x] Clause similarity — `shingles.ts` (5-shingles + Jaccard) +
+      `clauseClusters.ts` clustering at threshold ≥ 0.8;
+      `ClauseSimilarityPanel`. IDB v5 adds the `paragraphShingles`
+      store keyed by `[leaseId, paragraphIndex]`.
+- [x] "My standard" clause suite — new `leaseguard-standards` v1 IDB,
+      `compareToStandard.ts`, `StandardSuitePanel`, additive
+      `onPromoteToStandard` callback on `FindingsPanel`. Audit kinds
+      `standard-promote` / `standard-delete`.
+- [x] Portfolio-scope severity overrides — `portfolioOverrides.ts`
+      with lease > portfolio > pack-default resolution; sibling
+      `severityOverridesByLease` SETTINGS key (no IDB schema bump);
+      "Apply across portfolio" toggle on `SeverityOverridesPanel`.
+
+## Wave 10 — Multi-lease intelligence (Phase 16)
+
+Plan: [`plans/wave10-portfolio-intelligence.md`](./plans/wave10-portfolio-intelligence.md).
+Four parallel-safe parts run via TDD dispatch (per-story spec branches +
+isolated implementer worktrees).
+
+- [x] Wave 10 Part A — Portfolio rule rollups (`tdd-wave/10/a-rule-rollups`, PR #37)
+- [x] Wave 10 Part B — Clause similarity + IDB v5 (`tdd-wave/10/b-clause-similarity`, PR #38)
+- [x] Wave 10 Part C — "My standard" clause suite (`tdd-wave/10/c-standard-suite`, PR #39)
+- [x] Wave 10 Part D — Portfolio-scope severity overrides (`tdd-wave/10/d-portfolio-overrides`, PR #40)
+
+## Wave 11 — Content depth + risk register (Phase 14 + risk closeout)
+
+Plan: [`plans/wave11-content-and-risk.md`](./plans/wave11-content-and-risk.md).
+Closes the remaining Phase 14 content-depth items and four entries from
+the risk register.
+
+- [x] Wave 11 Part A — Static legal glossary (`wave11-glossary`, PR #33)
+- [x] Wave 11 Part B — i18n scaffold (en + es stub) (`wave11-i18n`, PR #34)
+- [x] Wave 11 Part C — OCR language picker (`wave11-ocr-language`, PR #35)
+- [x] Wave 11 Part D — Risk-register closeout: encrypted-archive review,
+      crash-log privacy review, CSP regression test, rule-pack rot
+      review (`wave11-risk-register`, PR #31). See `docs/SECURITY.md`.
 
 ## Cross-cutting tech debt
 
