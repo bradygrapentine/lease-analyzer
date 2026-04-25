@@ -92,6 +92,18 @@ describe('runOcr', () => {
     expect(optsArg?.langPath).toBe('/tesseract');
   });
 
+  it("defaults to 'eng' when no language is supplied", async () => {
+    recognizeMock.mockResolvedValue({ data: { text: 'x' } });
+    await runOcr(new Uint8Array([1]));
+    expect(recognizeMock.mock.calls[0]?.[1]).toBe('eng');
+  });
+
+  it('threads an explicit language through to tesseract.recognize', async () => {
+    recognizeMock.mockResolvedValue({ data: { text: 'x' } });
+    await runOcr(new Uint8Array([1]), { language: 'spa' });
+    expect(recognizeMock.mock.calls[0]?.[1]).toBe('spa');
+  });
+
   it('tolerates missing text on a recognize result', async () => {
     recognizeMock.mockResolvedValue({ data: {} });
     const doc = await runOcr(new Uint8Array([1]));

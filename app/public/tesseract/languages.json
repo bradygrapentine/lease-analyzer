@@ -1,0 +1,6 @@
+{
+  "schema": "leaseguard.tesseract.languages.v1",
+  "languages": [
+    { "code": "eng", "label": "English" }
+  ]
+}
