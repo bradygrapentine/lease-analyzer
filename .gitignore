@@ -6,3 +6,5 @@ coverage
 .DS_Store
 .memsearch/
 *.tsbuildinfo
+.claude/
+.codex-runs/
