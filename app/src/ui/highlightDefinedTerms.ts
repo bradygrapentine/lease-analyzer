@@ -1,5 +1,15 @@
 import { createElement, type ReactNode } from 'react';
 import type { DefinitionEntry } from '../facts/types';
+import type { GlossaryEntry } from '../glossary/loadGlossary';
+
+/**
+ * Minimal shape used internally — both DefinitionEntry (lease-defined
+ * terms) and GlossaryEntry (static legal glossary) collapse to this.
+ */
+interface TermLike {
+  term: string;
+  definition: string;
+}
 
 /**
  * Wrap whole-word occurrences of defined terms inside `text` with a
@@ -14,20 +24,35 @@ import type { DefinitionEntry } from '../facts/types';
  * - Returns an array of React nodes; when there are no matches (or no
  *   usable entries) the array is just `[text]`, cheap for the caller to
  *   render directly.
+ *
+ * Wave 11: an optional `glossary` of static legal terms can be passed.
+ * Lease-defined terms always win over glossary entries on duplicate
+ * terms (the document's own definition is more specific than the
+ * generic legal explainer). Glossary-only matches receive an extra
+ * `glossary` className token so the UI can theme them differently.
  */
 export function highlightDefinedTerms(
   text: string,
   entries: DefinitionEntry[],
+  glossary?: GlossaryEntry[],
 ): ReactNode[] {
-  if (entries.length === 0 || text.length === 0) return [text];
+  if (text.length === 0) return [text];
+  if (entries.length === 0 && (!glossary || glossary.length === 0)) return [text];
 
-  // Deduplicate by lowercased term, preserving the first definition seen.
-  const byKey = new Map<string, DefinitionEntry>();
+  // Deduplicate by lowercased term. Lease-defined entries win over
+  // glossary entries when both define the same term.
+  const byKey = new Map<string, { entry: TermLike; source: 'lease' | 'glossary' }>();
   for (const e of entries) {
-    const term = e.term;
-    if (!term) continue;
-    const key = term.toLowerCase();
-    if (!byKey.has(key)) byKey.set(key, e);
+    if (!e.term) continue;
+    const key = e.term.toLowerCase();
+    if (!byKey.has(key)) byKey.set(key, { entry: e, source: 'lease' });
+  }
+  if (glossary) {
+    for (const e of glossary) {
+      if (!e.term) continue;
+      const key = e.term.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, { entry: e, source: 'glossary' });
+    }
   }
   if (byKey.size === 0) return [text];
 
@@ -36,16 +61,17 @@ export function highlightDefinedTerms(
   interface Hit {
     start: number;
     end: number;
-    entry: DefinitionEntry;
+    entry: TermLike;
+    source: 'lease' | 'glossary';
   }
 
   // Collect every candidate match across all terms, then resolve overlaps.
   const hits: Hit[] = [];
-  for (const entry of usable) {
+  for (const { entry, source } of usable) {
     const re = new RegExp(`\\b${escapeRegex(entry.term)}\\b`, 'gi');
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {
-      hits.push({ start: m.index, end: m.index + m[0].length, entry });
+      hits.push({ start: m.index, end: m.index + m[0].length, entry, source });
       if (m[0].length === 0) re.lastIndex++;
     }
   }
@@ -74,7 +100,8 @@ export function highlightDefinedTerms(
         {
           key: `dfn-${i}-${h.start}`,
           title: h.entry.definition,
-          className: 'defined-term',
+          className:
+            h.source === 'glossary' ? 'defined-term glossary' : 'defined-term',
         },
         slice,
       ),

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Category, Finding, Severity } from '../rules/types';
 import type { DefinitionEntry } from '../facts/types';
+import type { GlossaryEntry } from '../glossary/loadGlossary';
 import { highlightDefinedTerms } from './highlightDefinedTerms';
 import { useInViewport } from './useInViewport';
 
@@ -28,6 +29,13 @@ interface FindingsPanelProps {
    */
   definitions?: DefinitionEntry[];
   /**
+   * Optional static legal glossary (Wave 11). When provided, generic
+   * legal terms are tooltip-wrapped in addition to the lease-specific
+   * `definitions`. Lease definitions win over glossary entries on
+   * duplicate terms.
+   */
+  glossary?: GlossaryEntry[];
+  /**
    * Optional per-rule suggested replacement text (either a user-saved
    * counter-offer or `rule.suggestedEdit`). When a finding's ruleId
    * appears in this map AND `onApplySuggestion` is provided, an "Apply
@@ -53,6 +61,7 @@ export function FindingsPanel({
   onSelect,
   plainEnglishByRuleId,
   definitions,
+  glossary,
   suggestedTextByRuleId,
   onApplySuggestion,
 }: FindingsPanelProps): JSX.Element {
@@ -181,6 +190,7 @@ export function FindingsPanel({
                         findingKey={key}
                         finding={finding}
                         definitions={definitions}
+                        glossary={glossary}
                         plain={plain}
                         isExplainerOpen={isOpen}
                         toggleExplainer={() =>
@@ -246,6 +256,7 @@ interface VirtualFindingItemProps {
   findingKey: string;
   finding: Finding;
   definitions: DefinitionEntry[] | undefined;
+  glossary: GlossaryEntry[] | undefined;
   plain: string | undefined;
   isExplainerOpen: boolean;
   toggleExplainer: () => void;
@@ -262,6 +273,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
     findingKey: key,
     finding,
     definitions,
+    glossary,
     plain,
     isExplainerOpen,
     toggleExplainer,
@@ -319,9 +331,14 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
               </span>
             )}
             <div>{finding.explanation}</div>
-            {definitions && definitions.length > 0 ? (
+            {(definitions && definitions.length > 0) ||
+            (glossary && glossary.length > 0) ? (
               <small className="finding-snippet">
-                {highlightDefinedTerms(finding.snippet, definitions)}
+                {highlightDefinedTerms(
+                  finding.snippet,
+                  definitions ?? [],
+                  glossary,
+                )}
               </small>
             ) : null}
             <small>Page {finding.page}</small>

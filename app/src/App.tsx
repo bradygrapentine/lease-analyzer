@@ -24,6 +24,7 @@ import {
   stripPdfExt,
 } from './App/appHelpers';
 import { FindingsPanel } from './ui/FindingsPanel';
+import { loadGlossary, type GlossaryEntry } from './glossary/loadGlossary';
 import { LibraryPanel } from './ui/LibraryPanel';
 import { PdfViewer } from './ui/PdfViewer';
 import { ComparePanel } from './ui/ComparePanel';
@@ -105,9 +106,16 @@ export function App(): JSX.Element {
   const [onboardingDismissedAt, setOnboardingDismissedAtState] = useState<
     number | null | undefined
   >(undefined);
+  // Static legal glossary (Wave 11 Part A): loaded once at mount via the
+  // single same-origin fetch the app makes. Failures fall back to [].
+  const [glossaryEntries, setGlossaryEntries] = useState<GlossaryEntry[]>([]);
 
   useEffect(() => {
     void getOnboardingDismissedAt().then((ts) => setOnboardingDismissedAtState(ts));
+  }, []);
+
+  useEffect(() => {
+    void loadGlossary().then((g) => setGlossaryEntries(g.entries));
   }, []);
 
   const dismissOnboarding = useCallback(async (): Promise<void> => {
@@ -549,6 +557,7 @@ export function App(): JSX.Element {
               findings={status.result.findings}
               onSelect={(f) => { setSelected(f); setSelectedPage(f.page); }}
               definitions={extractLeaseFacts(status.result.doc).definitions}
+              glossary={glossaryEntries}
               plainEnglishByRuleId={plainEnglishByRuleId}
               suggestedTextByRuleId={suggestedTextByRuleId}
               onApplySuggestion={(f, pIdx, text) => {
