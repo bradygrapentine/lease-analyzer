@@ -298,6 +298,11 @@ table for the authoritative figures):
 - `vite-plugin-pwa` service worker precaches assets for offline use.
 - Archive export/import uses WebCrypto AES-GCM. No handshake ever
   leaves the device.
+- The first-run onboarding tour (`OnboardingTour`) is purely
+  client-side: copy is bundled into the component, the dismissal
+  timestamp is persisted to IndexedDB via
+  `getOnboardingDismissedAt` / `setOnboardingDismissedAt`, and no
+  step issues network requests or telemetry events.
 
 ## i18n (Wave 11 / Phase 14)
 

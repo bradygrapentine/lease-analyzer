@@ -4,34 +4,41 @@ import userEvent from '@testing-library/user-event';
 import { OnboardingTour } from './OnboardingTour';
 
 describe('OnboardingTour', () => {
-  it('renders the first step on initial mount when dismissedAt is null', () => {
+  it('renders the first step (upload / sample-lease) on initial mount when dismissedAt is null', () => {
     render(<OnboardingTour dismissedAt={null} onDismiss={() => {}} />);
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(/step 1 of 4/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /local-first by design/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /upload a lease/i })).toBeInTheDocument();
+    expect(screen.getByText(/try a sample lease/i)).toBeInTheDocument();
   });
 
-  it('walks through all 4 steps via Next and back via Back', async () => {
+  it('walks through all 4 steps via Next, finishing with Done', async () => {
     const user = userEvent.setup();
     render(<OnboardingTour dismissedAt={null} onDismiss={() => {}} />);
     expect(screen.getByText(/step 1 of 4/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     expect(screen.getByText(/step 2 of 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /findings.*severity/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     expect(screen.getByText(/step 3 of 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /portfolio.*rollups/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     expect(screen.getByText(/step 4 of 4/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /ocr is opt-in/i }),
-    ).toBeInTheDocument();
-    // Back returns to step 3.
-    await user.click(screen.getByRole('button', { name: /^back$/i }));
-    expect(screen.getByText(/step 3 of 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /audit log.*signed export/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /finish onboarding tour/i })).toBeInTheDocument();
   });
 
-  it('clicking Got it on the last step calls onDismiss', async () => {
+  it('Back returns to the previous step', async () => {
+    const user = userEvent.setup();
+    render(<OnboardingTour dismissedAt={null} onDismiss={() => {}} />);
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(screen.getByText(/step 3 of 4/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^back$/i }));
+    expect(screen.getByText(/step 2 of 4/i)).toBeInTheDocument();
+  });
+
+  it('clicking Done on the last step calls onDismiss', async () => {
     const user = userEvent.setup();
     const onDismiss = vi.fn();
     render(<OnboardingTour dismissedAt={null} onDismiss={onDismiss} />);
@@ -72,5 +79,32 @@ describe('OnboardingTour', () => {
       expect(btn.getAttribute('tabindex')).not.toBe('-1');
     }
     cleanup();
+  });
+
+  it('portfolio step shows "switch to Portfolio" hint when viewMode is not portfolio', async () => {
+    const user = userEvent.setup();
+    render(<OnboardingTour dismissedAt={null} onDismiss={() => {}} viewMode="current" />);
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(screen.getByText(/step 3 of 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(/click the "portfolio" button/i);
+  });
+
+  it('portfolio step shows "you\'re already here" hint when viewMode is portfolio', async () => {
+    const user = userEvent.setup();
+    render(<OnboardingTour dismissedAt={null} onDismiss={() => {}} viewMode="portfolio" />);
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(screen.getByText(/step 3 of 4/i)).toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(/already on the portfolio view/i);
+  });
+
+  it('omits the contextual hint when viewMode is undefined', async () => {
+    const user = userEvent.setup();
+    render(<OnboardingTour dismissedAt={null} onDismiss={() => {}} />);
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    await user.click(screen.getByRole('button', { name: /^next$/i }));
+    expect(screen.getByText(/step 3 of 4/i)).toBeInTheDocument();
+    expect(screen.queryByRole('note')).toBeNull();
   });
 });

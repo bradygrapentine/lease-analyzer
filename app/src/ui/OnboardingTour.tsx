@@ -1,45 +1,65 @@
 import { useCallback, useEffect, useState } from 'react';
 
+export type OnboardingViewMode = 'current' | 'portfolio' | 'redline';
+
 interface OnboardingTourProps {
   /** Existing dismissal timestamp; if non-null, the tour renders nothing. */
   dismissedAt: number | null;
   /** Called when the user dismisses the tour (Got it / Skip / Esc). */
   onDismiss: () => void;
+  /** Current top-level view; lets later steps tell the user where to look. */
+  viewMode?: OnboardingViewMode;
 }
 
 interface Step {
   title: string;
   body: string;
+  /** Optional contextual hint that varies with the active view. */
+  hint?: (view: OnboardingViewMode | undefined) => string | null;
 }
 
 const STEPS: readonly Step[] = [
   {
-    title: 'Local-first by design',
-    body:
-      'LeaseGuard runs entirely in your browser. PDFs are parsed on your device, ' +
-      'findings live in IndexedDB, and nothing leaves your machine.',
-  },
-  {
     title: 'Upload a lease — or try a sample',
     body:
       'Drop a PDF onto the upload control to get started. No PDF handy? Click ' +
-      '"Try a sample lease" to walk through a fully synthetic example.',
+      '"Try a sample lease" to walk through a fully synthetic example. ' +
+      'Everything runs locally in your browser — nothing leaves your machine.',
   },
   {
-    title: 'Click through findings',
+    title: 'Findings: severity + click-to-highlight',
     body:
-      'Each finding links back to the page and clause that triggered it. ' +
-      'Use the sidebar to filter by category or severity.',
+      'Each finding is tagged Critical / Warning / Info and links back to ' +
+      'the page and clause that triggered it. Click a finding to jump to the ' +
+      'matching span in the PDF viewer; filter the list by category or severity.',
   },
   {
-    title: 'OCR is opt-in',
+    title: 'Portfolio: rollups across every saved lease',
     body:
-      'If a lease is a scanned image, LeaseGuard can run OCR locally — but ' +
-      'only after you opt in. The OCR engine ships with the app; no upload happens.',
+      'The Portfolio view aggregates rule hits across your saved leases, ' +
+      'flags clauses that drift from your standard suite, and shows ' +
+      'severity overrides scoped to your portfolio.',
+    hint: (view) => {
+      if (view === undefined) return null;
+      return view === 'portfolio'
+        ? "You're already on the Portfolio view."
+        : 'Click the "Portfolio" button at the top of the page to open it.';
+    },
+  },
+  {
+    title: 'Audit log + signed export',
+    body:
+      'Every significant action — analyze, export, pack import — appends to ' +
+      'a hash-chained audit log. Scroll to the Audit Log panel at the bottom ' +
+      'of the page to verify the chain or download a signed handoff bundle.',
   },
 ];
 
-export function OnboardingTour({ dismissedAt, onDismiss }: OnboardingTourProps): JSX.Element | null {
+export function OnboardingTour({
+  dismissedAt,
+  onDismiss,
+  viewMode,
+}: OnboardingTourProps): JSX.Element | null {
   const [stepIndex, setStepIndex] = useState(0);
   const total = STEPS.length;
   const isLast = stepIndex === total - 1;
@@ -65,6 +85,7 @@ export function OnboardingTour({ dismissedAt, onDismiss }: OnboardingTourProps):
 
   const step = STEPS[stepIndex];
   if (!step) return null;
+  const hint = step.hint?.(viewMode) ?? null;
 
   return (
     <div
@@ -77,10 +98,12 @@ export function OnboardingTour({ dismissedAt, onDismiss }: OnboardingTourProps):
       <div className="onboarding-tour__panel">
         <h2 id="onboarding-tour-title">{step.title}</h2>
         <p>{step.body}</p>
-        <p
-          className="onboarding-tour__progress"
-          aria-label={`step ${stepIndex + 1} of ${total}`}
-        >
+        {hint !== null && (
+          <p className="onboarding-tour__hint" role="note">
+            {hint}
+          </p>
+        )}
+        <p className="onboarding-tour__progress" aria-label={`step ${stepIndex + 1} of ${total}`}>
           Step {stepIndex + 1} of {total}
         </p>
         <div className="onboarding-tour__actions">
@@ -107,7 +130,7 @@ export function OnboardingTour({ dismissedAt, onDismiss }: OnboardingTourProps):
               onClick={handleDismiss}
               aria-label="finish onboarding tour"
             >
-              Got it
+              Done
             </button>
           ) : (
             <button
