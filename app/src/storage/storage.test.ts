@@ -142,4 +142,77 @@ describe('storage', () => {
     expect(loaded?.createdAt).toBeGreaterThanOrEqual(before);
     expect(loaded?.createdAt).toBeLessThanOrEqual(after);
   });
+
+  it('migrates a v3 database to v4 without dropping rows and adds the by-finding-and-pack index', async () => {
+    // Seed a v3 database directly via raw indexedDB.open so we can prove
+    // the v4 upgrade path runs against a populated v3 schema.
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('leaseguard', 3);
+      req.onupgradeneeded = (): void => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('leases')) {
+          const store = db.createObjectStore('leases', { keyPath: 'id' });
+          store.createIndex('by-createdAt', 'createdAt');
+        }
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings');
+        }
+        if (!db.objectStoreNames.contains('clauseTemplates')) {
+          db.createObjectStore('clauseTemplates', { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = (): void => {
+        const db = req.result;
+        const tx = db.transaction('leases', 'readwrite');
+        tx.objectStore('leases').put({
+          id: 'lease-1',
+          name: 'Clean.pdf',
+          createdAt: 1000,
+          updatedAt: 1000,
+          rulePackVersion: '1.0.0',
+          pageCount: 1,
+          findingCount: 0,
+          doc: makeDoc(),
+          findings: [],
+        });
+        tx.objectStore('leases').put({
+          id: 'lease-2',
+          name: 'Risky.pdf',
+          createdAt: 2000,
+          updatedAt: 2000,
+          rulePackVersion: '1.0.0',
+          pageCount: 2,
+          findingCount: 3,
+          doc: makeDoc(),
+          findings: [makeFinding()],
+        });
+        tx.oncomplete = (): void => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = (): void => reject(tx.error);
+      };
+      req.onerror = (): void => reject(req.error);
+    });
+
+    // Open via the v4 path. _resetDbForTests ensures we re-open through the
+    // module's upgrade ladder rather than reusing a cached v3 handle.
+    _resetDbForTests();
+    const db = await openLeaseDb();
+
+    expect(db.version).toBe(4);
+    // Existing rows preserved.
+    const survivors = await db.getAll('leases');
+    expect(survivors).toHaveLength(2);
+    expect(survivors.map((r) => r.id).sort()).toEqual(['lease-1', 'lease-2']);
+
+    // New compound index is queryable.
+    const tx = db.transaction('leases', 'readonly');
+    const idx = tx.objectStore('leases').index('by-finding-and-pack');
+    const cleanMatches = await idx.getAll(IDBKeyRange.only([0, '1.0.0']));
+    expect(cleanMatches.map((r) => r.id)).toEqual(['lease-1']);
+    const riskyMatches = await idx.getAll(IDBKeyRange.only([3, '1.0.0']));
+    expect(riskyMatches.map((r) => r.id)).toEqual(['lease-2']);
+    await tx.done;
+  });
 });
