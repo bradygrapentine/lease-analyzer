@@ -17,7 +17,7 @@ enough to land in one PR.
 | Axis | Value | Gate |
 |------|-------|------|
 | Source | 117 non-test files (~13.0k LOC) + 91 test files (~12.5k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests | ~856 passing across 110 files (app) + 3 in `cli/` | `npm test` |
+| Tests | ~890 passing across 121 files (app) + 8 in `cli/` | `npm test` |
 | Coverage | 97.02% stmt · 88.06% branch · 93.21% func · 97.02% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
 | IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); 8 side dbs: `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key store, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1 | migrations tested |
@@ -406,6 +406,19 @@ externally-auditable ecosystem.
 - [x] Wave 8 Part B — Diff-vs-verified warnings (`wave8-deviation-warnings`, PR #12)
 - [x] Wave 8 Part C — Reproducibility CLI (`wave8-cli`, PR #12)
 - [x] Wave 8 Part D — Key-rotation workflow (`wave8-key-rotation`, PR #12)
+
+## Wave 9 — Collaboration escape hatches (Phase 15)
+
+Plan: [`plans/wave9-collaboration.md`](./plans/wave9-collaboration.md). Four
+parallel-safe parts that turn Wave 8's signing/replay primitives into
+shareable workflows: encrypted review archives, signed counter-sign
+patches, signed delta packets, and a CLI verifier for the new archive
+format.
+
+- [x] Wave 9 Part A — Signed review links (`wave9-review-links`, PR #21)
+- [x] Wave 9 Part B — Counter-sign-and-return (`wave9-counter-sign`, PR #20)
+- [x] Wave 9 Part C — Delta packets (`wave9-delta-packets`, PR #19)
+- [x] Wave 9 Part D — Review-archive CLI verifier + privacy review (`wave9-privacy-review`, PR #22)
 
 ## Cross-cutting tech debt
 
