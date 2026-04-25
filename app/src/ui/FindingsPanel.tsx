@@ -54,6 +54,19 @@ interface FindingsPanelProps {
     paragraphIndex: number,
     suggestedText: string,
   ) => void;
+  /**
+   * Wave 10 Part C — optional "Promote to standard" callback. When defined
+   * (and `leaseId` is supplied), each finding renders a button that
+   * promotes the finding's paragraph into the user's standard-clause
+   * suite. Default-undefined keeps the existing UI byte-identical.
+   */
+  onPromoteToStandard?: (leaseId: string, paragraphIndex: number) => void;
+  /**
+   * Wave 10 Part C — owning lease id, threaded into `onPromoteToStandard`.
+   * Optional so existing call sites that don't wire promotion stay
+   * untouched.
+   */
+  leaseId?: string;
 }
 
 export function FindingsPanel({
@@ -64,6 +77,8 @@ export function FindingsPanel({
   glossary,
   suggestedTextByRuleId,
   onApplySuggestion,
+  onPromoteToStandard,
+  leaseId,
 }: FindingsPanelProps): JSX.Element {
   const [query, setQuery] = useState('');
   const [hiddenSeverities, setHiddenSeverities] = useState<Set<Severity>>(new Set());
@@ -199,6 +214,8 @@ export function FindingsPanel({
                         suggestedText={suggested}
                         onSelect={onSelect}
                         onApplySuggestion={onApplySuggestion}
+                        onPromoteToStandard={onPromoteToStandard}
+                        leaseId={leaseId}
                         pendingFocusRef={pendingFocusRef}
                       />
                     );
@@ -265,6 +282,10 @@ interface VirtualFindingItemProps {
   onApplySuggestion:
     | ((finding: Finding, paragraphIndex: number, suggestedText: string) => void)
     | undefined;
+  onPromoteToStandard:
+    | ((leaseId: string, paragraphIndex: number) => void)
+    | undefined;
+  leaseId: string | undefined;
   pendingFocusRef: { current: string | null };
 }
 
@@ -280,6 +301,8 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
     suggestedText,
     onSelect,
     onApplySuggestion,
+    onPromoteToStandard,
+    leaseId,
     pendingFocusRef,
   } = props;
   const liRef = useRef<HTMLLIElement | null>(null);
@@ -365,6 +388,17 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
               }
             >
               Apply suggestion
+            </button>
+          ) : null}
+          {onPromoteToStandard && leaseId !== undefined ? (
+            <button
+              type="button"
+              aria-label={`promote to standard ${finding.title}`}
+              onClick={() =>
+                onPromoteToStandard(leaseId, finding.paragraphIndex)
+              }
+            >
+              Promote to standard
             </button>
           ) : null}
         </div>
