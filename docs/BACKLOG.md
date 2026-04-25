@@ -511,13 +511,17 @@ the risk register.
 
 Things worth a deliberate decision before they surprise us.
 
-- [ ] **Licensing audit of tesseract assets** — we ship
-      `tesseract-core.wasm` (Apache-2.0) and the worker script
-      (Apache-2.0). `eng.traineddata` is Apache-2.0 per the
-      tessdata-fast repo, but redistributing it inside the PWA needs
-      an explicit NOTICE file and attribution page.
-      Decision: open — outside Wave 11 scope, schedule with Phase 14
-      content-depth follow-ups (2026-04-25).
+- [x] **Licensing audit of tesseract assets** — we ship
+      `tesseract-core.wasm` (Apache-2.0), the tesseract.js worker
+      (Apache-2.0), and `eng.traineddata.gz` (Apache-2.0). Apache-2.0
+      §4(d) attributions now live in `app/public/NOTICE` (precached,
+      reachable at `/NOTICE` from the installed PWA); `docs/SECURITY.md`
+      §5 documents the redistribution model and re-review trigger;
+      `app/src/security/notice.test.ts` is the build-time tripwire so
+      a refactor that drops the file fails CI.
+      Decision: closed — re-review only on new asset addition or
+      tesseract major-version bump; routine eng-only patch bumps
+      inherit the same obligations and need no audit (2026-04-25).
 - [x] **Security review of the encrypted archive format** —
       Decision: stay on PBKDF2-HMAC-SHA256 200k iterations + AES-GCM-256
       for v1; defer Argon2id to a v2 archive format with explicit

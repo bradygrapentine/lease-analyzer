@@ -59,6 +59,15 @@ Footprint (tests, coverage, bundles, IDB schema versions) is tracked in
 [`docs/BACKLOG.md`](./docs/BACKLOG.md) is the authoritative ticket
 list.
 
+## Third-party assets
+
+The bundled tesseract.js OCR runtime, WebAssembly engine, and English
+trained-data file are Apache License 2.0; attributions live in
+[`app/public/NOTICE`](./app/public/NOTICE) (also reachable at `/NOTICE`
+from any installed instance of the PWA). See
+[`docs/SECURITY.md`](./docs/SECURITY.md) §5 for the redistribution model
+and re-review triggers.
+
 ## Not legal advice
 
 Findings are heuristic pattern matches. LeaseGuard flags things worth a
