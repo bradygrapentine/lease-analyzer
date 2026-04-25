@@ -7,11 +7,18 @@ function para(text: string, page = 1): Paragraph {
 }
 
 function section(heading: string, paragraphs: Paragraph[], number: string | null = null): Section {
-  return { heading, number, paragraphs, startPage: paragraphs[0]?.page ?? 1 };
+  return { heading, number, paragraphs, paragraphIndices: [], startPage: paragraphs[0]?.page ?? 1 };
 }
 
 function doc(sections: Section[]): LeaseDocument {
-  const paragraphs = sections.flatMap((s) => s.paragraphs);
+  const paragraphs: Paragraph[] = [];
+  for (const s of sections) {
+    s.paragraphIndices = [];
+    for (const p of s.paragraphs) {
+      s.paragraphIndices.push(paragraphs.length);
+      paragraphs.push(p);
+    }
+  }
   return { pages: [], paragraphs, sections, raw: paragraphs.map((p) => p.text).join('\n\n') };
 }
 

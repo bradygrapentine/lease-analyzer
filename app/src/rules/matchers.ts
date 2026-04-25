@@ -123,20 +123,23 @@ function runSectionAnchored(
   compiled?: CompiledMatcherCache,
 ): RuleMatch[] {
   const heading = compiled?.headingRegex ?? new RegExp(matcher.headingPattern, 'i');
-  const allowed = new Set<Paragraph>();
+  const allowedIndices: number[] = [];
+  const filtered: Paragraph[] = [];
   for (const section of doc.sections) {
-    if (heading.test(section.heading)) {
-      for (const para of section.paragraphs) allowed.add(para);
+    if (!heading.test(section.heading)) continue;
+    for (const idx of section.paragraphIndices) {
+      const para = doc.paragraphs[idx];
+      if (para === undefined) continue;
+      allowedIndices.push(idx);
+      filtered.push(para);
     }
   }
-  const filtered = doc.paragraphs.filter((p) => allowed.has(p));
   if (filtered.length === 0) return [];
   const leafHits = runLeaf(matcher.child, filtered, compiled?.child);
-  return leafHits.map((hit) => {
-    const para = filtered[hit.paragraphIndex];
-    const originalIndex = para ? doc.paragraphs.indexOf(para) : hit.paragraphIndex;
-    return { ...hit, paragraphIndex: originalIndex };
-  });
+  return leafHits.map((hit) => ({
+    ...hit,
+    paragraphIndex: allowedIndices[hit.paragraphIndex] ?? hit.paragraphIndex,
+  }));
 }
 
 function findAll(haystack: string, needle: string): number[] {

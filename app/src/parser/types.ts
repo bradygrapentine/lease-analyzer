@@ -32,6 +32,10 @@ export interface Section {
   heading: string;
   number: string | null;
   paragraphs: Paragraph[];
+  /** Positions of `paragraphs` in the parent `LeaseDocument.paragraphs` array.
+   * Authoritative for index-based lookups; `paragraphs` is kept for callers
+   * that need the objects themselves. */
+  paragraphIndices: number[];
   startPage: number;
 }
 
