@@ -47,7 +47,7 @@ describe('crashLog', () => {
   });
 });
 
-import { diagnosticsReport } from './crashLog';
+import { diagnosticsReport, diagnosticsSummary } from './crashLog';
 
 describe('diagnosticsReport', () => {
   it('emits schema-stamped JSON with crashes included', () => {
@@ -58,5 +58,24 @@ describe('diagnosticsReport', () => {
     expect(parsed.crashes).toHaveLength(1);
     expect(parsed.crashes[0].message).toBe('in the report');
     expect(typeof parsed.generatedAt).toBe('string');
+  });
+
+  it('includes a summary array enumerating every category in the payload', () => {
+    clearCrashLog();
+    const parsed = JSON.parse(diagnosticsReport());
+    expect(Array.isArray(parsed.summary)).toBe(true);
+    expect(parsed.summary).toEqual([
+      'userAgent',
+      'stack-traces (last 20)',
+      'rule-pack versions',
+      'no PDF bytes',
+      'no IDB contents',
+    ]);
+  });
+
+  it('summary explicitly disclaims PDF bytes and IDB contents', () => {
+    const summary = diagnosticsSummary();
+    expect(summary).toContain('no PDF bytes');
+    expect(summary).toContain('no IDB contents');
   });
 });

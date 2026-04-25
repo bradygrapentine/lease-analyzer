@@ -19,6 +19,7 @@
     "build:tesseract-assets": "node scripts/build-tesseract-assets.mjs",
     "postinstall": "node scripts/build-tesseract-assets.mjs",
     "check:budget": "node scripts/check-bundle-budget.mjs",
+    "check:csp": "node scripts/check-csp.mjs",
     "lhci": "lhci autorun",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

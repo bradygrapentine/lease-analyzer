@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { diagnosticsReport, recordCrash } from './crashLog';
+import { diagnosticsReport, diagnosticsSummary, recordCrash } from './crashLog';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -47,6 +47,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           Your data is still on this device. You can download a local diagnostics report
           (no data leaves your device unless you share the file).
         </p>
+        <details className="diagnostics-summary" open>
+          <summary>What's in the diagnostics file</summary>
+          <ul>
+            {diagnosticsSummary().map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </details>
         <button type="button" onClick={this.handleDownload}>
           Download diagnostics
         </button>
