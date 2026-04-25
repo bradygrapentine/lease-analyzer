@@ -1,6 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import type { LeaseDocument } from '../parser/types';
 import type { RedlineEdit } from '../redline/redline';
+import { CounterSignPanel } from './CounterSignPanel';
+
+/**
+ * Wave 9 Part B — when the lease is being viewed inside a review-mode
+ * session (a `.lgreview` archive opened by a reviewer), the panel grows
+ * an Accept/Reject toggle next to each existing edit and a "Sign &
+ * export patch" pane at the bottom. The hook surface lives in Part A
+ * (`useReviewMode`); the panel just consumes a plain `reviewMode` prop
+ * so it stays decoupled from that hook's evolving shape.
+ */
+export interface RedlinePanelReviewMode {
+  archiveFingerprint: string;
+  /** Stable id per edit, agreed between author and reviewer. */
+  editIdByParagraphIndex: Record<number, string>;
+  onSignAndExport: (input: {
+    passphrase: string;
+    decisions: { editId: string; accepted: boolean }[];
+  }) => Promise<Uint8Array>;
+}
 
 interface RedlinePanelProps {
   doc: LeaseDocument | null;
@@ -12,6 +31,12 @@ interface RedlinePanelProps {
    * and triggering a file download. Panel just exposes the trigger.
    */
   onExportHtml: () => void;
+  /**
+   * When set, the panel renders Accept/Reject toggles on each existing
+   * edit and a counter-sign pane at the bottom. Omitted in normal
+   * (author) mode.
+   */
+  reviewMode?: RedlinePanelReviewMode;
 }
 
 /**
@@ -26,9 +51,11 @@ export function RedlinePanel({
   onEditParagraph,
   onDeleteEdit,
   onExportHtml,
+  reviewMode,
 }: RedlinePanelProps): JSX.Element {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState('');
+  const [decisions, setDecisions] = useState<Record<string, boolean>>({});
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -135,12 +162,45 @@ export function RedlinePanel({
                       Revert
                     </button>
                   ) : null}
+                  {reviewMode && edit ? (() => {
+                    const editId = reviewMode.editIdByParagraphIndex[i];
+                    if (!editId) return null;
+                    const accepted = decisions[editId] ?? false;
+                    return (
+                      <label aria-label={`accept paragraph ${i + 1}`}>
+                        <input
+                          type="checkbox"
+                          checked={accepted}
+                          onChange={(e) =>
+                            setDecisions((prev) => ({
+                              ...prev,
+                              [editId]: e.target.checked,
+                            }))
+                          }
+                        />
+                        Accept
+                      </label>
+                    );
+                  })() : null}
                 </>
               )}
             </li>
           );
         })}
       </ol>
+
+      {reviewMode ? (
+        <CounterSignPanel
+          decisions={Object.entries(reviewMode.editIdByParagraphIndex).map(
+            ([, editId]) => ({
+              editId,
+              accepted: decisions[editId] ?? false,
+            }),
+          )}
+          archiveFingerprint={reviewMode.archiveFingerprint}
+          onSign={reviewMode.onSignAndExport}
+        />
+      ) : null}
     </section>
   );
 }
