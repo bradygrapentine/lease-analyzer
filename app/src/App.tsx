@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { usePipeline } from './App/usePipeline';
+import { useAnnotations } from './App/useAnnotations';
+import { useCounterOffers } from './App/useCounterOffers';
+import { useReanalyzeOnRulesChange } from './App/useReanalyzeOnRulesChange';
 import { FindingsPanel } from './ui/FindingsPanel';
 import { LibraryPanel } from './ui/LibraryPanel';
 import { PdfViewer } from './ui/PdfViewer';
@@ -58,20 +61,9 @@ import { createSigningKey, exportPublicKey } from './security/signingKeys';
 import { signExport } from './storage/exportReport';
 import { sha256Hex } from './security/inputHash';
 import { AnnotationsPanel } from './ui/AnnotationsPanel';
-import {
-  deleteAnnotation,
-  listAnnotations,
-  saveAnnotation,
-  updateAnnotation,
-  type Annotation,
-} from './annotations/annotations';
+// Annotation CRUD is owned by useAnnotations (see App/useAnnotations.ts).
 import { CounterOfferPanel } from './ui/CounterOfferPanel';
-import {
-  deleteCounterOffer,
-  listCounterOffers,
-  saveCounterOffer,
-  type CounterOffer,
-} from './negotiation/counterOffers';
+// Counter-offer CRUD is owned by useCounterOffers (see App/useCounterOffers.ts).
 import { PortfolioPanel } from './ui/PortfolioPanel';
 import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
 import { RedlinePanel } from './ui/RedlinePanel';
@@ -149,8 +141,8 @@ export function App(): JSX.Element {
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [auditVerification, setAuditVerification] = useState<ChainVerification | null>(null);
   const [signingPublicKey, setSigningPublicKey] = useState<string | null>(null);
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [counterOffers, setCounterOffers] = useState<CounterOffer[]>([]);
+  // annotations + counter offers extracted into dedicated hooks (Wave 7-D).
+  // See src/App/useAnnotations.ts and src/App/useCounterOffers.ts.
   const [view, setView] = useState<'current' | 'portfolio' | 'redline'>('current');
   const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(
     new Map(),
@@ -171,20 +163,12 @@ export function App(): JSX.Element {
     setPortfolioFindings(map);
   }, []);
 
-  const refreshAnnotations = useCallback(async (leaseId: string) => {
-    setAnnotations(await listAnnotations(leaseId));
-  }, []);
-
   const refreshRedlineEdits = useCallback(async (leaseId: string) => {
     setRedlineEdits(await listEditsForLease(leaseId));
   }, []);
 
   const refreshVersions = useCallback(async (leaseId: string) => {
     setVersions(await listVersionsForLease(leaseId));
-  }, []);
-
-  const refreshCounterOffers = useCallback(async () => {
-    setCounterOffers(await listCounterOffers());
   }, []);
 
   const refreshSigningKey = useCallback(async () => {
@@ -255,6 +239,13 @@ export function App(): JSX.Element {
   const pipeline = usePipeline({ onLibraryChange: refreshLibrary, rules: activeRules });
   const { status, ocrState, comparison } = pipeline;
 
+  const analyzedLeaseId =
+    status.kind === 'analyzed' ? status.leaseId : null;
+  const annotationsApi = useAnnotations(analyzedLeaseId);
+  const counterOffersApi = useCounterOffers();
+  const annotations = annotationsApi.annotations;
+  const counterOffers = counterOffersApi.counterOffers;
+
   const plainEnglishByRuleId = useMemo<Record<string, string>>(() => {
     const out: Record<string, string> = {};
     for (const r of activeRules) {
@@ -272,18 +263,12 @@ export function App(): JSX.Element {
   }, [activeRules]);
 
   // For "Apply suggestion": prefer a user-authored counter-offer text over
-  // the rule's built-in `suggestedEdit`. Counter-offers are keyed by ruleId;
-  // if multiple exist we pick the most recently saved one.
-  const suggestedTextByRuleId = useMemo<Record<string, string>>(() => {
-    const out: Record<string, string> = { ...suggestedEditByRuleId };
-    const latestByRule = new Map<string, CounterOffer>();
-    for (const co of counterOffers) {
-      const cur = latestByRule.get(co.ruleId);
-      if (!cur || co.updatedAt > cur.updatedAt) latestByRule.set(co.ruleId, co);
-    }
-    for (const [ruleId, co] of latestByRule) out[ruleId] = co.text;
-    return out;
-  }, [suggestedEditByRuleId, counterOffers]);
+  // the rule's built-in `suggestedEdit`. The hook already exposes the
+  // latest-by-ruleId map so this just merges the two layers.
+  const suggestedTextByRuleId = useMemo<Record<string, string>>(
+    () => ({ ...suggestedEditByRuleId, ...counterOffersApi.latestTextByRuleId }),
+    [suggestedEditByRuleId, counterOffersApi.latestTextByRuleId],
+  );
 
   // All rule ids the custom-rule builder should treat as "taken", so the
   // dup-id guard fires against both the built-in pack and any installed pack.
@@ -299,7 +284,6 @@ export function App(): JSX.Element {
     void refreshTemplates();
     void refreshPacks();
     void refreshSigningKey();
-    void refreshCounterOffers();
     void refreshRulePackSettings();
     void refreshAuditLog();
   }, [
@@ -307,7 +291,6 @@ export function App(): JSX.Element {
     refreshTemplates,
     refreshPacks,
     refreshSigningKey,
-    refreshCounterOffers,
     refreshRulePackSettings,
     refreshAuditLog,
   ]);
@@ -319,20 +302,29 @@ export function App(): JSX.Element {
     }
   }, [view, library, refreshPortfolioFindings]);
 
-  // Load annotations whenever the currently-analyzed lease changes.
-  const analyzedLeaseId =
-    status.kind === 'analyzed' ? status.leaseId : null;
+  // Load lease-scoped data whenever the currently-analyzed lease changes.
+  // Annotations are owned by useAnnotations() and load themselves.
   useEffect(() => {
     if (analyzedLeaseId) {
-      void refreshAnnotations(analyzedLeaseId);
       void refreshRedlineEdits(analyzedLeaseId);
       void refreshVersions(analyzedLeaseId);
     } else {
-      setAnnotations([]);
       setRedlineEdits([]);
       setVersions([]);
     }
-  }, [analyzedLeaseId, refreshAnnotations, refreshRedlineEdits, refreshVersions]);
+  }, [analyzedLeaseId, refreshRedlineEdits, refreshVersions]);
+
+  // Auto-reanalyze when any rule-affecting input changes (Wave 7-D).
+  // Replaces the three manual `pipeline.reanalyze()` call sites that were
+  // previously easy to forget when adding new mutators.
+  useReanalyzeOnRulesChange({
+    statusKind: status.kind,
+    reanalyze: pipeline.reanalyze,
+    installedPacks,
+    enabledPackIds: enabledPacks,
+    selectedJurisdictions,
+    severityOverrides,
+  });
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
@@ -497,38 +489,13 @@ export function App(): JSX.Element {
   }
 
   async function onSaveAnnotation(text: string): Promise<void> {
-    if (!analyzedLeaseId || selected === null) return;
-    await saveAnnotation({
-      leaseId: analyzedLeaseId,
-      paragraphIndex: selected.paragraphIndex,
-      text,
-    });
-    await refreshAnnotations(analyzedLeaseId);
+    if (selected === null) return;
+    await annotationsApi.saveForParagraph(selected.paragraphIndex, text);
   }
-
-  async function onUpdateAnnotation(id: string, text: string): Promise<void> {
-    await updateAnnotation(id, text);
-    if (analyzedLeaseId) await refreshAnnotations(analyzedLeaseId);
-  }
-
-  async function onDeleteAnnotation(id: string): Promise<void> {
-    await deleteAnnotation(id);
-    if (analyzedLeaseId) await refreshAnnotations(analyzedLeaseId);
-  }
-
-  async function onSaveCounterOffer(
-    ruleId: string,
-    name: string,
-    text: string,
-  ): Promise<void> {
-    await saveCounterOffer({ ruleId, name, text });
-    await refreshCounterOffers();
-  }
-
-  async function onDeleteCounterOffer(id: string): Promise<void> {
-    await deleteCounterOffer(id);
-    await refreshCounterOffers();
-  }
+  const onUpdateAnnotation = annotationsApi.update;
+  const onDeleteAnnotation = annotationsApi.remove;
+  const onSaveCounterOffer = counterOffersApi.save;
+  const onDeleteCounterOffer = counterOffersApi.remove;
 
   async function onCreateSigningKey(passphrase: string): Promise<void> {
     await createSigningKey(passphrase);
@@ -646,8 +613,7 @@ export function App(): JSX.Element {
   async function onSelectedJurisdictionsChange(next: string[]): Promise<void> {
     setSelectedJurisdictionsState(next);
     await setSelectedJurisdictions(next);
-    // Re-run analyze against the currently loaded doc with the new filter.
-    pipeline.reanalyze();
+    // Reanalyze fires automatically via useReanalyzeOnRulesChange.
   }
 
   async function onSeverityOverrideChange(
@@ -664,7 +630,7 @@ export function App(): JSX.Element {
       await setSeverityOverride(ruleId, real);
     }
     setSeverityOverridesState(next);
-    pipeline.reanalyze();
+    // Reanalyze fires automatically via useReanalyzeOnRulesChange.
   }
 
   async function onRefreshAudit(): Promise<void> {
@@ -825,9 +791,8 @@ export function App(): JSX.Element {
       payload: { ruleId: rule.id, packId: pack.id },
     });
     await refreshPacks();
-    // After the new pack is in state, re-analyze the current lease so the
-    // rule fires immediately on the active document.
-    pipeline.reanalyze();
+    // Reanalyze fires automatically via useReanalyzeOnRulesChange once
+    // installedPacks/enabledPacks update.
     void refreshAuditLog();
   }
 
