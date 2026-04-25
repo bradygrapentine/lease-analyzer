@@ -67,15 +67,16 @@ Each phase links to its backlog section.
 | 3 | UI | Done |
 | 4 | Local Storage | Done |
 | 5 | Compare & OCR | Done |
-| 6 | Polish & Distribution | Partial — Lighthouse a11y/PWA CI, Tauri CI, onboarding tour open |
+| 6 | Polish & Distribution | Done |
 | 7 | Observability & hygiene | Done |
-| 8 | Structured lease understanding | Substantially done — commercial golden fixture open |
+| 8 | Structured lease understanding | Done |
 | 9 | Negotiation support | Done |
 | 10 | Rule ecosystem | Done |
 | 11 | Workflow & integrations | Done |
 | 12 | Trust & verification | Done |
-| 13 | Performance & scale | Substantially done — secondary IDB index open |
+| 13 | Performance & scale | Done |
 | 14 | Content depth | Substantially done — static glossary JSON, i18n scaffold, OCR language picker open |
+| 17 | Trust infrastructure | Done — Wave 8 shipped marketplace, deviation warnings, repro CLI, key rotation |
 
 "Substantially done" means the phase's primary surface is built and wired;
 the open items are scoped follow-ups rather than net-new work.
@@ -87,21 +88,6 @@ the open items are scoped follow-ups rather than net-new work.
 The roadmap below is organized by where the product is heading, not by
 phase number. Each bullet points to the backlog section that tracks the
 tickets.
-
-### Ship-readiness — getting 1.0 out the door
-
-- Lighthouse CI gates: a11y ≥95 and PWA ≥95 on every PR. (Phase 6)
-- Tauri desktop build + CI artifact. (Phase 6)
-- First-run onboarding tour that explains the local-first contract and
-  the OCR opt-in. (Phase 6)
-- Commercial-lease golden fixture that exercises tables + definitions +
-  cross-refs simultaneously. (Phase 8)
-
-### Perceived performance — stay snappy as leases grow
-
-- Secondary IndexedDB index on `findingCount` + `rulePackVersion` so
-  `listLeases` filters cheaply without hydrating every `LeaseRecord`.
-  (Phase 13)
 
 ### Content depth — more useful without phoning home
 
@@ -177,28 +163,30 @@ Phase 16 makes it analytical.
   override model so a tenant can say "treat this rule as High across
   my whole portfolio" without re-declaring it per lease.
 
-### Phase 17 — Trust infrastructure
+### Phase 17 — Trust infrastructure (shipped, Wave 8)
 
-Phase 10 shipped signed packs. Phase 12 shipped signed reports. Phase
-17 turns those primitives into an ecosystem a third party can audit.
+Phase 10 shipped signed packs. Phase 12 shipped signed reports. Wave 8
+turned those primitives into an ecosystem a third party can audit. See
+[`REPRODUCIBILITY.md`](./REPRODUCIBILITY.md) for the auditor walk-through.
 
-- **Offline pack marketplace** — a curated, build-time-bundled static
-  directory of packs with publisher keys, install-with-one-click,
-  verified-author badges from Phase 10, and a visible pack-diff view
-  before adoption.
-- **Diff-vs-verified warnings** — if a user edits a signed pack (or
-  imports an unsigned one derived from a signed one), show an explicit
-  "this deviates from the verified baseline" warning in the
-  findings and report views.
-- **Reproducibility CLI** — package the deterministic `analyze` +
-  replay-bundle format as a Node CLI (no browser, no network) so
-  auditors can verify `{inputHash, rulePackVersion, findings}` from
-  the command line. Shares its test fixtures with the in-app
-  `reproducibility.test.ts`.
-- **Key-rotation workflow** — UX for rotating a user's signing key
-  without invalidating historical audit-log entries (hash chain
-  stays intact; new entries signed with the new key; old entries
-  remain independently verifiable).
+- **Offline pack marketplace** — curated `.lgpack.json` files under
+  `app/public/packs/curated/`, each Ed25519-signed at build time;
+  in-app `MarketplacePanel` lists them with verified badge + diff
+  preview + one-click install.
+- **Diff-vs-verified warnings** — `packBaseline.ts` resolves each
+  active rule against its signed baseline; deviations carry through
+  `Finding.deviation` to the badge in `FindingsPanel` and the
+  `deviations[]` field in the signed export envelope.
+- **Reproducibility CLI** — `cli/` workspace ships `leaseguard-verify`,
+  a node-only command that extracts a replay bundle, re-runs
+  `parseLease` + `analyze`, and exits 0 on byte-identical match (1 on
+  mismatch with a diff). Shares fixtures with the in-app reproducibility
+  test.
+- **Key-rotation workflow** — `signingKeys.ts` v1→v2 migration
+  introduces a multi-key store with `rotateKey` / `listKeys` /
+  `getActiveKey`; audit entries record `signedByKeyId` and the hash
+  chain stays intact across rotations (retired keys remain
+  verification-only).
 
 ---
 
