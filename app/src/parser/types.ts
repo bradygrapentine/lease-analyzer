@@ -32,6 +32,10 @@ export interface Section {
   heading: string;
   number: string | null;
   paragraphs: Paragraph[];
+  /** Positions of `paragraphs` in the parent `LeaseDocument.paragraphs` array.
+   * Optional for backward compat with persisted/imported leases that predate
+   * this field; matchers fall back to deriving indices via lookup when absent. */
+  paragraphIndices?: number[];
   startPage: number;
 }
 
