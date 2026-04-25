@@ -4,13 +4,20 @@ import type { Finding } from '../rules/types';
 import type { ClauseTemplate } from '../templates/types';
 
 const DB_NAME = 'leaseguard';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE = 'leases';
 const SETTINGS = 'settings';
 const STANDARD_KEY = 'standardLeaseId';
 const ONBOARDING_DISMISSED_KEY = 'onboardingDismissedAt';
 export const CLAUSE_TEMPLATES_STORE = 'clauseTemplates';
 export const BY_FINDING_AND_PACK_INDEX = 'by-finding-and-pack';
+export const PARAGRAPH_SHINGLES_STORE = 'paragraphShingles';
+
+export interface ParagraphShinglesRecord {
+  leaseId: string;
+  paragraphIndex: number;
+  shingles: string[];
+}
 
 export interface LeaseRecord {
   id: string;
@@ -50,6 +57,10 @@ interface LeaseGuardSchema extends DBSchema {
   [CLAUSE_TEMPLATES_STORE]: {
     key: string;
     value: ClauseTemplate;
+  };
+  [PARAGRAPH_SHINGLES_STORE]: {
+    key: [string, number];
+    value: ParagraphShinglesRecord;
   };
 }
 
@@ -93,6 +104,17 @@ export async function openLeaseDb(): Promise<IDBPDatabase<LeaseGuardSchema>> {
               'findingCount',
               'rulePackVersion',
             ]);
+          }
+        }
+        // v4 → v5: paragraphShingles store keyed by [leaseId, paragraphIndex].
+        // Populated lazily on first portfolio-similarity render — no
+        // backfill on upgrade. Wave 7-E's compound index on `leases` is
+        // untouched.
+        if (oldVersion < 5) {
+          if (!db.objectStoreNames.contains(PARAGRAPH_SHINGLES_STORE)) {
+            db.createObjectStore(PARAGRAPH_SHINGLES_STORE, {
+              keyPath: ['leaseId', 'paragraphIndex'],
+            });
           }
         }
       },
@@ -158,6 +180,27 @@ export async function clearAll(): Promise<void> {
   await db.clear(STORE);
   await db.clear(SETTINGS);
   await db.clear(CLAUSE_TEMPLATES_STORE);
+  await db.clear(PARAGRAPH_SHINGLES_STORE);
+}
+
+export async function putParagraphShingles(
+  record: ParagraphShinglesRecord,
+): Promise<void> {
+  const db = await openLeaseDb();
+  await db.put(PARAGRAPH_SHINGLES_STORE, record);
+}
+
+export async function getParagraphShingles(
+  leaseId: string,
+  paragraphIndex: number,
+): Promise<ParagraphShinglesRecord | undefined> {
+  const db = await openLeaseDb();
+  return db.get(PARAGRAPH_SHINGLES_STORE, [leaseId, paragraphIndex]);
+}
+
+export async function listParagraphShingles(): Promise<ParagraphShinglesRecord[]> {
+  const db = await openLeaseDb();
+  return db.getAll(PARAGRAPH_SHINGLES_STORE);
 }
 
 export async function listAllLeaseRecords(): Promise<LeaseRecord[]> {

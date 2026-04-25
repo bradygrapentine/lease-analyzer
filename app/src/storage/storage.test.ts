@@ -172,6 +172,90 @@ describe('storage', () => {
     expect(loaded?.createdAt).toBeLessThanOrEqual(after);
   });
 
+  it('migrates v4 to v5: adds paragraphShingles store AND preserves by-finding-and-pack index', async () => {
+    // Seed a v4 database with one row + the v4 compound index, then re-open
+    // through the module to drive v4 -> v5 upgrade. After the bump:
+    //   * row survives
+    //   * `by-finding-and-pack` (Wave 7-E) still queryable
+    //   * new `paragraphShingles` store exists, keyed by [leaseId, paragraphIndex]
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.open('leaseguard', 4);
+      req.onupgradeneeded = (): void => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('leases')) {
+          const store = db.createObjectStore('leases', { keyPath: 'id' });
+          store.createIndex('by-createdAt', 'createdAt');
+          store.createIndex('by-finding-and-pack', [
+            'findingCount',
+            'rulePackVersion',
+          ]);
+        }
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings');
+        }
+        if (!db.objectStoreNames.contains('clauseTemplates')) {
+          db.createObjectStore('clauseTemplates', { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = (): void => {
+        const db = req.result;
+        const tx = db.transaction('leases', 'readwrite');
+        tx.objectStore('leases').put({
+          id: 'lease-v4',
+          name: 'Carry.pdf',
+          createdAt: 1000,
+          updatedAt: 1000,
+          rulePackVersion: '1.0.0',
+          pageCount: 1,
+          findingCount: 0,
+          doc: makeDoc(),
+          findings: [],
+        });
+        tx.oncomplete = (): void => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = (): void => reject(tx.error);
+      };
+      req.onerror = (): void => reject(req.error);
+    });
+
+    _resetDbForTests();
+    const db = await openLeaseDb();
+    expect(db.version).toBe(5);
+
+    // Existing row preserved.
+    const survivors = await db.getAll('leases');
+    expect(survivors.map((r) => r.id)).toEqual(['lease-v4']);
+
+    // Wave 7-E compound index still works.
+    const tx = db.transaction('leases', 'readonly');
+    const idx = tx.objectStore('leases').index('by-finding-and-pack');
+    const matches = await idx.getAll(IDBKeyRange.only([0, '1.0.0']));
+    expect(matches.map((r) => r.id)).toEqual(['lease-v4']);
+    await tx.done;
+
+    // New paragraphShingles store exists and accepts compound-key writes.
+    expect(db.objectStoreNames.contains('paragraphShingles')).toBe(true);
+    const tx2 = db.transaction('paragraphShingles', 'readwrite');
+    // Cast through `any` because schema typing for the new store hasn't
+    // been threaded into the DBSchema yet — that lands with the impl.
+    const store = (tx2 as unknown as {
+      objectStore: (n: string) => {
+        put: (v: unknown) => Promise<unknown>;
+        get: (k: unknown) => Promise<unknown>;
+      };
+    }).objectStore('paragraphShingles');
+    await store.put({
+      leaseId: 'lease-v4',
+      paragraphIndex: 0,
+      shingles: ['a b c d e'],
+    });
+    const got = await store.get(['lease-v4', 0]);
+    expect(got).toMatchObject({ leaseId: 'lease-v4', paragraphIndex: 0 });
+    await tx2.done;
+  });
+
   it('migrates a v3 database to v4 without dropping rows and adds the by-finding-and-pack index', async () => {
     // Seed a v3 database directly via raw indexedDB.open so we can prove
     // the v4 upgrade path runs against a populated v3 schema.
@@ -224,12 +308,13 @@ describe('storage', () => {
       req.onerror = (): void => reject(req.error);
     });
 
-    // Open via the v4 path. _resetDbForTests ensures we re-open through the
-    // module's upgrade ladder rather than reusing a cached v3 handle.
+    // Open via the latest path. _resetDbForTests ensures we re-open through
+    // the module's upgrade ladder rather than reusing a cached v3 handle.
+    // The v3→v4 migration runs as part of the ladder up to current (v5).
     _resetDbForTests();
     const db = await openLeaseDb();
 
-    expect(db.version).toBe(4);
+    expect(db.version).toBe(5);
     // Existing rows preserved.
     const survivors = await db.getAll('leases');
     expect(survivors).toHaveLength(2);
