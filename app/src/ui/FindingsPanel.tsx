@@ -309,6 +309,15 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
             {finding.negated && (
               <span aria-label="negated"> (possibly not applicable)</span>
             )}
+            {finding.deviation && (
+              <span
+                className="finding-deviation-badge"
+                aria-label="Deviates from verified baseline"
+              >
+                {' '}
+                deviates from verified pack
+              </span>
+            )}
             <div>{finding.explanation}</div>
             {definitions && definitions.length > 0 ? (
               <small className="finding-snippet">

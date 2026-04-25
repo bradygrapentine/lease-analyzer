@@ -1,5 +1,6 @@
 import type { LeaseDocument } from '../parser/types';
 import type { Finding } from '../rules/types';
+import type { BaselineDeviation } from '../rules/packBaseline';
 import { signPayload } from '../security/signingKeys';
 
 export interface ExportInput {
@@ -8,6 +9,12 @@ export interface ExportInput {
   findings: Finding[];
   /** Optional SHA-256 hex of the original PDF bytes. */
   inputHash?: string | null;
+  /**
+   * Wave 8 Part B — diff-vs-verified baseline deviations for the rule
+   * pack used in this analysis. Optional + additive: if omitted the
+   * exported envelope simply carries `deviations: []`.
+   */
+  deviations?: BaselineDeviation[];
 }
 
 export const EXPORT_SCHEMA = 'leaseguard.findings.v1';
@@ -41,6 +48,12 @@ export function exportFindingsJson(input: ExportInput): string {
       span: f.span,
       confidence: Number(f.confidence.toFixed(2)),
       negated: f.negated,
+    })),
+    deviations: (input.deviations ?? []).map((d) => ({
+      id: d.id,
+      baselineFingerprint: d.baselineFingerprint,
+      currentFingerprint: d.currentFingerprint,
+      deviates: d.deviates,
     })),
   };
   return JSON.stringify(payload, null, 2);

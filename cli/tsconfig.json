@@ -11,11 +11,20 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "types": ["node", "vitest/globals"],
     "paths": {
       "@app/*": ["../app/src/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../app/src/parser/**/*.ts",
+    "../app/src/rules/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "../app/src/**/*.test.ts",
+    "../app/src/**/*.bench.test.ts",
+    "../app/src/parser/testFixtures.ts"
+  ]
 }
