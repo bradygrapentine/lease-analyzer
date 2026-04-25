@@ -141,6 +141,50 @@ describe('Section.paragraphIndices contract', () => {
     expect(at(hits, 0).paragraphIndex).toBe(1);
   });
 
+  it('keeps section scoping correct when duplicate (page,text) paragraphs span sections (legacy JSON)', () => {
+    // Two sections each contain a paragraph with identical text on the same page.
+    // After JSON round-trip with no paragraphIndices, fallback must not collapse
+    // them to the first occurrence — the rent rule must hit ONLY in the Rent
+    // section (paragraph index 1), not in Utilities (index 3).
+    const original: LeaseDocument = {
+      pages: [],
+      paragraphs: [
+        p('1. Rent'),
+        p('Tenant shall pay $500.'),
+        p('2. Utilities'),
+        p('Tenant shall pay $500.'),
+      ],
+      sections: [
+        {
+          heading: 'Rent',
+          number: '1',
+          paragraphs: [p('Tenant shall pay $500.')],
+          startPage: 1,
+        } satisfies Section,
+        {
+          heading: 'Utilities',
+          number: '2',
+          paragraphs: [p('Tenant shall pay $500.')],
+          startPage: 1,
+        } satisfies Section,
+      ],
+      raw: '',
+    };
+
+    const restored = JSON.parse(JSON.stringify(original)) as LeaseDocument;
+
+    const matcher: SectionAnchoredMatcher = {
+      type: 'sectionAnchored',
+      headingPattern: '^Rent$',
+      child: { type: 'regex', pattern: 'pay \\$500', flags: 'i' },
+    };
+
+    const hits = runMatcher(matcher, restored);
+
+    expect(hits).toHaveLength(1);
+    expect(at(hits, 0).paragraphIndex).toBe(1);
+  });
+
   it('does not call doc.paragraphs.indexOf in runSectionAnchored', () => {
     const paragraphs: Paragraph[] = [
       p('1. Rent'),
