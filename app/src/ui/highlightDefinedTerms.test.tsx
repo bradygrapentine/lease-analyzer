@@ -3,9 +3,14 @@ import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { highlightDefinedTerms } from './highlightDefinedTerms';
 import type { DefinitionEntry } from '../facts/types';
+import type { GlossaryEntry } from '../glossary/loadGlossary';
 
 function entry(term: string, definition: string): DefinitionEntry {
   return { term, definition, page: 1, paragraphIndex: 0 };
+}
+
+function glossEntry(term: string, definition: string): GlossaryEntry {
+  return { term, definition };
 }
 
 function renderNodes(nodes: ReactNode): HTMLElement {
@@ -134,5 +139,65 @@ describe('highlightDefinedTerms', () => {
     const dfns = root.querySelectorAll('dfn');
     expect(dfns.length).toBe(1);
     expect(dfns[0]?.textContent).toBe('Premises');
+  });
+
+  it('wraps a glossary-only term and tags the dfn with the glossary class', () => {
+    const nodes = highlightDefinedTerms(
+      'Tenant must indemnify the landlord.',
+      [],
+      [glossEntry('indemnify', 'agree to cover losses')],
+    );
+    const root = renderNodes(nodes);
+    const dfn = root.querySelector('dfn');
+    expect(dfn).not.toBeNull();
+    expect(dfn?.textContent).toBe('indemnify');
+    expect(dfn?.getAttribute('title')).toBe('agree to cover losses');
+    expect(dfn?.className).toBe('defined-term glossary');
+  });
+
+  it('wraps lease-defined and glossary terms together in one pass', () => {
+    const nodes = highlightDefinedTerms(
+      'The Tenant must indemnify the Premises owner.',
+      [entry('Premises', 'the building')],
+      [glossEntry('indemnify', 'agree to cover losses')],
+    );
+    const root = renderNodes(nodes);
+    const dfns = root.querySelectorAll('dfn');
+    expect(dfns.length).toBe(2);
+    const texts = Array.from(dfns).map((d) => d.textContent);
+    expect(texts).toContain('indemnify');
+    expect(texts).toContain('Premises');
+  });
+
+  it('lease-defined terms win over glossary entries on duplicate term', () => {
+    const nodes = highlightDefinedTerms(
+      'The Premises must be returned.',
+      [entry('Premises', 'lease-specific definition')],
+      [glossEntry('Premises', 'generic glossary definition')],
+    );
+    const root = renderNodes(nodes);
+    const dfn = root.querySelector('dfn');
+    expect(dfn).not.toBeNull();
+    expect(dfn?.getAttribute('title')).toBe('lease-specific definition');
+    expect(dfn?.className).toBe('defined-term');
+  });
+
+  it('returns the original text when only an empty glossary is supplied', () => {
+    const nodes = highlightDefinedTerms('Hello world.', [], []);
+    const root = renderNodes(nodes);
+    expect(root.textContent).toBe('Hello world.');
+    expect(root.querySelector('dfn')).toBeNull();
+  });
+
+  it('ignores glossary entries with an empty term string', () => {
+    const nodes = highlightDefinedTerms(
+      'Tenant must indemnify the landlord.',
+      [],
+      [glossEntry('', 'ignored'), glossEntry('indemnify', 'agree to cover losses')],
+    );
+    const root = renderNodes(nodes);
+    const dfns = root.querySelectorAll('dfn');
+    expect(dfns.length).toBe(1);
+    expect(dfns[0]?.textContent).toBe('indemnify');
   });
 });

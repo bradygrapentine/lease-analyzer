@@ -288,3 +288,40 @@ matching `x` (public key) JWK component, replace both constants in the
 script, and re-run `npm run build:curated-packs`. Old fingerprints in
 the manifest will change; downstream consumers who pinned fingerprints
 will need to refresh.
+
+## Static legal glossary (Wave 11)
+
+The app ships a small, jurisdiction-neutral glossary that the
+findings panel uses to tooltip generic legal terms (in addition to the
+lease-specific defined terms picked up by `extractLeaseFacts`). The
+glossary is plain content — no rule logic is attached to it.
+
+- **File:** `app/public/glossary/v1.json`
+- **Schema:**
+
+  ```json
+  {
+    "schema": "leaseguard.glossary.v1",
+    "version": 1,
+    "entries": [
+      { "term": "Holdover", "definition": "…", "sources": ["optional"] }
+    ]
+  }
+  ```
+
+- **Loader:** `app/src/glossary/loadGlossary.ts` performs a single
+  same-origin `fetch('/glossary/v1.json')`, validates the shape, and
+  caches the result for the rest of the session. Any failure
+  (network, parse, schema) resolves to an empty entry list — the
+  glossary is a UX nicety and must never crash the pipeline.
+- **Authoring rules:**
+  - Plain English. No statute citations. No jurisdiction claims.
+  - 1–2 sentences per entry; ~250 chars max.
+  - `term` is what users will see highlighted; matching is whole-word
+    and case-insensitive. Lease-defined terms always win over glossary
+    entries on a duplicate term.
+  - `sources` is optional and is currently informational only — it is
+    not surfaced in the UI yet.
+- **Out of scope for v1:** schema versioning beyond v1, user-editable
+  entries, per-jurisdiction overrides. These are tracked separately on
+  the backlog.
