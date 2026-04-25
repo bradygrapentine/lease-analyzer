@@ -289,6 +289,36 @@ table for the authoritative figures):
 - Archive export/import uses WebCrypto AES-GCM. No handshake ever
   leaves the device.
 
+## Collaboration escape hatches
+
+Wave 9 adds three offline-first sharing surfaces. None of them open a
+network socket; archives travel over user-initiated file export, and
+recipients open them by drag/drop. The **review archive** (Part A) is
+the foundational primitive:
+
+- File extension: `.lgreview`. On-disk shape is a UTF-8 JSON envelope:
+  `{ magic: "LGREVIEW", version: 1, packFingerprint, expiresAt, salt,
+  iv, ciphertext }` with `salt`, `iv`, `ciphertext` base64-encoded so
+  the CLI verifier (Part D) can read metadata without a binary parser.
+- Encryption: AES-GCM, 256-bit key, fresh 12-byte random IV per
+  archive. The 128-bit auth tag is the AES-GCM tag baked into the
+  ciphertext output by WebCrypto — there is no separate HMAC. A
+  single-bit flip anywhere in the ciphertext fails decrypt with an
+  authentication error and the archive is rejected.
+- Key derivation: PBKDF2-HMAC-SHA-256, 250 000 iterations, fresh
+  16-byte random salt per archive. Salt is stored in the envelope; the
+  passphrase is held only in memory and is never persisted.
+- Expiry: ISO-8601 timestamp checked against `Date.now()` (or an
+  injected `now` for tests) before decrypt is attempted. Expired
+  archives surface a clear "expired" error.
+- What is NOT included: telemetry, key escrow, IDB dumps beyond the
+  chosen lease's replay bundle, network egress, server-side
+  share-link hosting.
+- Recipient trust model: the recipient sees a read-only review session;
+  audit writes back to the original lease are gated off (Part B may
+  route a separate "review-session" audit log). Possession of the
+  passphrase + a matching signed pack is the only authentication.
+
 ## Performance
 
 - 50-page parse budget 3s (CI measures ~210ms on the synthetic fixture).
