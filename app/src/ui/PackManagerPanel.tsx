@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { RulePackFile } from '../rules/packSchema';
+import {
+  MarketplacePanel,
+  type MarketplacePanelProps,
+} from './MarketplacePanel';
 
 /**
  * Signature trust vocabulary surfaced in the panel. Intentionally a
@@ -25,6 +29,12 @@ interface PackManagerPanelProps {
    * the map renders as "community".
    */
   signatureStatusByPackId?: Record<string, PackSignatureBadge>;
+  /**
+   * Optional curated marketplace wiring. When provided, the panel
+   * exposes a "Browse included packs" toggle that mounts the
+   * MarketplacePanel inline. Same-origin only — no network egress.
+   */
+  marketplace?: MarketplacePanelProps;
 }
 
 function badgeLabel(status: PackSignatureBadge): string {
@@ -49,10 +59,12 @@ export function PackManagerPanel({
   onToggle,
   onDelete,
   signatureStatusByPackId,
+  marketplace,
 }: PackManagerPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [browseOpen, setBrowseOpen] = useState(false);
 
   async function handleFile(e: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = e.target.files?.[0];
@@ -129,6 +141,19 @@ export function PackManagerPanel({
 
       {status !== null && <p role="status">{status}</p>}
       {error !== null && <p role="status">Error: {error}</p>}
+
+      {marketplace !== undefined && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setBrowseOpen((v) => !v)}
+            aria-expanded={browseOpen}
+          >
+            {browseOpen ? 'Hide included packs' : 'Browse included packs'}
+          </button>
+          {browseOpen && <MarketplacePanel {...marketplace} />}
+        </div>
+      )}
     </section>
   );
 }

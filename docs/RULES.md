@@ -252,3 +252,39 @@ Bump `RULE_PACK_VERSION` in `src/rules/analyze.ts` whenever the set of
 emitted findings changes. It's stamped onto every `Finding` and appears
 in the JSON export. Use semver: new rule = minor, behavior change on
 existing rule = patch, pack-wide restructure = major.
+
+## Curated pack marketplace (offline)
+
+LeaseGuard ships with a small set of curator-signed rule packs under
+`app/public/packs/curated/`. They are bundled into the PWA's precache —
+the marketplace is fully offline; the only "fetch" is a same-origin
+read of `/packs/curated/manifest.json`.
+
+### Authoring a curated pack
+
+1. Add the pack definition to the `PACKS` array in
+   `app/scripts/build-curated-packs.mjs`. Use the same shape as
+   `RulePackFile` (see `src/rules/packSchema.ts`).
+2. Pick a stable `id`. The output filename is `<id>.lgpack.json`.
+3. Run `npm run build:curated-packs`. The script:
+   - canonicalizes each pack to sorted-key JSON,
+   - signs the canonical bytes with the curator Ed25519 key,
+   - writes `<id>.lgpack.json` (the signed envelope) and updates
+     `manifest.json` with the SHA-256 fingerprint of that envelope.
+4. The script is idempotent — re-running with no input changes produces
+   byte-identical output.
+
+### Signing ceremony
+
+The curator key is a fixed Ed25519 seed checked into
+`build-curated-packs.mjs`. This is intentional: curated packs are public
+artifacts shipped with the app, not user secrets. Trust hierarchy is
+"ships with the app". Users who need stricter trust should remove the
+curated packs and import their own signed packs via the regular import
+flow.
+
+To rotate the curator key, generate a new 32-byte seed, derive the
+matching `x` (public key) JWK component, replace both constants in the
+script, and re-run `npm run build:curated-packs`. Old fingerprints in
+the manifest will change; downstream consumers who pinned fingerprints
+will need to refresh.
