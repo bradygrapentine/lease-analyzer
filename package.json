@@ -1,11 +1,14 @@
 {
   "name": "lease-analyzer-workspace",
   "private": true,
-  "description": "Repo-root package for git hooks (husky + lint-staged). Application code lives in app/.",
+  "description": "Repo-root package for git hooks (husky + lint-staged) and the Playwright e2e runner. Application code lives in app/.",
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10"
   }

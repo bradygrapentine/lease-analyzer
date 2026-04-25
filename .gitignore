@@ -8,3 +8,6 @@ coverage
 *.tsbuildinfo
 .claude/
 .codex-runs/
+playwright-report/
+test-results/
+worktrees/
