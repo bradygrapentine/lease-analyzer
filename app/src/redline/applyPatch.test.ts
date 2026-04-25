@@ -16,7 +16,26 @@ import { describe, it, expect, beforeEach } from 'vitest';
 //  - append exactly one audit entry of kind 'patch-applied' with
 //    payload { archiveFingerprint, acceptedEditIds }
 import type { RedlinePatch } from './redlinePatch';
+import { buildRedlinePatch } from './redlinePatch';
 import { applyRedlinePatch } from './applyPatch';
+
+async function realPatch(over: Partial<RedlinePatch> = {}): Promise<RedlinePatch> {
+  const keyPair = (await crypto.subtle.generateKey('Ed25519', true, [
+    'sign',
+    'verify',
+  ])) as CryptoKeyPair;
+  const built = await buildRedlinePatch({
+    archiveFingerprint: FINGERPRINT,
+    knownEditIds: ['e1', 'e2'],
+    decisions: [
+      { editId: 'e1', accepted: true },
+      { editId: 'e2', accepted: false },
+    ],
+    signingKey: keyPair,
+    signedByKeyId: 'key-1',
+  });
+  return { ...built, ...over };
+}
 import {
   _resetRedlineDbForTests,
   listEditsForLease,
@@ -24,20 +43,6 @@ import {
 import { _resetAuditDbForTests, listAuditEntries } from '../audit/auditLog';
 
 const FINGERPRINT = 'c'.repeat(64);
-
-function fakePatch(over: Partial<RedlinePatch> = {}): RedlinePatch {
-  return {
-    archiveFingerprint: FINGERPRINT,
-    decisions: [
-      { editId: 'e1', accepted: true },
-      { editId: 'e2', accepted: false },
-    ],
-    signature: 'AAAA',
-    signedByKeyId: 'key-1',
-    signedByPublicKey: 'BBBB',
-    ...over,
-  };
-}
 
 beforeEach(async () => {
   _resetRedlineDbForTests();
@@ -48,9 +53,10 @@ beforeEach(async () => {
 
 describe('applyRedlinePatch', () => {
   it('refuses to apply a patch with an invalid signature', async () => {
+    const patch = await realPatch({ signature: 'tampered' });
     await expect(
       applyRedlinePatch({
-        patch: fakePatch({ signature: 'tampered' }),
+        patch,
         archiveFingerprint: FINGERPRINT,
         editsByPatchId: {
           e1: { leaseId: 'L', paragraphIndex: 0, before: 'a', after: 'b', updatedAt: 'now' },
@@ -61,9 +67,10 @@ describe('applyRedlinePatch', () => {
   });
 
   it('refuses to apply when the local archive fingerprint does not match the patch', async () => {
+    const patch = await realPatch();
     await expect(
       applyRedlinePatch({
-        patch: fakePatch(),
+        patch,
         archiveFingerprint: 'd'.repeat(64),
         editsByPatchId: {
           e1: { leaseId: 'L', paragraphIndex: 0, before: 'a', after: 'b', updatedAt: 'now' },
@@ -73,13 +80,9 @@ describe('applyRedlinePatch', () => {
   });
 
   it('on success, persists exactly the accepted edits and writes one patch-applied audit entry', async () => {
-    // The signature path will fail with the placeholder fakePatch above, so
-    // this test pins the contract: after success we expect exactly one
-    // accepted edit in the redline store and exactly one new audit entry of
-    // kind 'patch-applied'. Until applyRedlinePatch is implemented this
-    // test fails at the await call (module missing).
+    const patch = await realPatch();
     const result = await applyRedlinePatch({
-      patch: fakePatch(),
+      patch,
       archiveFingerprint: FINGERPRINT,
       editsByPatchId: {
         e1: { leaseId: 'L', paragraphIndex: 0, before: 'a', after: 'b', updatedAt: 'now' },

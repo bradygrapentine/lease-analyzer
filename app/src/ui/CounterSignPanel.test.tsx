@@ -15,7 +15,7 @@ import userEvent from '@testing-library/user-event';
 //       decisions: { editId: string; accepted: boolean }[];
 //     }) => Promise<Uint8Array>;
 //   }
-import { CounterSignPanel } from './CounterSignPanel';
+import { CounterSignPanel, type CounterSignDecision } from './CounterSignPanel';
 
 describe('CounterSignPanel', () => {
   it('renders a signing button that is disabled until a passphrase is entered', () => {
@@ -31,7 +31,10 @@ describe('CounterSignPanel', () => {
 
   it('happy path: passphrase + click invokes onSign with the decisions list', async () => {
     const user = userEvent.setup();
-    const onSign = vi.fn(async () => new Uint8Array([9, 9, 9]));
+    const onSign = vi.fn<
+      [{ passphrase: string; decisions: CounterSignDecision[] }],
+      Promise<Uint8Array>
+    >(async () => new Uint8Array([9, 9, 9]));
     render(
       <CounterSignPanel
         decisions={[
