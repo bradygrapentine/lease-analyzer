@@ -138,6 +138,19 @@ async function computeEntryHash(
 export interface AppendInput {
   kind: AuditEntry['kind'];
   payload: Record<string, unknown>;
+  /**
+   * Optional explicit signing key id. When omitted, the entry is recorded as
+   * signed by `DEFAULT_KEY_ID` ('k0'). Callers that have rotated keys should
+   * pass the active key id from `signingKeys.getActiveKey()`.
+   *
+   * Wave 8 Part D follow-up: previously this was auto-resolved by walking the
+   * audit log for the most recent 'key-rotated' marker, but that extra IDB
+   * read widened a pre-existing race window in `appendAuditEntry` where two
+   * concurrent callers could read the same `maxSeq` and both attempt to write
+   * the same `seq`, triggering an InvalidStateError. The caller already knows
+   * the active key, so we accept it as input instead.
+   */
+  signedByKeyId?: string;
 }
 
 /**
@@ -184,43 +197,22 @@ export async function appendAuditEntry(input: AppendInput): Promise<AuditEntry> 
   // check historical entries against. The hash chain itself does NOT cover
   // this field, so adding it is back-compat with v1 audit logs.
   //
-  // Resolution order:
-  //   1. Explicit override on the input (rare; used by re-import paths).
-  //   2. The most recent 'key-rotated' marker in the existing chain
-  //      (payload.toKeyId), which records the rotation event.
-  //   3. DEFAULT_KEY_ID ('k0') for the very first entries before any
-  //      rotation has happened.
-  let signedByKeyId: string = DEFAULT_KEY_ID;
-  const explicit = (input as { signedByKeyId?: unknown }).signedByKeyId;
-  if (typeof explicit === 'string') {
-    signedByKeyId = explicit;
-  } else {
-    const lastRotation = await findLastRotationKeyId(db);
-    if (lastRotation) signedByKeyId = lastRotation;
-  }
+  // Wave 8 Part D follow-up: we used to auto-resolve from the most recent
+  // 'key-rotated' marker via a second readonly cursor walk. That widened the
+  // window between the maxSeq read (step 1) and the put (step 4) enough that
+  // concurrent callers (e.g. VersionHistoryPanel firing restore + export +
+  // delete back-to-back) collided on the same seq and the put rejected with
+  // InvalidStateError. We now require the caller to pass the active key id
+  // — `signingKeys.getActiveKey()` already knows it — and fall back to
+  // DEFAULT_KEY_ID otherwise. No extra IDB read.
+  const explicit = input.signedByKeyId;
+  const signedByKeyId: string =
+    typeof explicit === 'string' ? explicit : DEFAULT_KEY_ID;
   const entry: AuditEntry = { ...base, entryHash, signedByKeyId };
 
   // 4. Write.
   await db.put(ENTRIES, entry);
   return entry;
-}
-
-async function findLastRotationKeyId(
-  db: IDBPDatabase<AuditSchema>,
-): Promise<string | null> {
-  const tx = db.transaction(ENTRIES, 'readonly');
-  let cursor = await tx.objectStore(ENTRIES).openCursor(null, 'prev');
-  while (cursor) {
-    const v = cursor.value;
-    if (v.kind === 'key-rotated') {
-      const toKeyId = (v.payload as { toKeyId?: unknown }).toKeyId;
-      await tx.done;
-      return typeof toKeyId === 'string' ? toKeyId : null;
-    }
-    cursor = await cursor.continue();
-  }
-  await tx.done;
-  return null;
 }
 
 export async function listAuditEntries(): Promise<AuditEntry[]> {
