@@ -287,6 +287,40 @@ describe('Section.paragraphIndices contract', () => {
     expect(indices).toEqual([1, 3]); // not [1, 1]
   });
 
+  it('legacy fallback does not let an earlier non-matching section steal a duplicate-text occurrence', () => {
+    // Earlier section "Notes" (which does NOT match the heading) and the target
+    // section "Rent" both contain identical body text on the same page. Without
+    // doc-order assignment across all sections, the resolver would hand the
+    // first occurrence to Rent — wrong. Correct behavior: Notes claims index 1,
+    // Rent claims index 3.
+    const original: LeaseDocument = {
+      pages: [],
+      paragraphs: [
+        p('Notes'),
+        p('Tenant shall pay $123.'),
+        p('1. Rent'),
+        p('Tenant shall pay $123.'),
+      ],
+      sections: [
+        { heading: 'Notes', number: null, paragraphs: [p('Tenant shall pay $123.')], startPage: 1 } satisfies Section,
+        { heading: 'Rent', number: '1', paragraphs: [p('Tenant shall pay $123.')], startPage: 1 } satisfies Section,
+      ],
+      raw: '',
+    };
+
+    const restored = JSON.parse(JSON.stringify(original)) as LeaseDocument;
+
+    const matcher: SectionAnchoredMatcher = {
+      type: 'sectionAnchored',
+      headingPattern: '^Rent$',
+      child: { type: 'regex', pattern: 'pay \\$123', flags: 'i' },
+    };
+
+    const hits = runMatcher(matcher, restored);
+    expect(hits).toHaveLength(1);
+    expect(at(hits, 0).paragraphIndex).toBe(3); // not 1
+  });
+
   it('does not call doc.paragraphs.indexOf in runSectionAnchored', () => {
     const paragraphs: Paragraph[] = [
       p('1. Rent'),
