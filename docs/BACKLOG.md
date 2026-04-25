@@ -16,8 +16,8 @@ enough to land in one PR.
 
 | Axis | Value | Gate |
 |------|-------|------|
-| Source | 117 non-test files (~13.0k LOC) + 89 test files (~11.9k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests | 765 passing across 89 files | `npm test` |
+| Source | 117 non-test files (~13.0k LOC) + 90 test files (~12.4k LOC) | `find app/src -name '*.ts' -o -name '*.tsx'` |
+| Tests | ~790 passing across 90 files | `npm test` |
 | Coverage | 97.02% stmt · 88.06% branch · 93.21% func · 97.02% line | `npm run test:coverage` (thresholds 90/85/90/90) |
 | Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
 | IndexedDB | main `leaseguard` v3 (`leases` + `settings` + `clauseTemplates`); 8 side dbs: `leaseguard-packs` v3 (adds `signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` v1, `leaseguard-audit` v1, `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1 | migrations tested |
@@ -326,12 +326,12 @@ Local-only, CSP-compatible.
       `usePipeline` routes uploads through the `PipelineClient`
       abstraction with auto-selection of the Worker-backed client in
       real browsers and an inline fallback for jsdom.
-- [ ] Streaming render: PdfViewer renders page N as soon as
+- [x] Streaming render: PdfViewer renders page N as soon as
       `getPage(N)` resolves, rather than waiting on the whole doc.
-      Today `renderPdfPages` loops sequentially through every page
-      before the viewer can show anything (`src/ui/renderPdfPages.ts`
-      line ~87). Emit per-page progress and hand canvases back as they
-      complete.
+      Landed in wave6-streaming (PR #1) — `renderPdfPages` is now an
+      `AsyncIterable<RenderedPage>` and `PdfViewer` consumes it
+      page-by-page so the first page paints as soon as it resolves
+      instead of awaiting the full document.
 - [x] Virtualized `<ul>` in FindingsPanel using IntersectionObserver.
       Landed wave 4 (`wave4-virtualized`) via `src/ui/useInViewport.ts`
       + FindingsPanel viewport-gated rendering so long finding lists
@@ -388,10 +388,14 @@ Local-only, CSP-compatible.
       `src/App/usePipeline.ts` with a dedicated test suite; exposes a
       `reanalyze()` imperative for callers to re-run analysis after a
       rule-set change.
-- [ ] Sections track paragraph indices (not just `Paragraph` object
-      refs) so `sectionAnchored` doesn't need `Array.indexOf`. See
-      `src/rules/matchers.ts#L137` (`doc.paragraphs.indexOf(para)`) —
-      O(n) per section-anchored hit.
+- [x] Sections track paragraph indices (not just `Paragraph` object
+      refs) so `sectionAnchored` doesn't need `Array.indexOf`. Landed
+      via PR #3 (commit 614f7a4) — `Section.paragraphIndexes: number[]`
+      populated by the parser, consumed by `runSectionAnchored` for
+      O(1) lookups. Includes content-keyed fallback for
+      JSON-rehydrated legacy `LeaseDocument`s, ambiguity rejection on
+      stored indices, and doc-order section-paragraph assignment to
+      prevent cross-section theft.
 - [x] Fix the one react-refresh ESLint warning in
       `TemplateMatchesPanel.tsx` (move `classifyMatch` helper to its
       own file or mark it a pure helper). Landed in wave3-perf —

@@ -74,7 +74,7 @@ Each phase links to its backlog section.
 | 10 | Rule ecosystem | Done |
 | 11 | Workflow & integrations | Done |
 | 12 | Trust & verification | Done |
-| 13 | Performance & scale | Substantially done — streaming PdfViewer render + secondary IDB index open |
+| 13 | Performance & scale | Substantially done — secondary IDB index open |
 | 14 | Content depth | Substantially done — static glossary JSON, i18n scaffold, OCR language picker open |
 
 "Substantially done" means the phase's primary surface is built and wired;
@@ -99,8 +99,6 @@ tickets.
 
 ### Perceived performance — stay snappy as leases grow
 
-- Streaming `PdfViewer` render: paint page N as soon as `getPage(N)`
-  resolves, instead of waiting for the whole document. (Phase 13)
 - Secondary IndexedDB index on `findingCount` + `rulePackVersion` so
   `listLeases` filters cheaply without hydrating every `LeaseRecord`.
   (Phase 13)
@@ -116,9 +114,7 @@ tickets.
 
 ### Tech debt — keep the codebase honest
 
-- Parser-side paragraph-index tracking for sections (currently
-  reconstructed downstream).
-- Decompose `App.tsx` (~1170 lines) into per-panel containers around
+- Decompose `App.tsx` (~1540 lines) into per-panel containers around
   the `usePipeline` hook.
 - Fix reanalyze-staleness so `activeRules` is captured at render time,
   not re-read when the callback fires.
