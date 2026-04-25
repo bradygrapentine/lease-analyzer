@@ -1,0 +1,15 @@
+{
+  "name": "@leaseguard/cli",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Wave 8 Part C — leaseguard-verify CLI (test scaffolding only).",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

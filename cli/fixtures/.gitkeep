@@ -1,0 +1,4 @@
+Wave 8 Part C — fixture directory. The implementer ships
+`sample-replay.zip` (produced by an app-side build script) here.
+The CLI test suite expects to find it at `./sample-replay.zip`
+relative to this directory. See `cli/src/verifyReplay.test.ts`.
