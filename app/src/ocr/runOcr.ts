@@ -11,6 +11,10 @@ export interface RunOcrOptions {
   onProgress?: (p: OcrProgress) => void;
   // Rendering scale; higher = better OCR quality, larger canvas.
   scale?: number;
+  // Tesseract language code (e.g. `'eng'`, `'spa'`). Must correspond to a
+  // `<code>.traineddata.gz` file present in `public/tesseract/`. Defaults
+  // to `'eng'` so existing callers are unaffected.
+  language?: string;
   // Override the same-origin asset paths. Useful for tests.
   workerPath?: string;
   corePath?: string;
@@ -22,6 +26,7 @@ export interface RunOcrOptions {
 const DEFAULT_WORKER_PATH = '/tesseract/worker.min.js';
 const DEFAULT_CORE_PATH = '/tesseract/tesseract-core.wasm.js';
 const DEFAULT_LANG_PATH = '/tesseract';
+const DEFAULT_LANGUAGE = 'eng';
 const DEFAULT_SCALE = 2;
 
 // Creates a canvas for off-screen rendering. `OffscreenCanvas` would be nicer
@@ -49,6 +54,7 @@ export async function runOcr(
   const workerPath = opts.workerPath ?? DEFAULT_WORKER_PATH;
   const corePath = opts.corePath ?? DEFAULT_CORE_PATH;
   const langPath = opts.langPath ?? DEFAULT_LANG_PATH;
+  const language = opts.language ?? DEFAULT_LANGUAGE;
 
   onProgress?.({ pct: 0, stage: 'loading pdf' });
 
@@ -74,7 +80,7 @@ export async function runOcr(
       stage: `ocr page ${i}/${numPages}`,
     });
 
-    const result = await tesseract.recognize(canvas, 'eng', {
+    const result = await tesseract.recognize(canvas, language, {
       workerPath,
       corePath,
       langPath,

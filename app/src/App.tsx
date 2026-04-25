@@ -64,6 +64,8 @@ import { RedlinePanel } from './ui/RedlinePanel';
 import { VersionHistoryPanel } from './ui/VersionHistoryPanel';
 import { SideLetterPanel } from './ui/SideLetterPanel';
 import { needsOcr } from './compare/needsOcr';
+import { discoverOcrLanguages, type OcrLanguage } from './ocr/availableLanguages';
+import { OcrLanguagePickerPanel } from './ui/OcrLanguagePickerPanel';
 import type { Finding } from './rules/types';
 import type { ClauseTemplate } from './templates/types';
 import { matchTemplates } from './templates/matchTemplates';
@@ -121,6 +123,18 @@ function AppContent(): JSX.Element {
   // Static legal glossary (Wave 11 Part A): loaded once at mount via the
   // single same-origin fetch the app makes. Failures fall back to [].
   const [glossaryEntries, setGlossaryEntries] = useState<GlossaryEntry[]>([]);
+  const [ocrLanguages, setOcrLanguages] = useState<OcrLanguage[]>([]);
+  const [ocrLanguage, setOcrLanguage] = useState<string>('eng');
+
+  useEffect(() => {
+    void discoverOcrLanguages().then((langs) => {
+      setOcrLanguages(langs);
+      if (langs.length > 0 && !langs.some((l) => l.code === 'eng')) {
+        const first = langs[0];
+        if (first) setOcrLanguage(first.code);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     void getOnboardingDismissedAt().then((ts) => setOnboardingDismissedAtState(ts));
@@ -552,10 +566,15 @@ function AppContent(): JSX.Element {
                   Text extraction may be incomplete.
                 </p>
                 {status.bytes && ocrState.kind !== 'running' && (
-                  <button type="button" onClick={() => { setSelected(null); void pipeline.ocr(); }}>
+                  <button type="button" onClick={() => { setSelected(null); void pipeline.ocr(ocrLanguage); }}>
                     Attempt OCR
                   </button>
                 )}
+                <OcrLanguagePickerPanel
+                  available={ocrLanguages}
+                  selected={ocrLanguage}
+                  onChange={setOcrLanguage}
+                />
                 {ocrState.kind === 'running' && (
                   <p aria-live="polite" className="ocr-progress">
                     Running OCR: {ocrState.stage} ({Math.round(ocrState.pct * 100)}%)

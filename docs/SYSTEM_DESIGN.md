@@ -278,7 +278,16 @@ table for the authoritative figures):
 - `tesseract/*` — OCR runtime, copied from `node_modules` on
   `postinstall`, served same-origin. `eng.traineddata.gz` (language
   data) must be placed manually in `public/tesseract/` — we don't
-  fetch it at install time.
+  fetch it at install time. Additional languages are opt-in: drop
+  `<code>.traineddata.gz` next to it and append a matching entry to
+  `public/tesseract/languages.json` (schema
+  `leaseguard.tesseract.languages.v1`, an array of
+  `{ code, label }`). At runtime `discoverOcrLanguages()` fetches the
+  manifest from the same origin (`/tesseract/languages.json`) — the
+  only OCR-related fetch in the app and the only one allowed by CSP.
+  When the manifest is missing, malformed, or empty the language
+  picker is hidden and OCR runs in `eng` by default; when it lists a
+  single entry the UI renders a static label rather than a dropdown.
 
 ## Privacy contract
 

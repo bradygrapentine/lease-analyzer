@@ -35,7 +35,7 @@ export interface PipelineApi {
   /** Upload + parse + analyze + save + auto-compare. */
   upload: (bytes: Uint8Array, fileName: string) => Promise<void>;
   /** Re-run analyze over the currently loaded doc via OCR. */
-  ocr: () => Promise<void>;
+  ocr: (language?: string) => Promise<void>;
   /** Overwrite status to `analyzed` with a pre-loaded LeaseRecord (e.g. opening from library). */
   open: (record: LeaseRecord) => void;
   /**
@@ -149,7 +149,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     [onLibraryChange, activeRules, client],
   );
 
-  const ocr = useCallback(async (): Promise<void> => {
+  const ocr = useCallback(async (language?: string): Promise<void> => {
     if (status.kind !== 'analyzed' || !status.bytes) return;
     setOcrState({ kind: 'running', pct: 0, stage: 'starting' });
     try {
@@ -157,6 +157,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
       // and keep the original for the viewer.
       const doc = await runOcr(copyBytes(status.bytes), {
         onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
+        ...(language ? { language } : {}),
       });
       const findings = analyze(doc, activeRules);
       setStatus({
