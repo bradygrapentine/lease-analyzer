@@ -30,11 +30,29 @@ export function clearCrashLog(): void {
   entries = [];
 }
 
+/**
+ * Human-readable enumeration of every category included in the diagnostics
+ * payload. Exported so the UI can surface "what's in this file" above the
+ * download button (Wave 11 Part D — risk register: crash-log privacy review).
+ *
+ * Keep in sync with the payload built by `diagnosticsReport`.
+ */
+export function diagnosticsSummary(): string[] {
+  return [
+    'userAgent',
+    `stack-traces (last ${CRASH_LOG_CAPACITY})`,
+    'rule-pack versions',
+    'no PDF bytes',
+    'no IDB contents',
+  ];
+}
+
 export function diagnosticsReport(): string {
   const payload = {
     schema: 'leaseguard.diagnostics.v1',
     generatedAt: new Date().toISOString(),
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+    summary: diagnosticsSummary(),
     crashes: snapshotCrashLog(),
   };
   return JSON.stringify(payload, null, 2);

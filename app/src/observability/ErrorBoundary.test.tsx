@@ -35,6 +35,22 @@ describe('ErrorBoundary', () => {
     spy.mockRestore();
   });
 
+  it('renders the diagnostics summary list above the download button', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <ErrorBoundary>
+        <Boom />
+      </ErrorBoundary>,
+    );
+    // Every category in the diagnostics payload should be surfaced.
+    expect(screen.getByText('userAgent')).toBeInTheDocument();
+    expect(screen.getByText('stack-traces (last 20)')).toBeInTheDocument();
+    expect(screen.getByText('rule-pack versions')).toBeInTheDocument();
+    expect(screen.getByText('no PDF bytes')).toBeInTheDocument();
+    expect(screen.getByText('no IDB contents')).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
   it('the fallback has a "Download diagnostics" button that triggers a download', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const origCreate = document.createElement.bind(document);

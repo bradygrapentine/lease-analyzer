@@ -54,3 +54,28 @@ describe('RULE_PACK_V1 metadata', () => {
     }
   });
 });
+
+// Wave 11 Part D — rule-pack rot review.
+//
+// `plainEnglish` and `suggestedEdit` are technically optional in the Rule
+// type (Phase 14), but the v1 pack has audited values for every rule. This
+// block freezes that audit pass: any future edit that drops either field
+// from a v1 rule will trip CI here, forcing a deliberate decision rather
+// than silent rot. See docs/SECURITY.md §4 for the review schedule.
+describe('RULE_PACK_V1 rot review (Wave 11)', () => {
+  it.each(RULE_PACK_V1.map((r) => [r.id, r] as const))(
+    '%s has a non-empty plainEnglish field',
+    (_id, rule) => {
+      expect(typeof rule.plainEnglish).toBe('string');
+      expect((rule.plainEnglish ?? '').trim().length).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(RULE_PACK_V1.map((r) => [r.id, r] as const))(
+    '%s has a non-empty suggestedEdit field',
+    (_id, rule) => {
+      expect(typeof rule.suggestedEdit).toBe('string');
+      expect((rule.suggestedEdit ?? '').trim().length).toBeGreaterThan(0);
+    },
+  );
+});

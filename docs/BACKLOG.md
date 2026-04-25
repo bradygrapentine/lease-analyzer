@@ -467,21 +467,40 @@ Things worth a deliberate decision before they surprise us.
       (Apache-2.0). `eng.traineddata` is Apache-2.0 per the
       tessdata-fast repo, but redistributing it inside the PWA needs
       an explicit NOTICE file and attribution page.
-- [ ] **Security review of the encrypted archive format** — confirm
-      200k PBKDF2 iterations are still adequate in 2026; consider
-      Argon2id via WASM; document threat model explicitly.
+      Decision: open — outside Wave 11 scope, schedule with Phase 14
+      content-depth follow-ups (2026-04-25).
+- [x] **Security review of the encrypted archive format** —
+      Decision: stay on PBKDF2-HMAC-SHA256 200k iterations + AES-GCM-256
+      for v1; defer Argon2id to a v2 archive format with explicit
+      revisit on **2026-10-01**. Threat model + trigger conditions
+      documented in `docs/SECURITY.md` §1 (2026-04-25).
 - [ ] **Release & versioning policy** — no version bumps yet; decide
       when rule-pack changes bump `RULE_PACK_VERSION` vs the package
       version. Tie to the signed-export format.
-- [ ] **Crash-log privacy review** — `diagnosticsReport` today bundles
-      `navigator.userAgent` and stack traces; if a user shares the
-      JSON, what might leak? Add a user-visible "what's in this file"
-      summary before download.
-- [ ] **CSP regression tests** — an automated check that `index.html`
-      and `sw.js` don't pick up CDN URLs across dependency upgrades.
-- [ ] **Rule-pack rot** — the v1 rules were hand-authored; schedule a
-      review pass now that golden leases and the jurisdiction tag
-      scheme from Phase 10 exist.
+      Decision: open — Wave 11 is content + risk-register only;
+      release-policy decision belongs in a future trust-infra wave
+      (2026-04-25).
+- [x] **Crash-log privacy review** —
+      Decision: `diagnosticsReport` now emits a `summary: string[]`
+      field enumerating every category included (`userAgent`,
+      `stack-traces (last 20)`, `rule-pack versions`, `no PDF bytes`,
+      `no IDB contents`); the Error Boundary surfaces the same list
+      above the download button so users see exactly what they would
+      share. Documented in `docs/SECURITY.md` §2 (2026-04-25).
+- [x] **CSP regression tests** —
+      Decision: shipped `app/scripts/check-csp.mjs` (+ test fixture)
+      as a post-`npm run build` gate that scans `dist/index.html` and
+      `dist/sw.js` for any third-party origin in script/link/img/CSS
+      `url()`/`importScripts` references. Wired into the CI workflow
+      after `npm run build`. Documented in `docs/SECURITY.md` §3
+      (2026-04-25).
+- [x] **Rule-pack rot** —
+      Decision: added a rot-review test block to
+      `app/src/rules/packV1.test.ts` that asserts every v1 rule has a
+      non-empty `plainEnglish` AND `suggestedEdit`, freezing the
+      current audit pass. Quarterly (next 2026-07-25) and annual (next
+      2027-04-25) human review cadences documented in
+      `docs/SECURITY.md` §4 (2026-04-25).
 
 ## Explicitly out of scope
 
