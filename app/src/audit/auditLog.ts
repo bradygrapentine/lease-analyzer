@@ -34,7 +34,21 @@ export interface AuditEntry {
   prevHash: string;
   /** SHA-256 hex of the canonical JSON of {seq,timestamp,kind,payload,prevHash}. */
   entryHash: string;
+  /**
+   * Wave 8 Part D — which signing key id (e.g. 'k0', 'k1') was active when
+   * this entry was appended. Old entries that predate this field default to
+   * 'k0' (DEFAULT_KEY_ID) for back-compat. Intentionally NOT covered by the
+   * hash chain so adding the field is back-compat with v1 audit logs.
+   */
+  signedByKeyId?: string;
 }
+
+/**
+ * Default key id assigned to legacy audit entries with no `signedByKeyId`
+ * field. Matches the v1 -> v2 signing-store migration which renames the
+ * legacy single key to 'k0'.
+ */
+export const DEFAULT_KEY_ID = 'k0';
 
 interface AuditSchema extends DBSchema {
   [ENTRIES]: {
@@ -164,11 +178,49 @@ export async function appendAuditEntry(input: AppendInput): Promise<AuditEntry> 
     prevHash,
   };
   const entryHash = await computeEntryHash(base);
-  const entry: AuditEntry = { ...base, entryHash };
 
-  // 3. Write.
+  // 3. Resolve signedByKeyId. Wave 8 Part D — entries record which signing
+  // key id was active at append time so verifiers know which public key to
+  // check historical entries against. The hash chain itself does NOT cover
+  // this field, so adding it is back-compat with v1 audit logs.
+  //
+  // Resolution order:
+  //   1. Explicit override on the input (rare; used by re-import paths).
+  //   2. The most recent 'key-rotated' marker in the existing chain
+  //      (payload.toKeyId), which records the rotation event.
+  //   3. DEFAULT_KEY_ID ('k0') for the very first entries before any
+  //      rotation has happened.
+  let signedByKeyId: string = DEFAULT_KEY_ID;
+  const explicit = (input as { signedByKeyId?: unknown }).signedByKeyId;
+  if (typeof explicit === 'string') {
+    signedByKeyId = explicit;
+  } else {
+    const lastRotation = await findLastRotationKeyId(db);
+    if (lastRotation) signedByKeyId = lastRotation;
+  }
+  const entry: AuditEntry = { ...base, entryHash, signedByKeyId };
+
+  // 4. Write.
   await db.put(ENTRIES, entry);
   return entry;
+}
+
+async function findLastRotationKeyId(
+  db: IDBPDatabase<AuditSchema>,
+): Promise<string | null> {
+  const tx = db.transaction(ENTRIES, 'readonly');
+  let cursor = await tx.objectStore(ENTRIES).openCursor(null, 'prev');
+  while (cursor) {
+    const v = cursor.value;
+    if (v.kind === 'key-rotated') {
+      const toKeyId = (v.payload as { toKeyId?: unknown }).toKeyId;
+      await tx.done;
+      return typeof toKeyId === 'string' ? toKeyId : null;
+    }
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  return null;
 }
 
 export async function listAuditEntries(): Promise<AuditEntry[]> {
@@ -176,7 +228,14 @@ export async function listAuditEntries(): Promise<AuditEntry[]> {
   const all = await db.getAll(ENTRIES);
   // getAll on a keyPath store returns by key order (ascending), which is
   // also seq order. Sort defensively in case fake-indexeddb ever changes.
-  return all.sort((a, b) => a.seq - b.seq);
+  // Wave 8 Part D — back-fill `signedByKeyId` to DEFAULT_KEY_ID for any
+  // legacy entries written before the field existed.
+  return all
+    .sort((a, b) => a.seq - b.seq)
+    .map((e) => ({
+      ...e,
+      signedByKeyId: e.signedByKeyId ?? DEFAULT_KEY_ID,
+    }));
 }
 
 export interface ChainVerification {
