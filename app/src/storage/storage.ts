@@ -4,11 +4,12 @@ import type { Finding } from '../rules/types';
 import type { ClauseTemplate } from '../templates/types';
 
 const DB_NAME = 'leaseguard';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE = 'leases';
 const SETTINGS = 'settings';
 const STANDARD_KEY = 'standardLeaseId';
 export const CLAUSE_TEMPLATES_STORE = 'clauseTemplates';
+export const BY_FINDING_AND_PACK_INDEX = 'by-finding-and-pack';
 
 export interface LeaseRecord {
   id: string;
@@ -36,7 +37,10 @@ interface LeaseGuardSchema extends DBSchema {
   [STORE]: {
     key: string;
     value: LeaseRecord;
-    indexes: { 'by-createdAt': number };
+    indexes: {
+      'by-createdAt': number;
+      'by-finding-and-pack': [number, string];
+    };
   };
   [SETTINGS]: {
     key: string;
@@ -57,7 +61,7 @@ export function _resetDbForTests(): void {
 export async function openLeaseDb(): Promise<IDBPDatabase<LeaseGuardSchema>> {
   if (!dbPromise) {
     dbPromise = openDB<LeaseGuardSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion, _newVersion, _tx) {
+      upgrade(db, oldVersion, _newVersion, tx) {
         // v0 → v1: leases store (keyPath: id, by-createdAt index).
         if (oldVersion < 1) {
           if (!db.objectStoreNames.contains(STORE)) {
@@ -75,6 +79,19 @@ export async function openLeaseDb(): Promise<IDBPDatabase<LeaseGuardSchema>> {
         if (oldVersion < 3) {
           if (!db.objectStoreNames.contains(CLAUSE_TEMPLATES_STORE)) {
             db.createObjectStore(CLAUSE_TEMPLATES_STORE, { keyPath: 'id' });
+          }
+        }
+        // v3 → v4: compound index over [findingCount, rulePackVersion] so
+        // the portfolio panel can scan the "clean leases on the latest pack"
+        // partition without a full-store getAll. Uses fields already on
+        // every LeaseRecord; existing rows are re-indexed automatically.
+        if (oldVersion < 4) {
+          const store = tx.objectStore(STORE);
+          if (!store.indexNames.contains(BY_FINDING_AND_PACK_INDEX)) {
+            store.createIndex(BY_FINDING_AND_PACK_INDEX, [
+              'findingCount',
+              'rulePackVersion',
+            ]);
           }
         }
       },

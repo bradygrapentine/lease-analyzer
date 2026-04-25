@@ -1,10 +1,22 @@
+import { useEffect, useState } from 'react';
 import type { LeaseMetadata } from '../storage/storage';
+import {
+  listLeasesFiltered,
+  type ListLeasesFilter,
+} from '../storage/listLeasesFiltered';
 import type { Finding, Severity } from '../rules/types';
 
 export interface PortfolioPanelProps {
   leases: LeaseMetadata[];
   findingsByLease: Map<string, Finding[]>;
   onOpenLease: (id: string) => void;
+  /**
+   * Optional server-side filter. When set, the panel queries the
+   * `by-finding-and-pack` IDB index via `listLeasesFiltered` and
+   * renders the resulting subset instead of `leases`. Unset → uses
+   * `leases` as-is (caller-supplied).
+   */
+  filter?: ListLeasesFilter;
 }
 
 interface RuleColumn {
@@ -26,8 +38,26 @@ export function PortfolioPanel({
   leases,
   findingsByLease,
   onOpenLease,
+  filter,
 }: PortfolioPanelProps): JSX.Element {
-  if (leases.length === 0) {
+  const [filtered, setFiltered] = useState<LeaseMetadata[] | null>(null);
+
+  useEffect(() => {
+    if (!filter) {
+      setFiltered(null);
+      return;
+    }
+    let cancelled = false;
+    void listLeasesFiltered(filter).then((rows) => {
+      if (!cancelled) setFiltered(rows);
+    });
+    return (): void => {
+      cancelled = true;
+    };
+  }, [filter]);
+
+  const visible = filter && filtered ? filtered : leases;
+  if (visible.length === 0) {
     return (
       <section aria-label="portfolio">
         <h2>Portfolio</h2>
@@ -36,7 +66,7 @@ export function PortfolioPanel({
     );
   }
 
-  const columns = rankRuleColumns(leases, findingsByLease);
+  const columns = rankRuleColumns(visible, findingsByLease);
 
   return (
     <section aria-label="portfolio">
@@ -56,7 +86,7 @@ export function PortfolioPanel({
             </tr>
           </thead>
           <tbody>
-            {leases.map((lease) => {
+            {visible.map((lease) => {
               const findings = findingsByLease.get(lease.id) ?? [];
               const bestBySeverity = bestSeverityByRule(findings);
               return (
