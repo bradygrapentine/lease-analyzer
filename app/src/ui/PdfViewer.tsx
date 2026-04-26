@@ -53,7 +53,17 @@ export function PdfViewer({
     if (selectedPage == null) return;
     const el = document.getElementById(`pdf-page-${selectedPage}`);
     if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Honor `prefers-reduced-motion` so the scroll respects the OS-level
+      // motion preference (WCAG 2.3.3). Fall back to `smooth` when the
+      // media query is unavailable (jsdom) or the user hasn't opted in.
+      const reduceMotion =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
     }
   }, [selectedPage]);
 
@@ -67,10 +77,17 @@ export function PdfViewer({
 
   function overlayStyle(bbox: BoundingBox, page: PageText): CSSProperties {
     // PDF coords: y increases upward. Canvas CSS coords: top-left origin.
-    const left = bbox.xLeft;
-    const width = Math.max(1, bbox.xRight - bbox.xLeft);
-    const top = page.height - bbox.yTop;
-    const height = Math.max(1, bbox.yTop - bbox.yBottom);
+    // Clamp the overlay to the page viewport so a finding whose bbox
+    // overshoots (landscape / oversized fonts) doesn't render past the
+    // canvas edges and bleed into adjacent layout.
+    const rawLeft = bbox.xLeft;
+    const rawWidth = Math.max(1, bbox.xRight - bbox.xLeft);
+    const rawTop = page.height - bbox.yTop;
+    const rawHeight = Math.max(1, bbox.yTop - bbox.yBottom);
+    const left = Math.max(0, rawLeft);
+    const top = Math.max(0, rawTop);
+    const width = Math.max(1, Math.min(rawLeft + rawWidth, page.width) - left);
+    const height = Math.max(1, Math.min(rawTop + rawHeight, page.height) - top);
     return {
       position: 'absolute',
       left: `${left}px`,

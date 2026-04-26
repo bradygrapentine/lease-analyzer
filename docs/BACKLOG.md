@@ -158,6 +158,18 @@ Local-only, CSP-compatible.
       `definitions` prop is supplied.
 - [ ] Golden tests: a commercial lease fixture exercising table +
       definitions + references simultaneously.
+- [ ] **Per-span bbox on `Finding`** so the PDF viewer can highlight the
+      exact matched substring instead of the whole paragraph. Today
+      `Finding.span` is `{start, end}` char offsets into
+      `paragraph.text`; mapping that back to a canvas bbox requires
+      walking the paragraph's `PageText.items[]` (each item has
+      x/y/width/height). Plan: extend `Finding` with a derived
+      `spanBbox: BoundingBox` populated by the rules engine when the
+      span maps cleanly to one or more text items, and consumed by
+      `PdfViewer.tsx` (multiple rects when the span straddles items).
+      Out of scope for Wave 15-C (shipped clipping + reduced-motion
+      only); track as a dedicated follow-up wave because it touches
+      parser → rules → ui in lockstep.
 
 ## Phase 9 — Negotiation support
 
