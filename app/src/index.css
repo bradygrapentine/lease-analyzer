@@ -1,13 +1,83 @@
-:root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  line-height: 1.5;
-  color-scheme: light dark;
+@import 'tailwindcss';
+
+/* Self-hosted Source Serif 4 — local font-face declarations.
+   Files dropped under app/public/fonts/ in step A.4. */
+@font-face {
+  font-family: 'Source Serif 4';
+  src: url('/fonts/source-serif-4-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  src: url('/fonts/source-serif-4-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
 }
 
-body {
-  margin: 0;
-  min-height: 100dvh;
+@theme {
+  /* Surfaces */
+  --color-paper: #faf6ee;
+  --color-paper-raised: #ffffff;
+  --color-paper-sunken: #f3eddc;
+
+  /* Text */
+  --color-fg: #2a2316;
+  --color-fg-body: #4a3f25;
+  --color-fg-muted: #7a6f57;
+  --color-fg-faint: #a59a7e;
+
+  /* Rules / lines */
+  --color-rule: #d6cdb6;
+  --color-rule-subtle: #e8e0cf;
+
+  /* Single accent */
+  --color-ink: #1f3a4d;
+
+  /* Severity (functional color, never the sole signal) */
+  --color-severity-high: #b1442d;
+  --color-severity-medium: #b8862c;
+  --color-severity-low: #5a7a5a;
+  --color-severity-info: #6b7b8c;
+
+  /* Status */
+  --color-positive: #4a7a4a;
+  --color-negative: #9a3022;
+
+  /* Type */
+  --font-display: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  /* Type sizes — paired with line-height */
+  --text-display: 28px;
+  --text-display--line-height: 32px;
+  --text-heading: 15px;
+  --text-heading--line-height: 22px;
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+  --text-small: 12.5px;
+  --text-small--line-height: 18px;
+  --text-mono: 12px;
+  --text-mono--line-height: 18px;
+
+  /* Radius */
+  --radius-sm: 2px;
+  --radius: 4px;
+
+  /* Single shadow */
+  --shadow-paper: 0 1px 0 rgba(42, 35, 22, 0.05);
 }
+
+/* Base */
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-fg-body);
+  background: var(--color-paper);
+}
+body { margin: 0; min-height: 100dvh; }
 
 main {
   max-width: 72rem;
@@ -15,18 +85,10 @@ main {
   padding: 2rem 1rem;
 }
 
-.split {
-  display: grid;
-  gap: 1rem;
-  align-items: start;
-}
-
+.split { display: grid; gap: 1rem; align-items: start; }
 @media (min-width: 960px) {
-  .split {
-    grid-template-columns: minmax(18rem, 28rem) 1fr;
-  }
+  .split { grid-template-columns: minmax(18rem, 28rem) 1fr; }
 }
-
 .split aside[aria-label='findings'] {
   position: sticky;
   top: 1rem;
@@ -34,58 +96,17 @@ main {
   overflow-y: auto;
 }
 
-.pdf-viewer .pdf-page {
+/* Legacy PDF-viewer cascade — every selector from the pre-Wave-27
+   index.css that targets `.pdf-*` gets prefixed with
+   `.pdf-viewer-legacy ` so it can't bleed into Tailwind utilities.
+   `app/src/ui/PdfViewer.tsx` gets a one-line edit in Part B that
+   wraps its root in `<div class="pdf-viewer-legacy">`. The pre-wave
+   index.css contained four such selectors (.pdf-viewer .pdf-page,
+   .pdf-viewer .pdf-overlay, .pdf-viewer .pdf-overlay-bbox,
+   .pdf-viewer .pdf-text-layer); migrate each one verbatim with the
+   prefix. */
+.pdf-viewer-legacy .pdf-page {
   position: relative;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-rule);
   margin-bottom: 0.5rem;
-}
-
-.pdf-highlight {
-  transition: opacity 150ms ease;
-}
-
-.pdf-viewer canvas {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-.ocr-banner {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-  color: #6a4a00;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-}
-
-.view-toggle {
-  display: inline-flex;
-  gap: 0.25rem;
-  margin-left: 0.5rem;
-}
-
-.view-toggle button[aria-pressed='true'] {
-  font-weight: 600;
-  text-decoration: underline;
-}
-
-.workflow-panel .actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.portfolio-scroll {
-  max-width: 100%;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }

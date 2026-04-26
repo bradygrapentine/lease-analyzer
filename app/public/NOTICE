@@ -86,3 +86,20 @@ This NOTICE must be re-reviewed and updated before any new tesseract
 asset is added to `app/public/tesseract/` (new traineddata language,
 upstream major-version bump, or replacement WebAssembly engine). See
 `docs/SECURITY.md` §5 for the full re-review checklist.
+
+
+====================================================================
+Source Serif 4
+====================================================================
+Copyright 2014-2023 Adobe (http://www.adobe.com/), with Reserved
+Font Name 'Source'. Source is a trademark of Adobe in the United
+States and/or other countries.
+
+Licensed under the SIL Open Font License, Version 1.1.
+This license is available at: https://scripts.sil.org/OFL
+
+The font is included as part of the LeaseGuard application; the
+files served at /fonts/source-serif-4-400.woff2 and
+/fonts/source-serif-4-600.woff2 are unmodified subsets distributed
+under OFL §1 (subsetting permitted). Full license text and source
+files: https://github.com/adobe-fonts/source-serif
