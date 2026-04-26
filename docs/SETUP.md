@@ -87,15 +87,46 @@ cd app
 npm run build:classifier-assets
 ```
 
-This downloads ~17.5 MiB of `Xenova/paraphrase-MiniLM-L3-v2` files
-into `app/public/classifier/`. Idempotent — subsequent runs no-op
-when the files are already present. NOT auto-run on `npm install`
-(CI builds that don't need the classifier shouldn't pay the fetch
-cost).
+This drops **~27 MiB total** under `app/public/classifier/`:
 
-Without this drop, the hybrid path silently falls back to the
-deterministic rules engine even when the flag is on. The rest of
-the app is unaffected.
+- `~17.5 MiB` of `Xenova/paraphrase-MiniLM-L3-v2` model files
+  (`onnx/model_quantized.onnx`, tokenizer, config) under
+  `app/public/classifier/Xenova/paraphrase-MiniLM-L3-v2/`.
+- `~9.5 MiB` of `ort-wasm-simd.wasm` (ONNX Runtime, single-thread
+  SIMD; copied from `node_modules/@xenova/transformers/dist/`)
+  into `app/public/classifier/onnx-runtime/`.
+
+Both must be served same-origin (the app's CSP sets `connect-src
+'self'`). The Wave 25 loader fix (`app/src/llm/loadClassifier.ts`)
+configures `@xenova/transformers` to point at these paths and
+disables remote-model fallback so a missing-asset error surfaces
+immediately rather than silently degrading.
+
+Idempotent — subsequent runs no-op when the files are already
+present. NOT auto-run on `npm install` (CI builds that don't need
+the classifier shouldn't pay the fetch cost). Without this drop,
+the hybrid path silently falls back to the deterministic rules
+engine even when the flag is on; the rest of the app is unaffected.
+
+### Verifying the classifier works end-to-end
+
+A gated Playwright spec exercises the full chain (asset load → ONNX
+runtime boot → embedding → cosine similarity → hybrid finding →
+click-to-explain disclosure). After the `build:classifier-assets`
+drop:
+
+```bash
+cd app && npm run build && cd ..
+RUN_REAL_MODEL=1 npx playwright test --project=chromium tests/e2e/hybrid-golden.spec.ts
+```
+
+The spec is skipped without `RUN_REAL_MODEL=1`. First-run wall time
+is ~30–60 s (16 MiB ONNX fetch + WASM init); subsequent runs reuse
+the browser HTTP cache and complete in a couple of seconds.
+
+See [`docs/SECURITY.md`](./SECURITY.md) §7 for the standing
+`npm audit` decisions on the dep chain that ships with this
+runtime.
 
 ## Troubleshooting
 
