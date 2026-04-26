@@ -1,5 +1,12 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+vi.mock('../llm/loadClassifier', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../llm/loadClassifier')>();
+  return {
+    ...mod,
+    loadClassifier: vi.fn(mod.loadClassifier),
+  };
+});
 vi.mock('../ocr/runOcr', () => ({
   runOcr: vi.fn(async (_bytes: Uint8Array) => ({
     pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
@@ -11,6 +18,7 @@ vi.mock('../ocr/runOcr', () => ({
   })),
 }));
 import { usePipeline } from './usePipeline';
+import { loadClassifier } from '../llm/loadClassifier';
 import { makePdf } from '../parser/testFixtures';
 import {
   _resetDbForTests,
@@ -279,6 +287,86 @@ describe('usePipeline', () => {
     });
     if (result.current.status.kind !== 'error') throw new Error('expected error');
     expect(result.current.status.message).toBe('boom');
+  });
+
+  // Wave 24-A: upload() now runs the classifier pass on the main thread
+  // after the worker returns, when Phase 18 is enabled AND the classifier
+  // loads. These two tests pin the flag-on success path (extras appended)
+  // and the flag-on load-fails fallback (deterministic findings unchanged
+  // — no error surfaced).
+  it('upload() appends hybrid findings when Phase 18 flag is on and classifier loads', async () => {
+    Object.defineProperty(window, 'location', {
+      value: new URL('http://localhost/?phase18=on'),
+      writable: true,
+    });
+    // Inject a stub embedder that produces high similarity for any pair
+    // (returns identical unit vectors). The fixture paragraphs include
+    // "renewal" / "arbitration" / "jury" tokens that the rule pack
+    // pre-filter will key on, so the classifier pass has work to do.
+    const stubEmbed = async (texts: string[]): Promise<Float32Array[]> =>
+      texts.map(() => new Float32Array([1, 0, 0]));
+    vi.mocked(loadClassifier).mockResolvedValueOnce(stubEmbed);
+
+    // Use a single non-matching rule whose title shares the "lease"
+    // keyword with the fixture paragraphs — deterministic emits 0,
+    // pre-filter passes, stub embedder returns similarity = 1.
+    const classifyRule: import('../rules/types').Rule = {
+      id: 'classify-only',
+      severity: 'low',
+      category: 'general',
+      title: 'Lease classification probe',
+      explanation: 'probe',
+      citation: null,
+      match: { type: 'regex', pattern: 'definitely_no_match_token_xyz' },
+    };
+    const audit = vi.fn(async () => undefined);
+    const { result } = renderHook(() => usePipeline({ audit, rules: [classifyRule] }));
+    const bytes = await makeBytes();
+    await act(async () => {
+      await result.current.upload(bytes, 'lease.pdf');
+    });
+    expect(result.current.status.kind).toBe('analyzed');
+    // At least one llm-classify audit entry should have fired (the
+    // stub embedder produces similarity = 1 for every candidate, so
+    // every pre-filter hit becomes a hybrid finding).
+    const llmCalls = audit.mock.calls.filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (c: any[]) => c[0]?.kind === 'llm-classify',
+    );
+    expect(llmCalls.length).toBeGreaterThan(0);
+    // Restore.
+    Object.defineProperty(window, 'location', {
+      value: new URL('http://localhost/'),
+      writable: true,
+    });
+  });
+
+  it('upload() falls back to deterministic findings when classifier load fails (no error surfaced)', async () => {
+    Object.defineProperty(window, 'location', {
+      value: new URL('http://localhost/?phase18=on'),
+      writable: true,
+    });
+    vi.mocked(loadClassifier).mockRejectedValueOnce(new Error('wasm boot failed'));
+
+    const audit = vi.fn(async () => undefined);
+    const { result } = renderHook(() => usePipeline({ audit }));
+    const bytes = await makeBytes();
+    await act(async () => {
+      await result.current.upload(bytes, 'lease.pdf');
+    });
+    // Status reaches 'analyzed' regardless — load failure is swallowed.
+    expect(result.current.status.kind).toBe('analyzed');
+    // No llm-classify audit entries (the classifier never ran).
+    const llmCalls = audit.mock.calls.filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (c: any[]) => c[0]?.kind === 'llm-classify',
+    );
+    expect(llmCalls).toHaveLength(0);
+    // Restore.
+    Object.defineProperty(window, 'location', {
+      value: new URL('http://localhost/'),
+      writable: true,
+    });
   });
 
   it('routes upload() through an injected pipelineClient (Phase 13 worker hook)', async () => {

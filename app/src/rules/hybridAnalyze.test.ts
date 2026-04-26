@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runHybridAnalyze, type EmbedFunction } from './hybridAnalyze';
+import { runClassifierPass, runHybridAnalyze, type EmbedFunction } from './hybridAnalyze';
 import type { LeaseDocument } from '../parser/types';
 import type { Rule } from './types';
 
@@ -281,6 +281,56 @@ describe('runHybridAnalyze', () => {
       threshold: 0.0001,
     });
     expect(findings).toHaveLength(0);
+  });
+
+  // Wave 24-A: runClassifierPass is the standalone classifier pass that
+  // the upload-path now calls after the Web Worker returns deterministic
+  // findings. It must return ONLY the delta (extras) and never re-emit
+  // findings against paragraphs already covered by `baseFindings`.
+  it('runClassifierPass: returns delta only when given pre-computed baseFindings', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    const d = doc(['The renewal clause grants additional renewal terms upon notice.']);
+    const extras = await runClassifierPass({
+      doc: d,
+      rules: [rule()],
+      baseFindings: [], // no deterministic findings yet
+      embedFn,
+      threshold: 0.3,
+    });
+    expect(extras).toHaveLength(1);
+    expect(extras[0]?.confidence).toBe(0.5);
+    expect(extras[0]?.paragraphIndex).toBe(0);
+  });
+
+  it('runClassifierPass: never duplicates findings against paragraphs already covered by baseFindings', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    const d = doc(['The renewal clause grants additional renewal terms upon notice.']);
+    // Pre-seed a deterministic finding on paragraph 0 — the classifier
+    // pass must skip it.
+    const extras = await runClassifierPass({
+      doc: d,
+      rules: [rule()],
+      baseFindings: [
+        {
+          ruleId: 'r1',
+          severity: 'medium',
+          category: 'general',
+          title: 'Auto-renewal clause',
+          explanation: 'preset',
+          citation: null,
+          page: 1,
+          paragraphIndex: 0,
+          snippet: '',
+          span: { start: 0, end: 0 },
+          confidence: 0.9,
+          negated: false,
+          rulePackVersion: '1',
+        },
+      ],
+      embedFn,
+      threshold: 0.3,
+    });
+    expect(extras).toEqual([]);
   });
 
   it('skips rules whose title has no 4+-char tokens (cheap pre-filter is empty)', async () => {

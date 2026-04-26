@@ -54,6 +54,17 @@ export interface HybridAnalyzeOptions {
   modelId?: string;
 }
 
+export interface RunClassifierPassOptions {
+  doc: LeaseDocument;
+  rules: Rule[] | CompiledRule[];
+  baseFindings: Finding[];
+  embedFn: EmbedFunction;
+  threshold?: number;
+  maxLlmCalls?: number;
+  audit?: (entry: HybridAnalyzeAuditEntry) => Promise<void> | void;
+  modelId?: string;
+}
+
 const DEFAULT_THRESHOLD = 0.7;
 const DEFAULT_MAX_LLM_CALLS = 50;
 
@@ -63,14 +74,39 @@ const DEFAULT_MAX_LLM_CALLS = 50;
  */
 export async function runHybridAnalyze(opts: HybridAnalyzeOptions): Promise<Finding[]> {
   const { doc, rules, enabled, embedFn } = opts;
+  const baseFindings = analyze(doc, rules);
+  if (!enabled || embedFn === null) return baseFindings;
+  const extras = await runClassifierPass({
+    doc,
+    rules,
+    baseFindings,
+    embedFn,
+    ...(opts.threshold !== undefined ? { threshold: opts.threshold } : {}),
+    ...(opts.maxLlmCalls !== undefined ? { maxLlmCalls: opts.maxLlmCalls } : {}),
+    ...(opts.audit ? { audit: opts.audit } : {}),
+    ...(opts.modelId !== undefined ? { modelId: opts.modelId } : {}),
+  });
+  return [...baseFindings, ...extras];
+}
+
+/**
+ * Phase-18 classifier pass over a doc, returning ONLY the extras
+ * (hybrid findings) so the caller can concat them onto pre-computed
+ * `baseFindings`. Wave 24-A extracts this so the upload path can run
+ * the classifier after the worker returns deterministic findings,
+ * without re-running the regex pass on the main thread.
+ *
+ * The pass skips paragraphs that already have at least one entry in
+ * `baseFindings` (deterministic findings always win).
+ */
+export async function runClassifierPass(opts: RunClassifierPassOptions): Promise<Finding[]> {
+  const { doc, rules, baseFindings, embedFn } = opts;
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
   const maxLlmCalls = opts.maxLlmCalls ?? DEFAULT_MAX_LLM_CALLS;
   const audit = opts.audit;
   const modelId = opts.modelId ?? 'unknown';
 
-  const baseFindings = analyze(doc, rules);
-
-  if (!enabled || embedFn === null || maxLlmCalls <= 0) return baseFindings;
+  if (maxLlmCalls <= 0) return [];
 
   // Index of paragraphs that already have at least one finding —
   // these are skipped on the classifier pass.
@@ -115,7 +151,7 @@ export async function runHybridAnalyze(opts: HybridAnalyzeOptions): Promise<Find
     if (work.length >= maxLlmCalls) break;
   }
 
-  if (work.length === 0) return baseFindings;
+  if (work.length === 0) return [];
 
   // Embed paragraphs and rule titles in two batched calls. De-dupe.
   const paraIdxs = Array.from(new Set(work.map((w) => w.pIdx)));
@@ -179,7 +215,7 @@ export async function runHybridAnalyze(opts: HybridAnalyzeOptions): Promise<Find
     }
   }
 
-  return [...baseFindings, ...extras];
+  return extras;
 }
 
 function cosine(a: Float32Array, b: Float32Array): number {
