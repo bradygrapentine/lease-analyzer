@@ -63,24 +63,3 @@ export const migrateLegacyOverrides = (
   }
   return out;
 };
-
-/**
- * Build a `Record<ruleId, Severity>` resolver map for a single lease, suitable
- * for handing to `applySeverityOverrides`. Lease-scope wins over portfolio-
- * scope; rules with no entry are omitted (caller falls back to pack default).
- */
-export const buildResolverMapForLease = (
-  entries: readonly ScopedOverrideEntry[],
-  leaseId: string,
-): Record<string, Severity> => {
-  const portfolio: Record<string, Severity> = {};
-  const lease: Record<string, Severity> = {};
-  for (const e of entries) {
-    if (e.scope === 'portfolio') {
-      portfolio[e.ruleId] = e.severity;
-    } else if (e.scope === 'lease' && e.leaseId === leaseId) {
-      lease[e.ruleId] = e.severity;
-    }
-  }
-  return { ...portfolio, ...lease };
-};
