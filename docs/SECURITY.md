@@ -12,6 +12,33 @@ items closed out in Wave 11 (see `docs/BACKLOG.md` → "Known unknowns &
 risk register"). When a related design changes, update the matching
 section here in the same PR.
 
+**Last review:** 2026-04-25 (Wave 16-F).
+
+Findings from the 2026-04-25 pass:
+
+- `npm audit --audit-level=high` was reporting 4 HIGH findings via
+  `vite-plugin-pwa → workbox-build → @rollup/plugin-terser →
+  serialize-javascript@<=7.0.4` (RCE via `RegExp.flags` /
+  `Date.prototype.toISOString`, plus a CPU-DoS). Pinned via the new
+  `overrides.serialize-javascript: ^7.0.5` block in `app/package.json`.
+  All four HIGHs cleared; 9 MODERATEs remain in the Storybook /
+  vite-plugin-pwa transitive tree (build-time only, not shipped to
+  end users — track for routine maintenance, not blocking).
+- A03 Injection: zero `dangerouslySetInnerHTML` callers in `app/src`.
+- A05 Misconfiguration: `npm run check:csp` clean; CSP in
+  `app/index.html` is `default-src 'self'` with `style-src 'self'
+  'unsafe-inline'` (React inline styles), `connect-src 'self' blob:`
+  (worker postMessage), `worker-src 'self' blob:`, and `object-src
+  'none'`. No external origins.
+- A02 Crypto: encrypted-archive AES-GCM uses a fresh `randomBytes`
+  IV per encryption (`app/src/storage/archive.ts:28`); Ed25519 keys
+  go through `crypto.subtle.generateKey` and the private key never
+  leaves IDB unencrypted (Wave 8-D's `signingKeys.ts`). No regressions
+  vs. the Wave 8-D baseline.
+- A08 Integrity: SHA-256 via `crypto.subtle` is the single content
+  fingerprinting source (`app/src/security/inputHash.ts`); no parallel
+  hashing implementations.
+
 ---
 
 ## 1. Encrypted archive threat model
