@@ -696,6 +696,22 @@ Things worth a deliberate decision before they surprise us.
       current audit pass. Quarterly (next 2026-07-25) and annual (next
       2027-04-25) human review cadences documented in
       `docs/SECURITY.md` §4 (2026-04-25).
+- [x] **npm audit standing decisions** — `app/` reports 4 critical
+      (`protobufjs <7.5.5` via `@xenova/transformers`) + 9 moderate
+      (`esbuild`/`vite` chain). Both audited in Wave 26-B and
+      consciously deferred: the critical never reaches the
+      vulnerable `protobufjs.parse()` (Phase 18 only uses
+      `transformers.pipeline()`); the moderate is dev-server-only
+      and the auditor's fix needs vite@8 (Wave 27 candidate).
+      Decisions + revisit triggers documented in `docs/SECURITY.md`
+      §7 (2026-04-26). Re-run `cd app && npm audit` quarterly.
+- [ ] **Vite 7-or-8 upgrade** (Wave 27 candidate) — clears the
+      moderate dev-time esbuild chain. Pre-flight: storybook 8 +
+      `vite-plugin-pwa` compatibility check; coverage threshold
+      revalidation; Workbox precache size verification.
+- [ ] **`@xenova/transformers` upstream bump watch** — when
+      transformers ships with `protobufjs >= 7.5.5`, take the
+      bump and retire `SECURITY.md` §7.1's "accept risk" line.
 
 ## Explicitly out of scope
 
