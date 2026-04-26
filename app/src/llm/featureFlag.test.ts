@@ -87,4 +87,34 @@ describe('isPhase18Enabled', () => {
     setPhase18Override(null);
     expect(isPhase18Enabled()).toBe(false);
   });
+
+  it('URL parsing throws are swallowed (returns null, not crash)', () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        get search() {
+          throw new Error('synthetic search getter failure');
+        },
+      },
+      writable: true,
+    });
+    // Should not throw; default-off applies.
+    expect(isPhase18Enabled()).toBe(false);
+  });
+
+  it('localStorage read errors are swallowed (returns null, not crash)', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('synthetic storage getter failure');
+      },
+      setItem: () => {},
+      removeItem: () => {},
+    });
+    expect(isPhase18Enabled()).toBe(false);
+  });
+
+  it('setPhase18Override is a no-op when localStorage is undefined', () => {
+    vi.stubGlobal('localStorage', undefined);
+    // Should not throw.
+    expect(() => setPhase18Override('on')).not.toThrow();
+  });
 });
