@@ -57,6 +57,19 @@ export interface Rule {
    * addition — purely additive.
    */
   suggestedEdit?: string;
+  /**
+   * Wave 29 Part B (Phase 2) — optional hybrid pre-filter anchors.
+   * The classifier pass uses the rule title to derive 4+-char keyword
+   * tokens for cheap pre-filtering before computing embedding similarity.
+   * For rules whose title doesn't capture common phrasings (e.g.
+   * "indemnification" doesn't include "hold harmless"), `hybridAnchors`
+   * supplies extra phrases that are MERGED INTO the keyword set so
+   * paragraphs containing those anchors are considered for the
+   * classifier pass. Anchors are matched as case-insensitive substrings
+   * of the paragraph text. Purely additive — rules without
+   * `hybridAnchors` keep current behavior.
+   */
+  hybridAnchors?: string[];
 }
 
 export interface Span {

@@ -115,14 +115,25 @@ export async function runClassifierPass(opts: RunClassifierPassOptions): Promise
 
   // Pre-compute keyword sets for each rule (lowercased word set from
   // rule title). Rule title is the cheapest "anchor" we have without
-  // synthesizing prompts.
+  // synthesizing prompts. Wave 29 Part B (Phase 2): rules may also
+  // declare `hybridAnchors` — additional case-insensitive substrings
+  // (often multi-word phrases like "hold harmless") that should also
+  // qualify a paragraph for the classifier pass. Anchors are merged
+  // into the keyword set; the original title-derived tokens are kept.
   const rulesArr = rules as Rule[];
   const ruleKeywords = rulesArr.map((r) => {
     const tokens = r.title
       .toLowerCase()
       .split(/[^a-z0-9]+/)
       .filter((w) => w.length >= 4);
-    return new Set(tokens);
+    const set = new Set<string>(tokens);
+    if (r.hybridAnchors) {
+      for (const a of r.hybridAnchors) {
+        const trimmed = a.trim().toLowerCase();
+        if (trimmed.length > 0) set.add(trimmed);
+      }
+    }
+    return set;
   });
 
   // Build the work queue: (paragraphIndex, ruleIndex) pairs where the
