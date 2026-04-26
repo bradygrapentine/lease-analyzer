@@ -54,6 +54,21 @@ running on :4173 is reused instead of being torn down.
 The HTML report is uploaded as a build artifact when the job fails so
 you can replay the trace + screenshots locally.
 
+## a11y (`a11y.spec.ts`)
+
+A second spec runs `@axe-core/playwright` against the analyzed-lease
+view (sample-lease loaded, findings panel populated). It calls
+`AxeBuilder.withTags(['wcag2a', 'wcag2aa'])` and fails the build on
+any `serious` or `critical` impact violation. `moderate` / `minor`
+impacts surface in the report but don't gate the merge — those are on
+a separate manual-review track.
+
+The unit-side companion is `app/src/ui/FindingsPanel.a11y.test.tsx`,
+which uses `vitest-axe` against the most aria-heavy panel. The two
+gates are intentionally redundant: the unit gate catches regressions
+inside a single component, the e2e gate catches regressions caused by
+how panels compose.
+
 ## Out of scope (deferred to later waves)
 
 - Visual regression snapshots.

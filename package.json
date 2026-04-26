@@ -8,6 +8,7 @@
     "e2e:install": "playwright install --with-deps chromium firefox webkit"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.2",
     "@playwright/test": "^1.49.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10"
