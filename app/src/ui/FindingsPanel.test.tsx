@@ -61,6 +61,38 @@ describe('FindingsPanel', () => {
     expect(screen.getByText(/not applicable/i)).toBeInTheDocument();
   });
 
+  // Wave 24-B: hybrid findings (those with `evidence` from the Phase 18
+  // classifier pass) render a small badge whose aria-label conveys the
+  // model's similarity score for screen readers. Deterministic findings
+  // render no badge.
+  it('renders a hybrid badge with similarity percentage on findings carrying evidence', () => {
+    render(
+      <FindingsPanel
+        findings={[
+          f({
+            ruleId: 'h',
+            title: 'Hybrid hit',
+            confidence: 0.5,
+            evidence: { modelId: 'Xenova/test-model', similarity: 0.83 },
+          }),
+        ]}
+        onSelect={() => {}}
+      />,
+    );
+    const badge = screen.getByLabelText(/identified by on-device classifier \(similarity 83%\)/i);
+    expect(badge).toBeInTheDocument();
+  });
+
+  it('renders no hybrid badge on deterministic findings (no evidence)', () => {
+    render(
+      <FindingsPanel
+        findings={[f({ ruleId: 'd', title: 'Deterministic hit' })]}
+        onSelect={() => {}}
+      />,
+    );
+    expect(screen.queryByLabelText(/identified by on-device classifier/i)).not.toBeInTheDocument();
+  });
+
   it('filters findings by search query across title and explanation', async () => {
     const findings = [
       f({ ruleId: 'a', title: 'Arbitration clause', explanation: 'Disputes go to arbitrator.' }),
@@ -156,9 +188,7 @@ describe('FindingsPanel', () => {
   it('omits the "What this means" disclosure when plainEnglish is absent', () => {
     const finding = f({ ruleId: 'no-pe', title: 'No PE' });
     render(<FindingsPanel findings={[finding]} onSelect={() => {}} />);
-    expect(
-      screen.queryByRole('button', { name: /what this means/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /what this means/i })).not.toBeInTheDocument();
   });
 
   it('omits the "What this means" disclosure when the map has no entry for this rule', () => {
@@ -170,9 +200,7 @@ describe('FindingsPanel', () => {
         plainEnglishByRuleId={{ 'other-rule': 'not this one' }}
       />,
     );
-    expect(
-      screen.queryByRole('button', { name: /what this means/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /what this means/i })).not.toBeInTheDocument();
   });
 
   // Phase 14 — hover glossary on snippets.
@@ -187,11 +215,7 @@ describe('FindingsPanel', () => {
       { term: 'Premises', definition: 'the leased building.', page: 1, paragraphIndex: 0 },
     ];
     const { container } = render(
-      <FindingsPanel
-        findings={[finding]}
-        onSelect={() => {}}
-        definitions={definitions}
-      />,
+      <FindingsPanel findings={[finding]} onSelect={() => {}} definitions={definitions} />,
     );
     const dfn = container.querySelector('dfn');
     expect(dfn).not.toBeNull();
@@ -205,9 +229,7 @@ describe('FindingsPanel', () => {
       title: 'No glossary',
       snippet: 'The Premises shall be delivered on time.',
     });
-    const { container } = render(
-      <FindingsPanel findings={[finding]} onSelect={() => {}} />,
-    );
+    const { container } = render(<FindingsPanel findings={[finding]} onSelect={() => {}} />);
     expect(container.querySelector('dfn')).toBeNull();
   });
 
@@ -249,9 +271,7 @@ describe('FindingsPanel', () => {
         suggestedTextByRuleId={{ nobtn: 'Suggested.' }}
       />,
     );
-    expect(
-      screen.queryByRole('button', { name: /apply suggestion/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /apply suggestion/i })).not.toBeInTheDocument();
   });
 
   it('omits "Apply suggestion" when the rule id has no suggested text', () => {
@@ -264,9 +284,7 @@ describe('FindingsPanel', () => {
         onApplySuggestion={() => {}}
       />,
     );
-    expect(
-      screen.queryByRole('button', { name: /apply suggestion/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /apply suggestion/i })).not.toBeInTheDocument();
   });
 
   it('"Apply suggestion" invokes the callback with finding, paragraphIndex, and suggested text', async () => {
@@ -284,9 +302,7 @@ describe('FindingsPanel', () => {
         onApplySuggestion={onApplySuggestion}
       />,
     );
-    await userEvent.click(
-      screen.getByRole('button', { name: /apply suggestion for apply me/i }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /apply suggestion for apply me/i }));
     expect(onApplySuggestion).toHaveBeenCalledWith(finding, 4, 'Suggested replacement.');
   });
 
@@ -348,9 +364,7 @@ describe('FindingsPanel', () => {
           f({ ruleId: 'b', severity: 'high', title: 'Second finding' }),
           f({ ruleId: 'c', severity: 'high', title: 'Third finding' }),
         ];
-        const { container } = render(
-          <FindingsPanel findings={findings} onSelect={() => {}} />,
-        );
+        const { container } = render(<FindingsPanel findings={findings} onSelect={() => {}} />);
 
         // Before any intersection event, all three are "off viewport" in
         // the observer-present branch — they should appear as placeholders
@@ -390,9 +404,7 @@ describe('FindingsPanel', () => {
             span: { start: i, end: i + 5 },
           }),
         );
-        const { container } = render(
-          <FindingsPanel findings={findings} onSelect={() => {}} />,
-        );
+        const { container } = render(<FindingsPanel findings={findings} onSelect={() => {}} />);
         // With no intersections reported yet, every row is a placeholder.
         const fullButtons = container.querySelectorAll('button.finding-btn');
         expect(fullButtons.length).toBeLessThan(100);

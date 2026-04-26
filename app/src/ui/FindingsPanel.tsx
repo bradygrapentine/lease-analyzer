@@ -49,11 +49,7 @@ interface FindingsPanelProps {
    * finding that invokes this with the finding, its paragraphIndex, and
    * the suggested text. Wiring into redline storage is App's job.
    */
-  onApplySuggestion?: (
-    finding: Finding,
-    paragraphIndex: number,
-    suggestedText: string,
-  ) => void;
+  onApplySuggestion?: (finding: Finding, paragraphIndex: number, suggestedText: string) => void;
   /**
    * Wave 10 Part C — optional "Promote to standard" callback. When defined
    * (and `leaseId` is supplied), each finding renders a button that
@@ -208,9 +204,7 @@ export function FindingsPanel({
                         glossary={glossary}
                         plain={plain}
                         isExplainerOpen={isOpen}
-                        toggleExplainer={() =>
-                          toggleInSet(openExplainers, key, setOpenExplainers)
-                        }
+                        toggleExplainer={() => toggleInSet(openExplainers, key, setOpenExplainers)}
                         suggestedText={suggested}
                         onSelect={onSelect}
                         onApplySuggestion={onApplySuggestion}
@@ -254,9 +248,7 @@ export function FindingsPanel({
     // effect inside VirtualFindingItem will claim focus when the button
     // appears.
     pendingFocusRef.current = nextKey;
-    const li = root.querySelector<HTMLLIElement>(
-      `li[data-finding-key="${cssEscape(nextKey)}"]`,
-    );
+    const li = root.querySelector<HTMLLIElement>(`li[data-finding-key="${cssEscape(nextKey)}"]`);
     if (li && typeof li.scrollIntoView === 'function') {
       li.scrollIntoView({ block: 'nearest' });
     }
@@ -282,9 +274,7 @@ interface VirtualFindingItemProps {
   onApplySuggestion:
     | ((finding: Finding, paragraphIndex: number, suggestedText: string) => void)
     | undefined;
-  onPromoteToStandard:
-    | ((leaseId: string, paragraphIndex: number) => void)
-    | undefined;
+  onPromoteToStandard: ((leaseId: string, paragraphIndex: number) => void) | undefined;
   leaseId: string | undefined;
   pendingFocusRef: { current: string | null };
 }
@@ -341,9 +331,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
             onClick={() => onSelect(finding)}
           >
             <strong>{finding.title}</strong>
-            {finding.negated && (
-              <span aria-label="negated"> (possibly not applicable)</span>
-            )}
+            {finding.negated && <span aria-label="negated"> (possibly not applicable)</span>}
             {finding.deviation && (
               <span
                 className="finding-deviation-badge"
@@ -353,15 +341,24 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                 deviates from verified pack
               </span>
             )}
+            {finding.evidence && (
+              <span
+                className="finding-llm-badge"
+                title={`On-device classifier (similarity ${Math.round(
+                  finding.evidence.similarity * 100,
+                )}%)`}
+                aria-label={`Identified by on-device classifier (similarity ${Math.round(
+                  finding.evidence.similarity * 100,
+                )}%)`}
+              >
+                {' '}
+                ~
+              </span>
+            )}
             <div>{finding.explanation}</div>
-            {(definitions && definitions.length > 0) ||
-            (glossary && glossary.length > 0) ? (
+            {(definitions && definitions.length > 0) || (glossary && glossary.length > 0) ? (
               <small className="finding-snippet">
-                {highlightDefinedTerms(
-                  finding.snippet,
-                  definitions ?? [],
-                  glossary,
-                )}
+                {highlightDefinedTerms(finding.snippet, definitions ?? [], glossary)}
               </small>
             ) : null}
             <small>Page {finding.page}</small>
@@ -383,9 +380,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
             <button
               type="button"
               aria-label={`apply suggestion for ${finding.title}`}
-              onClick={() =>
-                onApplySuggestion(finding, finding.paragraphIndex, suggestedText)
-              }
+              onClick={() => onApplySuggestion(finding, finding.paragraphIndex, suggestedText)}
             >
               Apply suggestion
             </button>
@@ -394,9 +389,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
             <button
               type="button"
               aria-label={`promote to standard ${finding.title}`}
-              onClick={() =>
-                onPromoteToStandard(leaseId, finding.paragraphIndex)
-              }
+              onClick={() => onPromoteToStandard(leaseId, finding.paragraphIndex)}
             >
               Promote to standard
             </button>
@@ -413,11 +406,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
   );
 }
 
-function toggleInSet<T>(
-  current: Set<T>,
-  value: T,
-  setter: (s: Set<T>) => void,
-): void {
+function toggleInSet<T>(current: Set<T>, value: T, setter: (s: Set<T>) => void): void {
   const next = new Set(current);
   if (next.has(value)) next.delete(value);
   else next.add(value);
