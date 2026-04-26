@@ -10,5 +10,5 @@ storybook-static
 
 # Wave 27 — Source Serif 4 fonts dropped manually via
 # `npm run build:design-fonts`; never committed.
-app/public/fonts/*
-!app/public/fonts/.gitkeep
+public/fonts/*
+!public/fonts/.gitkeep
