@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { Category, Finding, Severity } from '../rules/types';
 import type { DefinitionEntry } from '../facts/types';
@@ -7,10 +7,11 @@ import { highlightDefinedTerms } from './highlightDefinedTerms';
 import { useInViewport } from './useInViewport';
 import { Button } from './system/Button';
 import { Card } from './system/Card';
-import {
-  HybridFeedbackButton,
-  type HybridFeedbackPayload,
-} from './HybridFeedbackButton';
+import type { HybridFeedbackPayload } from './HybridFeedbackButton';
+
+const HybridFeedbackButton = lazy(() =>
+  import('./HybridFeedbackButton').then((m) => ({ default: m.HybridFeedbackButton })),
+);
 
 // Aria/data inventory (preserved verbatim):
 //   aria-label="findings" (aside)
@@ -433,11 +434,13 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                 </button>
                 {onHybridFeedback && leaseId !== undefined ? (
                   <span className="ml-2 inline-flex">
-                    <HybridFeedbackButton
-                      finding={finding}
-                      leaseId={leaseId}
-                      onSubmit={onHybridFeedback}
-                    />
+                    <Suspense fallback={null}>
+                      <HybridFeedbackButton
+                        finding={finding}
+                        leaseId={leaseId}
+                        onSubmit={onHybridFeedback}
+                      />
+                    </Suspense>
                   </span>
                 ) : null}
                 {isHybridDetailOpen ? (

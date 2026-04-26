@@ -44,7 +44,7 @@ const deterministic: Finding = {
 };
 
 describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
-  it('renders the feedback button only for hybrid findings', () => {
+  it('renders the feedback button only for hybrid findings', async () => {
     render(
       <FindingsPanel
         findings={[hybrid, deterministic]}
@@ -53,7 +53,7 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
         onHybridFeedback={() => {}}
       />,
     );
-    const buttons = screen.queryAllByRole('button', { name: /not relevant/i });
+    const buttons = await screen.findAllByRole('button', { name: /not relevant/i });
     expect(buttons).toHaveLength(1);
   });
 
@@ -78,7 +78,7 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
         onHybridFeedback={onHybridFeedback}
       />,
     );
-    const btn = screen.getByRole('button', { name: /mark .* not relevant/i });
+    const btn = await screen.findByRole('button', { name: /mark .* not relevant/i });
     await userEvent.click(btn);
     await userEvent.click(btn);
     expect(onHybridFeedback).toHaveBeenCalledTimes(1);
