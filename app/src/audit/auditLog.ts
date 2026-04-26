@@ -28,6 +28,7 @@ export interface AuditEntry {
     | 'import-pack'
     | 'save-lease'
     | 'delete-lease'
+    | 'hybrid-feedback'
     | string;
   payload: Record<string, unknown>;
   /** SHA-256 hex of the previous entry's canonical JSON, '' for seq=1. */

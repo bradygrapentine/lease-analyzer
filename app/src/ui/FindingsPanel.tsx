@@ -7,6 +7,10 @@ import { highlightDefinedTerms } from './highlightDefinedTerms';
 import { useInViewport } from './useInViewport';
 import { Button } from './system/Button';
 import { Card } from './system/Card';
+import {
+  HybridFeedbackButton,
+  type HybridFeedbackPayload,
+} from './HybridFeedbackButton';
 
 // Aria/data inventory (preserved verbatim):
 //   aria-label="findings" (aside)
@@ -82,6 +86,15 @@ interface FindingsPanelProps {
    * untouched.
    */
   leaseId?: string;
+  /**
+   * Wave 29-C — optional callback fired when a user marks a hybrid finding
+   * as not relevant. The button renders only when both this callback and
+   * `leaseId` are provided AND the finding carries `evidence` (i.e. it's
+   * a Phase 18 hybrid finding). Receives the canonical audit payload; the
+   * caller is responsible for the actual `safeAudit({ kind: 'hybrid-feedback' })`
+   * write.
+   */
+  onHybridFeedback?: (payload: HybridFeedbackPayload) => void | Promise<void>;
 }
 
 export function FindingsPanel({
@@ -94,6 +107,7 @@ export function FindingsPanel({
   onApplySuggestion,
   onPromoteToStandard,
   leaseId,
+  onHybridFeedback,
 }: FindingsPanelProps): JSX.Element {
   const [query, setQuery] = useState('');
   const [hiddenSeverities, setHiddenSeverities] = useState<Set<Severity>>(new Set());
@@ -244,6 +258,7 @@ export function FindingsPanel({
                         onApplySuggestion={onApplySuggestion}
                         onPromoteToStandard={onPromoteToStandard}
                         leaseId={leaseId}
+                        onHybridFeedback={onHybridFeedback}
                         pendingFocusRef={pendingFocusRef}
                       />
                     );
@@ -312,6 +327,7 @@ interface VirtualFindingItemProps {
     | undefined;
   onPromoteToStandard: ((leaseId: string, paragraphIndex: number) => void) | undefined;
   leaseId: string | undefined;
+  onHybridFeedback: ((payload: HybridFeedbackPayload) => void | Promise<void>) | undefined;
   pendingFocusRef: { current: string | null };
 }
 
@@ -331,6 +347,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
     onApplySuggestion,
     onPromoteToStandard,
     leaseId,
+    onHybridFeedback,
     pendingFocusRef,
   } = props;
   const liRef = useRef<HTMLLIElement | null>(null);
@@ -414,6 +431,15 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                 >
                   ~
                 </button>
+                {onHybridFeedback && leaseId !== undefined ? (
+                  <span className="ml-2 inline-flex">
+                    <HybridFeedbackButton
+                      finding={finding}
+                      leaseId={leaseId}
+                      onSubmit={onHybridFeedback}
+                    />
+                  </span>
+                ) : null}
                 {isHybridDetailOpen ? (
                   <dl className="finding-llm-evidence mt-2 space-y-1 text-small text-fg-body">
                     <dt className="text-fg-muted">Model</dt>

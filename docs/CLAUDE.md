@@ -154,10 +154,14 @@ New UI panels live in `src/ui/` and follow a four-file convention:
    `kind` (`analyze`, `export`, `import-pack`, `pack-signature-verified`,
    `pack-signature-invalid`, `save-lease`, `delete-lease`, `bulk-import`,
    `custom-rule-save`, `redline-edit`, `version-save`, `version-restore`,
-   `version-delete`, `llm-classify`) or add a new one — `kind` is a
-   free-form string. `llm-classify` fires once per Phase 18 hybrid
-   finding (Wave 22-A); payload includes `{ ruleId, paragraphIndex,
-   modelId, similarity }`.
+   `version-delete`, `llm-classify`, `hybrid-feedback`) or add a new
+   one — `kind` is a free-form string. `llm-classify` fires once per
+   Phase 18 hybrid finding (Wave 22-A); payload includes
+   `{ ruleId, paragraphIndex, modelId, similarity }`. `hybrid-feedback`
+   (Wave 29-C) records a user marking a hybrid finding as not relevant;
+   payload is `{ ruleId, paragraphIndex, modelId, similarity, leaseId,
+   signal: 'not-relevant' }` and is idempotent on
+   `(ruleId, paragraphIndex, leaseId, signal)`.
 6. **Hybrid-finding badge** (Wave 24-B / 25-B): `FindingsPanel`
    renders a `finding-llm-badge` button next to each finding carrying
    `evidence: { modelId, similarity }`; the button's `aria-label`
