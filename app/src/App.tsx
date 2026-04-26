@@ -36,6 +36,10 @@ import { extractLeaseFacts } from './facts/extractFacts';
 import { WorkflowPanel } from './ui/WorkflowPanel';
 import { buildSummary, copyToClipboard } from './workflow/copySummary';
 import { PackManagerPanel } from './ui/PackManagerPanel';
+import { loadCuratedManifest, type CuratedPackEntry } from './rules/curatedPacks';
+import { validatePackFile } from './rules/packSchema';
+import { diffPack } from './rules/packDiff';
+import { verifySignedPack } from './rules/packSigning';
 import { JURISDICTION_OPTIONS } from './rules/jurisdictions';
 import { JurisdictionPickerPanel } from './ui/JurisdictionPickerPanel';
 import { SeverityOverridesPanel } from './ui/SeverityOverridesPanel';
@@ -814,6 +818,68 @@ function AppContent(): JSX.Element {
         onToggle={(id, enabled) => void packs.togglePack(id, enabled)}
         onDelete={(id) => void packs.deletePack(id)}
         signatureStatusByPackId={packs.packSignatureStatus}
+        marketplace={{
+          loadManifest: loadCuratedManifest,
+          onInstall: async (entry: CuratedPackEntry) => {
+            // Same-origin fetch of the curated pack JSON. The pack is
+            // re-verified inside `importPackFile` (signed envelopes go
+            // through `verifySignedPack`); we additionally peek at the
+            // bytes here so the marketplace can surface a verified vs.
+            // invalid badge without round-tripping through IDB state.
+            const res = await fetch(entry.path);
+            if (!res.ok) {
+              throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
+            }
+            const text = await res.text();
+            const parsed: unknown = JSON.parse(text);
+            let signature: 'verified' | 'invalid' = 'verified';
+            if (
+              parsed !== null &&
+              typeof parsed === 'object' &&
+              'algorithm' in parsed &&
+              'payload' in parsed &&
+              'signature' in parsed
+            ) {
+              const v = await verifySignedPack(parsed);
+              signature = v.ok ? 'verified' : 'invalid';
+            }
+            const file = new File([text], `${entry.id}.lgpack.json`, {
+              type: 'application/json',
+            });
+            await packs.importPackFile(file);
+            return { ok: true, signature };
+          },
+          onPreviewDiff: async (entry: CuratedPackEntry) => {
+            const res = await fetch(entry.path);
+            if (!res.ok) {
+              throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
+            }
+            const parsed: unknown = await res.json();
+            // Signed-envelope packs need to be unwrapped before diffing.
+            let candidate: unknown = parsed;
+            if (
+              parsed !== null &&
+              typeof parsed === 'object' &&
+              'algorithm' in parsed &&
+              'payload' in parsed &&
+              'signature' in parsed
+            ) {
+              const v = await verifySignedPack(parsed);
+              if (v.ok && v.pack) candidate = v.pack;
+              else throw new Error(`Invalid signed pack: ${v.reason ?? 'unknown'}`);
+            }
+            const result = validatePackFile(candidate);
+            if (!result.ok) {
+              throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
+            }
+            const d = diffPack(packs.activeRules, result.pack);
+            return {
+              added: d.added.map((r) => r.id),
+              removed: d.removed.map((r) => r.id),
+              changed: d.changed.map((c) => c.ruleId),
+            };
+          },
+        }}
       />
 
       <details>
