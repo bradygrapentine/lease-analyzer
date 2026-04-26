@@ -9,6 +9,10 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,21 +31,21 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ms-playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: ms-playwright-${{ runner.os }}-
-      - name: Install Chromium + system deps
-        run: npx playwright install --with-deps chromium
+          key: ms-playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: ms-playwright-${{ runner.os }}-${{ matrix.browser }}-
+      - name: Install ${{ matrix.browser }} + system deps
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Build app
         working-directory: app
         run: npm run build
-      - name: Run e2e smoke
+      - name: Run e2e smoke (${{ matrix.browser }})
         env:
           CI: 'true'
-        run: npm run e2e
+        run: npx playwright test --project=${{ matrix.browser }}
       - name: Upload Playwright HTML report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.browser }}
           path: playwright-report/
           retention-days: 7

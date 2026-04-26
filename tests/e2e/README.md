@@ -1,7 +1,8 @@
 # Playwright e2e smoke
 
 A single happy-path browser test that exercises the user-facing pipeline
-end-to-end against a real Chromium build:
+end-to-end. The same spec runs against Chromium, Firefox, and WebKit on
+every PR via a 3-way matrix in `.github/workflows/e2e.yml`:
 
 1. Load the production preview build.
 2. Dismiss the first-run onboarding tour.
@@ -20,13 +21,22 @@ service-worker install, and the preview build's bundle wiring.
 From the repo root:
 
 ```bash
-# One-time: install Chromium + system deps.
+# One-time: install Chromium + system deps. To run the full matrix
+# locally, also install Firefox + WebKit:
+#   npx playwright install --with-deps firefox webkit
 npm run e2e:install
 
 # Build the app and run the smoke. Playwright auto-starts `vite preview`
 # on http://127.0.0.1:4173 via the webServer config in playwright.config.ts.
 cd app && npm run build && cd ..
+
+# All three browsers (matches CI):
 npm run e2e
+
+# Single browser:
+npx playwright test --project=chromium
+npx playwright test --project=firefox
+npx playwright test --project=webkit
 ```
 
 `reuseExistingServer` is on outside CI, so an `npm run preview` already
@@ -46,7 +56,6 @@ you can replay the trace + screenshots locally.
 
 ## Out of scope (deferred to later waves)
 
-- WebKit / Firefox matrix.
 - Visual regression snapshots.
 - e2e for review-link / counter-sign / delta-packet flows (those need
   filesystem fixtures).
