@@ -72,10 +72,12 @@ describe('MarketplacePanel', () => {
   });
 
   it('install success surfaces a status message and does not show an error', async () => {
-    const onInstall = vi.fn(async (): Promise<InstallResult> => ({
-      ok: true,
-      signature: 'verified',
-    }));
+    const onInstall = vi.fn(
+      async (): Promise<InstallResult> => ({
+        ok: true,
+        signature: 'verified',
+      }),
+    );
     render(
       <MarketplacePanel
         loadManifest={async () => [ENTRY_A]}
@@ -138,10 +140,12 @@ describe('MarketplacePanel', () => {
   });
 
   it('shows a signature-invalid badge when install reports an invalid signature', async () => {
-    const onInstall = vi.fn(async (): Promise<InstallResult> => ({
-      ok: false,
-      signature: 'invalid',
-    }));
+    const onInstall = vi.fn(
+      async (): Promise<InstallResult> => ({
+        ok: false,
+        signature: 'invalid',
+      }),
+    );
     render(
       <MarketplacePanel
         loadManifest={async () => [ENTRY_A]}
@@ -153,9 +157,35 @@ describe('MarketplacePanel', () => {
       name: /install california residential/i,
     });
     await userEvent.click(installBtn);
+    expect(await screen.findByLabelText(/signature status: invalid/i)).toBeInTheDocument();
+  });
+});
+
+describe('MarketplacePanel — empty state', () => {
+  it('renders an empty-state message when no curated packs are available', async () => {
+    render(
+      <MarketplacePanel
+        loadManifest={async () => []}
+        onInstall={async () => ({ ok: true, signature: 'verified' })}
+        onPreviewDiff={async () => ({ added: [], removed: [], changed: [] })}
+      />,
+    );
     expect(
-      await screen.findByLabelText(/signature status: invalid/i),
+      await screen.findByText(/no curated packs are currently available/i),
     ).toBeInTheDocument();
+  });
+
+  it('does not render install or diff controls in the empty state', async () => {
+    render(
+      <MarketplacePanel
+        loadManifest={async () => []}
+        onInstall={async () => ({ ok: true, signature: 'verified' })}
+        onPreviewDiff={async () => ({ added: [], removed: [], changed: [] })}
+      />,
+    );
+    await screen.findByText(/no curated packs/i);
+    expect(screen.queryByRole('button', { name: /install/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /view diff/i })).toBeNull();
   });
 });
 
@@ -166,7 +196,5 @@ describe('build-curated-packs.mjs', () => {
   // import attempt still serves as a failing-on-purpose marker until the
   // implementer ships the script and a test-side runner.
   beforeEach(() => {});
-  it.todo(
-    'produces byte-identical output across two runs (script + manifest hash)',
-  );
+  it.todo('produces byte-identical output across two runs (script + manifest hash)');
 });

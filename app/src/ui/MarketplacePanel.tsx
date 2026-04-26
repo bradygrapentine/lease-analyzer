@@ -105,6 +105,15 @@ export function MarketplacePanel({
     );
   }
 
+  if (entries.length === 0) {
+    return (
+      <section aria-label="curated rule packs">
+        <h2>Curated rule packs</h2>
+        <p role="status">No curated packs are currently available.</p>
+      </section>
+    );
+  }
+
   return (
     <section aria-label="curated rule packs">
       <h2>Curated rule packs</h2>
@@ -112,16 +121,11 @@ export function MarketplacePanel({
         {entries.map((entry) => {
           const state = perEntry[entry.id] ?? emptyState();
           const sig: 'verified' | 'invalid' =
-            state.install.kind === 'success'
-              ? state.install.signature
-              : 'verified';
+            state.install.kind === 'success' ? state.install.signature : 'verified';
           return (
             <li key={entry.id}>
               <strong>{entry.name}</strong>{' '}
-              <span
-                aria-label={`Signature status: ${sig}`}
-                data-signature-status={sig}
-              >
+              <span aria-label={`Signature status: ${sig}`} data-signature-status={sig}>
                 [{sig === 'verified' ? 'Verified' : 'Invalid signature'}]
               </span>
               <p>{entry.description}</p>
