@@ -66,12 +66,15 @@ describe('AppLibraryAndPacksPane', () => {
     defaults();
     expect(screen.getByRole('heading', { name: /my leases/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /diff rule pack/i })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: /audit log/i })).toBeInTheDocument();
+    // Wave 28 Part C: SectionGroup wrappers also expose role="region";
+    // AuditLogPanel renders its own region with the same accessible name,
+    // so we assert at least one match.
+    expect(screen.getAllByRole('region', { name: /audit log/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('hides the ComparePanel when comparison is null', () => {
     defaults({ comparison: null });
-    expect(screen.queryByRole('region', { name: /compare/i })).toBeNull();
+    expect(screen.queryByRole('region', { name: /^compare$/i })).toBeNull();
   });
 
   it('fires onRefreshAuditLog when the audit-log refresh button is clicked', async () => {
