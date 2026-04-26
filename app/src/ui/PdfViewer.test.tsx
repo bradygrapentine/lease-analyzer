@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PdfViewer } from './PdfViewer';
+import type { LineSpan, Paragraph } from './../parser/types';
+import type { Finding } from './../rules/types';
 
 describe('PdfViewer', () => {
   it('renders a page container per page', () => {
@@ -82,6 +84,86 @@ describe('PdfViewer', () => {
     rerender(<PdfViewer bytes={null} pageCount={2} selectedPage={2} />);
     expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
     matchMediaSpy.mockRestore();
+  });
+
+  it('renders one [data-span-highlight] per overlapping line when paragraph has lines', () => {
+    const pages = [{ pageNumber: 1, width: 612, height: 792, items: [] }];
+    const lines: LineSpan[] = [
+      { start: 0, end: 10, bbox: { page: 1, xLeft: 72, xRight: 200, yTop: 720, yBottom: 710 } },
+      { start: 10, end: 20, bbox: { page: 1, xLeft: 72, xRight: 200, yTop: 710, yBottom: 700 } },
+      { start: 20, end: 30, bbox: { page: 1, xLeft: 72, xRight: 200, yTop: 700, yBottom: 690 } },
+    ];
+    const paragraph: Paragraph = {
+      text: 'a'.repeat(30),
+      page: 1,
+      bbox: { page: 1, xLeft: 72, xRight: 200, yTop: 720, yBottom: 690 },
+      lines,
+    };
+    const finding: Finding = {
+      ruleId: 'r',
+      severity: 'high',
+      category: 'fees',
+      title: 't',
+      explanation: 'e',
+      citation: null,
+      page: 1,
+      paragraphIndex: 0,
+      snippet: 's',
+      span: { start: 5, end: 25 },
+      confidence: 1,
+      negated: false,
+      rulePackVersion: '1.0.0',
+    };
+    render(
+      <PdfViewer
+        bytes={null}
+        pageCount={1}
+        selectedPage={null}
+        pages={pages}
+        selectedParagraph={paragraph}
+        selectedFinding={finding}
+      />,
+    );
+    const overlays = document.querySelectorAll('[data-span-highlight]');
+    // span [5,25) overlaps all three lines (0..10, 10..20, 20..30)
+    expect(overlays).toHaveLength(3);
+  });
+
+  it('falls back to a single highlight rect for a paragraph without lines', () => {
+    const pages = [{ pageNumber: 1, width: 612, height: 792, items: [] }];
+    const paragraph: Paragraph = {
+      text: 'whole paragraph',
+      page: 1,
+      bbox: { page: 1, xLeft: 72, xRight: 200, yTop: 720, yBottom: 700 },
+    };
+    const finding: Finding = {
+      ruleId: 'r',
+      severity: 'high',
+      category: 'fees',
+      title: 't',
+      explanation: 'e',
+      citation: null,
+      page: 1,
+      paragraphIndex: 0,
+      snippet: 's',
+      span: { start: 0, end: 5 },
+      confidence: 1,
+      negated: false,
+      rulePackVersion: '1.0.0',
+    };
+    render(
+      <PdfViewer
+        bytes={null}
+        pageCount={1}
+        selectedPage={null}
+        pages={pages}
+        selectedParagraph={paragraph}
+        selectedFinding={finding}
+      />,
+    );
+    const overlays = document.querySelectorAll('.pdf-highlight');
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0]).toHaveAttribute('data-span-highlight');
   });
 
   it('does not render a highlight for a page that does not match', () => {

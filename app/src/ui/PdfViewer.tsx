@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { renderPdfPages } from './renderPdfPages';
 import { copyBytes } from '../parser/copyBytes';
-import type { BoundingBox, PageText } from '../parser/types';
+import type { BoundingBox, PageText, Paragraph } from '../parser/types';
+import type { Finding } from '../rules/types';
+import { computeSpanRects } from './spanHighlight';
 
 interface PdfViewerProps {
   bytes: Uint8Array | null;
@@ -10,6 +12,17 @@ interface PdfViewerProps {
   selectedPage: number | null;
   pages?: PageText[];
   highlight?: BoundingBox | null;
+  /**
+   * Wave 28 Part E — when supplied alongside `selectedFinding`, the viewer
+   * computes per-line highlight rects from the paragraph's `lines: LineSpan[]`
+   * (Wave 28-A parser output) and renders one overlay per overlapping line.
+   * If the paragraph lacks `lines` (legacy persisted leases re-parsed without
+   * span info), falls back to the paragraph's bbox — preserving the
+   * pre-Wave-28 single-rect contract. Each rendered overlay carries
+   * `data-span-highlight` so e2e selectors can target span highlights.
+   */
+  selectedParagraph?: Paragraph | null;
+  selectedFinding?: Finding | null;
 }
 
 export function PdfViewer({
@@ -18,8 +31,20 @@ export function PdfViewer({
   selectedPage,
   pages,
   highlight,
+  selectedParagraph,
+  selectedFinding,
 }: PdfViewerProps): JSX.Element {
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([]);
+
+  // Resolve the highlight rects. Span-aware path wins when both inputs are
+  // present (Wave 28-A onward); otherwise fall back to the legacy single-bbox
+  // `highlight` prop so existing callers keep working unchanged.
+  const computedRects = useMemo<BoundingBox[]>(() => {
+    if (selectedParagraph && selectedFinding) {
+      return computeSpanRects<BoundingBox>(selectedParagraph, selectedFinding);
+    }
+    return highlight ? [highlight] : [];
+  }, [selectedParagraph, selectedFinding, highlight]);
 
   useEffect(() => {
     if (!bytes || pageCount === 0) return;
@@ -105,7 +130,9 @@ export function PdfViewer({
       <div className="pdf-viewer-legacy">
       {Array.from({ length: pageCount }, (_, i) => {
         const pageNum = i + 1;
-        const overlay = highlight?.page === pageNum ? highlight : null;
+        const rectsForPage: BoundingBox[] = computedRects.filter(
+          (b) => b.page === pageNum,
+        );
         const page = pages?.[i] ?? null;
         return (
           <div key={pageNum} id={`pdf-page-${pageNum}`} className="pdf-page">
@@ -115,13 +142,17 @@ export function PdfViewer({
               }}
               aria-label={`page ${pageNum}`}
             />
-            {overlay && page && (
-              <div
-                aria-hidden="true"
-                className="pdf-highlight"
-                style={overlayStyle(overlay, page)}
-              />
-            )}
+            {page &&
+              rectsForPage.map((overlay, idx) => (
+                <div
+                  // bbox tuple is enough to disambiguate co-page overlays
+                  key={`${overlay.xLeft}-${overlay.yTop}-${overlay.xRight}-${overlay.yBottom}-${idx}`}
+                  aria-hidden="true"
+                  className="pdf-highlight"
+                  data-span-highlight=""
+                  style={overlayStyle(overlay, page)}
+                />
+              ))}
             <small>Page {pageNum}</small>
           </div>
         );
