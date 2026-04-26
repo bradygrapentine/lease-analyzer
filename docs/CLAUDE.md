@@ -158,6 +158,11 @@ New UI panels live in `src/ui/` and follow a four-file convention:
    free-form string. `llm-classify` fires once per Phase 18 hybrid
    finding (Wave 22-A); payload includes `{ ruleId, paragraphIndex,
    modelId, similarity }`.
+6. **Hybrid-finding badge** (Wave 24-B): `FindingsPanel` renders a
+   `finding-llm-badge` span next to the title for any finding carrying
+   `evidence: { modelId, similarity }`; the badge's `aria-label` exposes
+   the similarity percentage so screen readers convey provenance.
+   Deterministic findings render no badge.
 
 ## Testing patterns
 
