@@ -73,6 +73,23 @@
   /* PDF highlight overlay — semi-transparent by design; no opaque hex form exists */
   --color-highlight: rgba(255, 235, 59, 0.35);
   --color-highlight-border: rgba(255, 193, 7, 0.9);
+
+  /* Wave 28 — interactive state + focus-ring tokens.
+     Ring is a darker mustard tuned against the cream paper background;
+     ring-offset matches the paper so the halo reads cleanly. Hover /
+     active are warm low-opacity washes that harmonize with the
+     terracotta/mustard severity palette. */
+  --ring: #b8862c;
+  --ring-offset: #faf6ee;
+  --state-hover: rgba(184, 134, 44, 0.08);
+  --state-active: rgba(184, 134, 44, 0.16);
+}
+
+/* Focus-ring utility — applied via `focus-visible:focus-ring` on
+   interactive surfaces. Pulled out as a utility so primitives don't
+   each duplicate the ring math. */
+@utility focus-ring {
+  @apply outline-none ring-2 ring-[var(--ring)] ring-offset-2 ring-offset-[var(--ring-offset)];
 }
 
 /* Base */
