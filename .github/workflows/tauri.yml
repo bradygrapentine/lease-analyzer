@@ -3,6 +3,14 @@ name: tauri
 on:
   pull_request:
     branches: [main]
+    paths:
+      - 'app/src-tauri/**'
+      - '.github/workflows/tauri.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/src-tauri/**'
+      - '.github/workflows/tauri.yml'
 
 jobs:
   build:
