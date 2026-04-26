@@ -90,10 +90,8 @@ tickets.
 
 ### Tech debt — keep the codebase honest
 
-- Continue `App.tsx` decomposition (~958 lines after Wave 17-A; ten
-  hooks already extracted under `app/src/App/use*.ts`; remaining
-  drop to the ~600-line target needs derived-state hook extraction
-  before further sub-component splits land cleanly).
+App.tsx decomposition closed in Waves 17–21: 12 hooks + 5 sub-components
+extracted; App.tsx now sits at 541 lines (below the ~600 target).
 
 See [`BACKLOG.md`](./BACKLOG.md#cross-cutting-tech-debt) for the full
 list.
