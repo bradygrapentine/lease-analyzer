@@ -22,10 +22,22 @@ export interface BoundingBox {
   yBottom: number;
 }
 
+export interface LineSpan {
+  /** char offset within the parent Paragraph.text where this line begins */
+  start: number;
+  /** char offset within the parent Paragraph.text where this line ends (exclusive) */
+  end: number;
+  /** PDF-page bbox in PDF user-space units (same coordinate system as Paragraph.bbox) */
+  bbox: BoundingBox;
+}
+
 export interface Paragraph {
   text: string;
   page: number;
   bbox?: BoundingBox;
+  /** Wave 28: per-line spans for span-level highlight. Optional — legacy
+   *  paragraphs lack this and the viewer falls back to paragraph bbox. */
+  lines?: LineSpan[];
 }
 
 export interface Section {

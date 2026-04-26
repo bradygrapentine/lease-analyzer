@@ -1,4 +1,4 @@
-import type { BoundingBox, PageText, Paragraph, TextItem } from './types';
+import type { BoundingBox, LineSpan, PageText, Paragraph, TextItem } from './types';
 
 interface Line {
   page: number;
@@ -84,6 +84,7 @@ interface Building {
   lastFont: number;
   lastY: number;
   bbox: BoundingBox;
+  lines: LineSpan[];
 }
 
 function mergeLinesIntoParagraphs(lines: Line[]): Paragraph[] {
@@ -98,24 +99,52 @@ function mergeLinesIntoParagraphs(lines: Line[]): Paragraph[] {
       current.lastY - line.y <= line.fontSize * PARAGRAPH_GAP_RATIO;
 
     if (shouldContinue && current) {
-      current.text = joinWithHyphenRepair(current.text, line.text);
+      const joined = joinWithHyphenRepair(current.text, line.text);
+      const hyphenRepaired = joined.length < current.text.length + line.text.length;
+      if (hyphenRepaired) {
+        // Hyphen-repair dropped the trailing '-' from prior text. Shrink the
+        // last line span's end by 1 so it reflects the post-repair paragraph text.
+        const lastIdx = current.lines.length - 1;
+        const last = current.lines[lastIdx]!;
+        current.lines[lastIdx] = { start: last.start, end: last.end - 1, bbox: last.bbox };
+      }
+      const start = hyphenRepaired ? current.text.length - 1 : current.text.length + 1;
+      const end = joined.length;
+      current.text = joined;
       current.lastFont = line.fontSize;
       current.lastY = line.y;
       current.bbox = extendBbox(current.bbox, line.bbox);
+      current.lines.push({ start, end, bbox: line.bbox });
     } else {
-      if (current) paragraphs.push({ page: current.page, text: current.text, bbox: current.bbox });
+      if (current) {
+        paragraphs.push({
+          page: current.page,
+          text: current.text,
+          bbox: current.bbox,
+          lines: current.lines,
+        });
+      }
       current = {
         page: line.page,
         text: line.text,
         lastFont: line.fontSize,
         lastY: line.y,
         bbox: line.bbox,
+        lines: [{ start: 0, end: line.text.length, bbox: line.bbox }],
       };
     }
   }
-  if (current) paragraphs.push({ page: current.page, text: current.text, bbox: current.bbox });
+  if (current) {
+    paragraphs.push({
+      page: current.page,
+      text: current.text,
+      bbox: current.bbox,
+      lines: current.lines,
+    });
+  }
   return paragraphs;
 }
+
 
 function extendBbox(a: BoundingBox, b: BoundingBox): BoundingBox {
   return {
