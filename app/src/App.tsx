@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { usePipeline } from './App/usePipeline';
 import { usePackManager } from './App/usePackManager';
@@ -7,12 +7,12 @@ import { useRedlineState } from './App/useRedlineState';
 import { useVersionHistory } from './App/useVersionHistory';
 import { useSideLetter } from './App/useSideLetter';
 import { useCounterOffers } from './App/useCounterOffers';
+import { useDerivedAppState } from './App/useDerivedAppState';
 import { useSigningKey } from './App/useSigningKey';
 import { useReanalyzeOnRulesChange } from './App/useReanalyzeOnRulesChange';
 import {
   buildIcsBytes,
   clearAllFlow,
-  downloadBlob,
   downloadBlobBytes,
   downloadHandoffZip,
   exportEncryptedArchiveFlow,
@@ -21,7 +21,6 @@ import {
   friendlyError,
   importEncryptedArchiveFlow,
   readFileBytes,
-  stripPdfExt,
 } from './App/appHelpers';
 import { FindingsPanel } from './ui/FindingsPanel';
 import { loadGlossary, type GlossaryEntry } from './glossary/loadGlossary';
@@ -61,13 +60,10 @@ import { buildAuditLogJson, downloadAuditLogBlob } from './audit/auditExport';
 import { SigningKeyPanel } from './ui/SigningKeyPanel';
 import { AnnotationsPanel } from './ui/AnnotationsPanel';
 import { CounterOfferPanel } from './ui/CounterOfferPanel';
-import type { CounterOffer } from './negotiation/counterOffers';
 import { PortfolioPanel } from './ui/PortfolioPanel';
 import { paragraphShingles } from './portfolio/shingles';
 import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
-import { RedlinePanel } from './ui/RedlinePanel';
-import { VersionHistoryPanel } from './ui/VersionHistoryPanel';
-import { SideLetterPanel } from './ui/SideLetterPanel';
+import { AppRedlinePane } from './ui/AppRedlinePane';
 import { needsOcr } from './compare/needsOcr';
 import { discoverOcrLanguages, type OcrLanguage } from './ocr/availableLanguages';
 import { OcrLanguagePickerPanel } from './ui/OcrLanguagePickerPanel';
@@ -251,29 +247,16 @@ function AppContent(): JSX.Element {
     severityOverrides: packs.severityOverrides,
   });
 
-  const plainEnglishByRuleId = useMemo<Record<string, string>>(() => {
-    const out: Record<string, string> = {};
-    for (const r of packs.activeRules) if (r.plainEnglish) out[r.id] = r.plainEnglish;
-    return out;
-  }, [packs.activeRules]);
-
-  const suggestedEditByRuleId = useMemo<Record<string, string>>(() => {
-    const out: Record<string, string> = {};
-    for (const r of packs.activeRules) if (r.suggestedEdit) out[r.id] = r.suggestedEdit;
-    return out;
-  }, [packs.activeRules]);
-
-  // User counter-offers override the rule's `suggestedEdit`. Most recent wins per rule.
-  const suggestedTextByRuleId = useMemo<Record<string, string>>(() => {
-    const out: Record<string, string> = { ...suggestedEditByRuleId };
-    const latestByRule = new Map<string, CounterOffer>();
-    for (const co of counters.counterOffers) {
-      const cur = latestByRule.get(co.ruleId);
-      if (!cur || co.updatedAt > cur.updatedAt) latestByRule.set(co.ruleId, co);
-    }
-    for (const [ruleId, co] of latestByRule) out[ruleId] = co.text;
-    return out;
-  }, [suggestedEditByRuleId, counters.counterOffers]);
+  const {
+    plainEnglishByRuleId,
+    suggestedEditByRuleId,
+    suggestedTextByRuleId,
+    sectionForParagraph,
+  } = useDerivedAppState({
+    activeRules: packs.activeRules,
+    counterOffers: counters.counterOffers,
+    doc: status.kind === 'analyzed' ? status.result.doc : null,
+  });
 
   useEffect(() => {
     void refreshLibrary();
@@ -417,22 +400,6 @@ function AppContent(): JSX.Element {
     downloadBlobBytes(ics.bytes, 'text/calendar', ics.filename);
   }
 
-  // Map a paragraph index to a section label, for side-letter clause headings.
-  const sectionForParagraph = useCallback(
-    (paragraphIndex: number): string | undefined => {
-      if (status.kind !== 'analyzed') return undefined;
-      const paragraph = status.result.doc.paragraphs[paragraphIndex];
-      if (!paragraph) return undefined;
-      for (const section of status.result.doc.sections) {
-        if (section.paragraphs.includes(paragraph)) {
-          return section.number ?? section.heading;
-        }
-      }
-      return undefined;
-    },
-    [status],
-  );
-
   return (
     <main>
       {onboardingDismissedAt !== undefined && (
@@ -487,96 +454,15 @@ function AppContent(): JSX.Element {
       )}
 
       {view === 'redline' && status.kind === 'analyzed' && (
-        <>
-          <RedlinePanel
-            doc={status.result.doc}
-            edits={redline.redlineEdits}
-            onEditParagraph={(pIdx, after) => {
-              const before =
-                status.kind === 'analyzed' ? (status.result.doc.paragraphs[pIdx]?.text ?? '') : '';
-              void redline.editParagraph({ paragraphIndex: pIdx, before, after });
-            }}
-            onDeleteEdit={(pIdx) => void redline.deleteParagraphEdit(pIdx)}
-            onExportHtml={() => {
-              if (status.kind !== 'analyzed') return;
-              downloadBlob(
-                redline.buildHtml({ leaseName: status.fileName, doc: status.result.doc }),
-                'text/html',
-                `${stripPdfExt(status.fileName)}-redline.html`,
-              );
-            }}
-          />
-          <details>
-            <summary>Version history</summary>
-            <VersionHistoryPanel
-              versions={versionHistory.versions}
-              currentEditCount={redline.redlineEdits.length}
-              onCreateVersion={(label, note) => void versionHistory.createVersion(label, note)}
-              onRestoreVersion={(vId) =>
-                void versionHistory.restoreVersion(vId, redline.replaceAll)
-              }
-              onDeleteVersion={(vId) => void versionHistory.removeVersion(vId)}
-              onExportVersion={(vId) => {
-                if (status.kind !== 'analyzed') return;
-                void versionHistory.exportVersion(vId, {
-                  leaseName: status.fileName,
-                  doc: status.result.doc,
-                });
-              }}
-            />
-          </details>
-          <SideLetterPanel
-            leaseName={status.fileName}
-            edits={redline.redlineEdits}
-            signerDraft={sideLetter.signerDraft}
-            previewHtml={sideLetter.previewHtml}
-            onSignerChange={(s) => sideLetter.setSignerDraft(s)}
-            onPreview={() => {
-              if (status.kind !== 'analyzed') return;
-              sideLetter.preview({
-                leaseName: status.fileName,
-                edits: redline.redlineEdits,
-                sectionFor: sectionForParagraph,
-              });
-            }}
-            onClosePreview={() => sideLetter.clearPreview()}
-            onDownload={() => {
-              if (status.kind !== 'analyzed') return;
-              sideLetter.download({
-                leaseName: status.fileName,
-                edits: redline.redlineEdits,
-                sectionFor: sectionForParagraph,
-              });
-              void safeAudit({
-                kind: 'export',
-                payload: {
-                  artifact: 'side-letter',
-                  format: 'html',
-                  leaseName: status.fileName,
-                },
-              });
-            }}
-            onDownloadPdf={() => {
-              if (status.kind !== 'analyzed') return;
-              void sideLetter
-                .downloadPdf({
-                  leaseName: status.fileName,
-                  edits: redline.redlineEdits,
-                  sectionFor: sectionForParagraph,
-                })
-                .then(() =>
-                  safeAudit({
-                    kind: 'export',
-                    payload: {
-                      artifact: 'side-letter',
-                      format: 'pdf',
-                      leaseName: status.fileName,
-                    },
-                  }),
-                );
-            }}
-          />
-        </>
+        <AppRedlinePane
+          doc={status.result.doc}
+          leaseName={status.fileName}
+          redline={redline}
+          versionHistory={versionHistory}
+          sideLetter={sideLetter}
+          sectionForParagraph={sectionForParagraph}
+          safeAudit={safeAudit}
+        />
       )}
 
       {view === 'current' && status.kind === 'analyzed' && (
