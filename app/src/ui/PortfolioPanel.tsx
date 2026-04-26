@@ -1,3 +1,13 @@
+// Wave 27-C — design pass rewrite.
+// Semantic attributes preserved verbatim:
+//   aria-label="portfolio"               (section, both branches)
+//   aria-label="portfolio"               (table)
+//   data-sticky="true"                   (th — used for sticky-column positioning)
+//   aria-label={lease.name}              (tr)
+//   aria-label={`Open ${lease.name}`}    (button)
+//   data-severity={severity}             (span in SeverityBadge)
+//   className portfolio-sticky / portfolio-scroll preserved verbatim (CSS hooks)
+//
 import { useEffect, useMemo, useState } from 'react';
 import type { LeaseMetadata } from '../storage/storage';
 import {
@@ -7,6 +17,8 @@ import {
 import type { Finding, Severity } from '../rules/types';
 import { PortfolioRollupsPanel } from './PortfolioRollupsPanel';
 import { aggregateFindings } from '../portfolio/ruleRollups';
+import { Section } from './system/Section';
+import { Button } from './system/Button';
 
 export interface PortfolioPanelProps {
   leases: LeaseMetadata[];
@@ -87,38 +99,38 @@ export function PortfolioPanel({
 
   if (visible.length === 0) {
     return (
-      <section aria-label="portfolio">
-        <h2>Portfolio</h2>
-        <p>No leases in portfolio yet.</p>
-      </section>
+      <Section label="portfolio" className="space-y-2 px-4 py-4">
+        <h2 className="text-heading uppercase text-fg-muted">Portfolio</h2>
+        <p className="text-body text-fg-muted">No leases in portfolio yet.</p>
+      </Section>
     );
   }
 
   const columns = rankRuleColumns(visible, findingsByLease);
 
   return (
-    <section aria-label="portfolio">
-      <h2>Portfolio</h2>
+    <Section label="portfolio" className="space-y-3 px-4 py-4">
+      <h2 className="text-heading uppercase text-fg-muted">Portfolio</h2>
       <PortfolioRollupsPanel
         rollups={rollups}
         onDrillThrough={(ids) => setDrillIds(ids)}
       />
       {drillIds !== null && (
         <p>
-          <button type="button" onClick={() => setDrillIds(null)}>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDrillIds(null)}>
             Clear rollup filter
-          </button>
+          </Button>
         </p>
       )}
-      <div className="portfolio-scroll" style={{ overflowX: 'auto' }}>
-        <table aria-label="portfolio">
+      <div className="portfolio-scroll overflow-x-auto">
+        <table aria-label="portfolio" className="text-small text-fg-body border-collapse">
           <thead>
-            <tr>
-              <th scope="col" data-sticky="true" className="portfolio-sticky">
+            <tr className="border-b border-rule">
+              <th scope="col" data-sticky="true" className="portfolio-sticky text-left py-1 pr-4 text-fg-muted font-sans">
                 Lease
               </th>
               {columns.map((c) => (
-                <th key={c.ruleId} scope="col">
+                <th key={c.ruleId} scope="col" className="text-left py-1 pr-3 text-fg-muted font-mono text-mono">
                   {c.ruleId}
                 </th>
               ))}
@@ -129,17 +141,17 @@ export function PortfolioPanel({
               const findings = findingsByLease.get(lease.id) ?? [];
               const bestBySeverity = bestSeverityByRule(findings);
               return (
-                <tr key={lease.id} aria-label={lease.name}>
-                  <th scope="row" data-sticky="true" className="portfolio-sticky">
+                <tr key={lease.id} aria-label={lease.name} className="even:bg-paper-sunken border-b border-rule-subtle">
+                  <th scope="row" data-sticky="true" className="portfolio-sticky py-2 pr-4 text-left align-top font-normal">
                     <button
                       type="button"
                       onClick={() => onOpenLease(lease.id)}
                       aria-label={`Open ${lease.name}`}
+                      className="text-body text-ink hover:underline text-left"
                     >
                       {lease.name}
                     </button>
-                    <small>
-                      {' · '}
+                    <small className="block text-small text-fg-muted">
                       {lease.pageCount} pages
                       {' · '}
                       {new Date(lease.createdAt).toLocaleDateString()}
@@ -148,8 +160,8 @@ export function PortfolioPanel({
                   {columns.map((c) => {
                     const sev = bestBySeverity.get(c.ruleId);
                     return (
-                      <td key={c.ruleId}>
-                        {sev ? <SeverityBadge severity={sev} /> : <span>—</span>}
+                      <td key={c.ruleId} className="py-2 pr-3 align-top">
+                        {sev ? <SeverityBadge severity={sev} /> : <span className="text-fg-muted">—</span>}
                       </td>
                     );
                   })}
@@ -159,13 +171,19 @@ export function PortfolioPanel({
           </tbody>
         </table>
       </div>
-    </section>
+    </Section>
   );
 }
 
 function SeverityBadge({ severity }: { severity: Severity }): JSX.Element {
+  const COLOR: Record<Severity, string> = {
+    high: 'bg-severity-high/10 text-severity-high border-severity-high/30',
+    medium: 'bg-severity-medium/10 text-severity-medium border-severity-medium/30',
+    low: 'bg-severity-low/10 text-severity-low border-severity-low/30',
+    info: 'bg-severity-info/10 text-severity-info border-severity-info/30',
+  };
   return (
-    <span className={`severity-badge severity-${severity}`} data-severity={severity}>
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border text-small font-sans ${COLOR[severity]}`} data-severity={severity}>
       {severity}
     </span>
   );

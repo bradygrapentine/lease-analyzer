@@ -28,13 +28,13 @@ export function Field({
       <label className={`flex flex-col gap-1 text-body font-sans text-fg-body ${className}`}>
         <span className="text-small text-fg-muted">{label}</span>
         {description && (
-          <span id={descId} className="text-small text-fg-faint">
+          <span id={descId} className="text-small text-fg-muted">
             {description}
           </span>
         )}
         <select
           aria-describedby={descId}
-          className="border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
+          className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
           {...(selectRest as SelectHTMLAttributes<HTMLSelectElement>)}
         >
           {children}
@@ -48,13 +48,13 @@ export function Field({
       <label className={`flex flex-col gap-1 text-body font-sans text-fg-body ${className}`}>
         <span className="text-small text-fg-muted">{label}</span>
         {description && (
-          <span id={descId} className="text-small text-fg-faint">
+          <span id={descId} className="text-small text-fg-muted">
             {description}
           </span>
         )}
         <textarea
           aria-describedby={descId}
-          className="border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
+          className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
           {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
         />
       </label>
@@ -65,13 +65,13 @@ export function Field({
     <label className={`flex flex-col gap-1 text-body font-sans text-fg-body ${className}`}>
       <span className="text-small text-fg-muted">{label}</span>
       {description && (
-        <span id={descId} className="text-small text-fg-faint">
+        <span id={descId} className="text-small text-fg-muted">
           {description}
         </span>
       )}
       <input
         aria-describedby={descId}
-        className="border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
+        className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
         {...(rest as InputHTMLAttributes<HTMLInputElement>)}
       />
     </label>

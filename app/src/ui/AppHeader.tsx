@@ -35,7 +35,7 @@ export function AppHeader({
         <LocalePickerPanel />
         <details className="privacy text-small text-fg-muted">
           <summary className="cursor-pointer">{t('header.privacy.summary')}</summary>
-          <ul className="mt-1 ml-4 space-y-0.5 list-disc text-fg-faint">
+          <ul className="mt-1 ml-4 space-y-0.5 list-disc text-fg-muted">
             <li>The PDF is parsed entirely in your browser via pdf.js.</li>
             <li>All storage is in IndexedDB on this device. No account, no sync.</li>
             <li>

@@ -37,7 +37,7 @@ export function AnnotationsPanel({
     return (
       <Section label="annotations">
         <h3 className="text-heading uppercase text-fg-muted mb-3">Notes</h3>
-        <p className="text-body text-fg-faint">Click a finding to attach a note.</p>
+        <p className="text-body text-fg-muted">Click a finding to attach a note.</p>
       </Section>
     );
   }
@@ -65,7 +65,7 @@ export function AnnotationsPanel({
     <Section label="annotations" className="space-y-3">
       <h3 className="text-heading uppercase text-fg-muted mb-3">Notes</h3>
       {forParagraph.length === 0 ? (
-        <p className="text-body text-fg-faint">No notes yet for this paragraph.</p>
+        <p className="text-body text-fg-muted">No notes yet for this paragraph.</p>
       ) : (
         <ul className="space-y-2">
           {forParagraph.map((a) => (

@@ -1,5 +1,20 @@
+// Wave 27-C — design pass rewrite.
+// Semantic attributes preserved verbatim:
+//   aria-label="clause templates"        (section)
+//   aria-label={`edit ${t.name}`}        (form)
+//   aria-label="template name"           (input)
+//   aria-label="template text"           (textarea)
+//   aria-label={`Edit ${t.name}`}        (button)
+//   aria-label={`Delete ${t.name}`}      (button)
+//   aria-label="add clause template"     (form)
+//   aria-label="new template name"       (input)
+//   aria-label="new template text"       (textarea)
+//
 import { useState } from 'react';
 import type { ClauseTemplate } from '../templates/types';
+import { Section } from './system/Section';
+import { Button } from './system/Button';
+import { Field } from './system/Field';
 
 interface TemplatesPanelProps {
   templates: ClauseTemplate[];
@@ -39,56 +54,62 @@ export function TemplatesPanel({
   }
 
   return (
-    <section aria-label="clause templates">
-      <h2>Clause templates</h2>
+    <Section label="clause templates" className="space-y-4 px-4 py-4">
+      <h2 className="text-heading uppercase text-fg-muted">Clause templates</h2>
       {templates.length === 0 ? (
-        <p>No clause templates saved yet.</p>
+        <p className="text-body text-fg-muted">No clause templates saved yet.</p>
       ) : (
-        <ul>
+        <ul className="space-y-2">
           {templates.map((t) => (
-            <li key={t.id}>
+            <li key={t.id} className="rounded-sm border border-rule bg-paper-raised shadow-paper p-3">
               {editing?.id === t.id ? (
-                <form onSubmit={onEditSubmit} aria-label={`edit ${t.name}`}>
-                  <label>
-                    <span className="visually-hidden">Template name</span>
-                    <input
-                      type="text"
-                      aria-label="template name"
-                      value={editing.name}
-                      onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span className="visually-hidden">Template text</span>
-                    <textarea
-                      aria-label="template text"
-                      value={editing.text}
-                      onChange={(e) => setEditing({ ...editing, text: e.target.value })}
-                    />
-                  </label>
-                  <button type="submit">Save</button>
-                  <button type="button" onClick={() => setEditing(null)}>
-                    Cancel
-                  </button>
+                <form onSubmit={onEditSubmit} aria-label={`edit ${t.name}`} className="space-y-2">
+                  <Field
+                    as="input"
+                    label="Template name"
+                    type="text"
+                    aria-label="template name"
+                    value={editing.name}
+                    onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                  />
+                  <Field
+                    as="textarea"
+                    label="Template text"
+                    aria-label="template text"
+                    value={editing.text}
+                    onChange={(e) => setEditing({ ...editing, text: e.target.value })}
+                  />
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm">Save</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(null)}>
+                      Cancel
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <>
-                  <strong>{t.name}</strong>
-                  <p>{t.text}</p>
-                  <button
-                    type="button"
-                    aria-label={`Edit ${t.name}`}
-                    onClick={() => setEditing({ id: t.id, name: t.name, text: t.text })}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Delete ${t.name}`}
-                    onClick={() => onDelete(t.id)}
-                  >
-                    Delete
-                  </button>
+                  <strong className="text-body text-fg font-sans">{t.name}</strong>
+                  <p className="text-body text-fg-body mt-1">{t.text}</p>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Edit ${t.name}`}
+                      onClick={() => setEditing({ id: t.id, name: t.name, text: t.text })}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Delete ${t.name}`}
+                      onClick={() => onDelete(t.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </>
               )}
             </li>
@@ -96,27 +117,25 @@ export function TemplatesPanel({
         </ul>
       )}
 
-      <form onSubmit={onSubmit} aria-label="add clause template">
-        <h3>Add template</h3>
-        <label>
-          Name
-          <input
-            type="text"
-            aria-label="new template name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <label>
-          Clause text
-          <textarea
-            aria-label="new template text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-        </label>
-        <button type="submit">Add template</button>
+      <form onSubmit={onSubmit} aria-label="add clause template" className="space-y-2 border-t border-rule pt-3">
+        <h3 className="text-heading uppercase text-fg-muted">Add template</h3>
+        <Field
+          as="input"
+          label="Name"
+          type="text"
+          aria-label="new template name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <Field
+          as="textarea"
+          label="Clause text"
+          aria-label="new template text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <Button type="submit" size="sm">Add template</Button>
       </form>
-    </section>
+    </Section>
   );
 }

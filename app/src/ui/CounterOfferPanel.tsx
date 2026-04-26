@@ -57,7 +57,7 @@ export function CounterOfferPanel({
     return (
       <Section label="counter-offers">
         <h3 className="text-heading uppercase text-fg-muted mb-3">Counter-offers</h3>
-        <p className="text-body text-fg-faint">Select a finding to see or add counter-offers.</p>
+        <p className="text-body text-fg-muted">Select a finding to see or add counter-offers.</p>
       </Section>
     );
   }
@@ -80,7 +80,7 @@ export function CounterOfferPanel({
       <h3 className="text-heading uppercase text-fg-muted mb-3">Counter-offers</h3>
       <p className="text-small text-fg-muted">For rule: {finding.title}</p>
       {forRule.length === 0 ? (
-        <p className="text-body text-fg-faint">No counter-offers saved for this rule.</p>
+        <p className="text-body text-fg-muted">No counter-offers saved for this rule.</p>
       ) : (
         <ul className="space-y-2">
           {forRule.map((c) => (

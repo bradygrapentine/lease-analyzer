@@ -31,7 +31,7 @@ export function Card({
   const accentClass = accent ? ACCENT_BORDER[accent] : '';
   return (
     <Tag
-      className={`bg-paper-raised shadow-paper rounded border border-rule ${accentClass} ${className}`}
+      className={`bg-paper-raised shadow-paper rounded-sm border border-rule ${accentClass} ${className}`}
       {...rest}
     >
       {children}
