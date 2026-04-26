@@ -14,8 +14,13 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm,mjs}'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // The added `onnx`, `txt`, and `json` extensions cover the Phase 18
+        // classifier assets dropped by `npm run build:classifier-assets`
+        // into public/classifier/. The bumped 18 MiB per-file cap fits the
+        // int8-quantized MiniLM-L3 weights (~17.5 MiB); the previous 5 MiB
+        // cap excluded them.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm,mjs,onnx,txt,json}'],
+        maximumFileSizeToCacheInBytes: 18 * 1024 * 1024,
         navigateFallback: 'index.html',
       },
       manifest: {

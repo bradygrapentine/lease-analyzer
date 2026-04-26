@@ -115,21 +115,26 @@ async function main() {
     }
   }
 
-  // Phase 18 classifier (lazy-loaded, precached). Wave 20-C reserves the
-  // directory; Wave 21+ ships the actual model files. Sum every byte
-  // under dist/classifier/ recursively if present.
-  let classifierTotalBytes = 0;
-  let classifierEntries = [];
-  try {
-    classifierEntries = await readdir(CLASSIFIER_DIR);
-  } catch {
-    // Directory missing is the expected state for Wave 20-C — the
-    // classifier hasn't shipped yet. No warning needed.
+  // Phase 18 classifier (lazy-loaded, precached). Sum every byte
+  // recursively under dist/classifier/ if present. Wave 23-A's
+  // build:classifier-assets script writes onnx/model_quantized.onnx
+  // into a subdirectory, so a non-recursive walk would under-count.
+  async function walkBytes(dir) {
+    let total = 0;
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return 0;
+    }
+    for (const e of entries) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) total += await walkBytes(p);
+      else if (e.isFile()) total += (await stat(p)).size;
+    }
+    return total;
   }
-  for (const name of classifierEntries) {
-    const info = await stat(join(CLASSIFIER_DIR, name));
-    if (info.isFile()) classifierTotalBytes += info.size;
-  }
+  const classifierTotalBytes = await walkBytes(CLASSIFIER_DIR);
 
   // Combined OCR + classifier precache cap. The contract from Wave 18-B's
   // model selection: "OCR + classifier ≤ 30 MiB combined precache." Trivially
