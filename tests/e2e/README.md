@@ -69,9 +69,23 @@ gates are intentionally redundant: the unit gate catches regressions
 inside a single component, the e2e gate catches regressions caused by
 how panels compose.
 
+## User flows covered
+
+- `golden.spec.ts` — analyze sample lease → click finding → portfolio
+  toggle → audit-log entries (Wave 12-B).
+- `a11y.spec.ts` — axe-core against the analyzed-lease view (Wave
+  14-D).
+- `save-and-library.spec.ts` — auto-save after analyze → library row
+  surfaces → reopen rehydrates findings (Wave 16-B).
+
 ## Out of scope (deferred to later waves)
 
 - Visual regression snapshots.
 - e2e for review-link / counter-sign / delta-packet flows (those need
   filesystem fixtures).
+- e2e for compare / redline / version-history flows — Wave 16-B
+  evaluated these and skipped: ComparePanel has no hover-to-inspect
+  behavior to verify, redline acceptance is a per-paragraph inline
+  editor (easier at RTL level), version-history save/restore state
+  machine is already covered by `useVersionHistory.test.ts`.
 - Test parallelism beyond Playwright's defaults.
