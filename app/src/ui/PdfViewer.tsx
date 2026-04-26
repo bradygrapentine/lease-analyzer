@@ -102,6 +102,7 @@ export function PdfViewer({
 
   return (
     <section aria-label="pdf viewer" className="pdf-viewer">
+      <div className="pdf-viewer-legacy">
       {Array.from({ length: pageCount }, (_, i) => {
         const pageNum = i + 1;
         const overlay = highlight?.page === pageNum ? highlight : null;
@@ -125,6 +126,7 @@ export function PdfViewer({
           </div>
         );
       })}
+      </div>
     </section>
   );
 }

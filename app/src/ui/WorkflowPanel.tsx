@@ -1,5 +1,12 @@
 import { useState } from 'react';
 import type { Finding } from '../rules/types';
+import { Section } from './system/Section';
+import { Button } from './system/Button';
+
+// Aria/data inventory (preserved verbatim):
+//   aria-label="workflow" (aside — now Section)
+//   role="group" + aria-label="workflow actions" (div)
+//   role="status" + aria-live="polite" (p)
 
 export interface WorkflowPanelProps {
   leaseName: string;
@@ -26,32 +33,34 @@ export function WorkflowPanel(props: WorkflowPanelProps): JSX.Element {
   }
 
   return (
-    <aside aria-label="workflow" className="workflow-panel">
-      <h2>Workflow</h2>
-      <p className="lease-name">
+    <Section label="workflow" className="workflow-panel space-y-3">
+      <h3 className="text-heading uppercase text-fg-muted mb-1">Workflow</h3>
+      <p className="lease-name text-body text-fg-body">
         <strong>{leaseName}</strong> · {findings.length} finding
         {findings.length === 1 ? '' : 's'}
       </p>
-      <div className="actions" role="group" aria-label="workflow actions">
-        <button type="button" onClick={onBuildIcs}>
+      <div className="actions flex flex-wrap gap-2" role="group" aria-label="workflow actions">
+        <Button type="button" variant="subtle" size="sm" onClick={onBuildIcs}>
           Download .ics
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="subtle"
+          size="sm"
           onClick={handleCopy}
           disabled={copyStatus === 'copying'}
         >
           Copy summary
-        </button>
-        <button type="button" onClick={onDownloadHandoff}>
+        </Button>
+        <Button type="button" variant="subtle" size="sm" onClick={onDownloadHandoff}>
           Download handoff ZIP
-        </button>
+        </Button>
       </div>
-      <p className="status" role="status" aria-live="polite">
+      <p className="status text-small text-fg-muted" role="status" aria-live="polite">
         {copyStatus === 'copied' && 'Copied!'}
         {copyStatus === 'copying' && 'Copying…'}
         {copyStatus === 'failed' && 'Copy failed.'}
       </p>
-    </aside>
+    </Section>
   );
 }

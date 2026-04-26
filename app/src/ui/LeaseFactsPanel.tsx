@@ -5,6 +5,13 @@ import type {
   MoneyValue,
   RentSchedulePeriod,
 } from '../facts/types';
+import { Section } from './system/Section';
+
+// Aria/data inventory (preserved verbatim):
+//   aria-label="lease facts" (section)
+//   aria-label="rent schedule" (table)
+//   scope="col" (th headers), scope="row" (th row headers)
+//   className="visually-hidden" (caption)
 
 interface LeaseFactsPanelProps {
   facts: LeaseFacts;
@@ -25,19 +32,19 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
 
   if (isEmpty) {
     return (
-      <section aria-label="lease facts">
-        <h2>Lease facts</h2>
-        <p>No structured facts detected in this lease.</p>
-      </section>
+      <Section label="lease facts">
+        <h3 className="text-heading uppercase text-fg-muted mb-3">Lease facts</h3>
+        <p className="text-body text-fg-faint">No structured facts detected in this lease.</p>
+      </Section>
     );
   }
 
   return (
-    <section aria-label="lease facts">
-      <h2>Lease facts</h2>
-      <table>
+    <Section label="lease facts" className="space-y-4">
+      <h3 className="text-heading uppercase text-fg-muted mb-3">Lease facts</h3>
+      <table className="w-full text-body text-fg-body">
         <caption className="visually-hidden">Key lease facts</caption>
-        <tbody>
+        <tbody className="divide-y divide-rule">
           <FactRow label="Base rent" value={formatMoney(facts.baseRent)} />
           <FactRow label="Security deposit" value={formatMoney(facts.securityDeposit)} />
           <FactRow label="Term" value={formatMonths(facts.termMonths)} />
@@ -49,8 +56,10 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
 
       {facts.definitions.length > 0 && (
         <div>
-          <h3>Definitions ({facts.definitions.length})</h3>
-          <dl>
+          <h4 className="text-heading uppercase text-fg-muted mb-2">
+            Definitions ({facts.definitions.length})
+          </h4>
+          <dl className="space-y-2">
             {facts.definitions.map((d) => (
               <DefinitionRow key={`${d.term}-${d.paragraphIndex}`} entry={d} />
             ))}
@@ -60,8 +69,10 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
 
       {facts.crossReferences.length > 0 && (
         <div>
-          <h3>Cross-references ({facts.crossReferences.length})</h3>
-          <ul>
+          <h4 className="text-heading uppercase text-fg-muted mb-2">
+            Cross-references ({facts.crossReferences.length})
+          </h4>
+          <ul className="space-y-1 text-body text-fg-body">
             {facts.crossReferences.map((r) => (
               <CrossRefRow key={`${r.target}-${r.paragraphIndex}-${r.page}`} entry={r} />
             ))}
@@ -71,17 +82,19 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
 
       {rentSchedule.length > 0 && (
         <div>
-          <h3>Rent schedule ({rentSchedule.length})</h3>
-          <table aria-label="rent schedule">
+          <h4 className="text-heading uppercase text-fg-muted mb-2">
+            Rent schedule ({rentSchedule.length})
+          </h4>
+          <table aria-label="rent schedule" className="w-full text-body text-fg-body">
             <thead>
-              <tr>
-                <th scope="col">From</th>
-                <th scope="col">To</th>
-                <th scope="col">Amount</th>
-                <th scope="col">Escalator</th>
+              <tr className="border-b border-rule">
+                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">From</th>
+                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">To</th>
+                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">Amount</th>
+                <th scope="col" className="py-1 text-left text-small text-fg-muted font-sans">Escalator</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-rule">
               {rentSchedule.map((period, i) => (
                 <RentScheduleRow key={`${period.from}-${period.to}-${i}`} period={period} />
               ))}
@@ -89,17 +102,17 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
           </table>
         </div>
       )}
-    </section>
+    </Section>
   );
 }
 
 function RentScheduleRow({ period }: { period: RentSchedulePeriod }): JSX.Element {
   return (
     <tr>
-      <td>{period.from}</td>
-      <td>{period.to}</td>
-      <td>{formatAmount(period.amount)}</td>
-      <td>{period.escalator !== undefined ? `${period.escalator}%` : '—'}</td>
+      <td className="py-1 pr-3">{period.from}</td>
+      <td className="py-1 pr-3">{period.to}</td>
+      <td className="py-1 pr-3">{formatAmount(period.amount)}</td>
+      <td className="py-1">{period.escalator !== undefined ? `${period.escalator}%` : '—'}</td>
     </tr>
   );
 }
@@ -116,8 +129,8 @@ interface FactRowProps {
 function FactRow({ label, value }: FactRowProps): JSX.Element {
   return (
     <tr>
-      <th scope="row">{label}</th>
-      <td>{value}</td>
+      <th scope="row" className="py-1 pr-4 text-left text-small text-fg-muted font-sans w-40">{label}</th>
+      <td className="py-1 text-body text-fg-body font-sans">{value}</td>
     </tr>
   );
 }
@@ -125,9 +138,9 @@ function FactRow({ label, value }: FactRowProps): JSX.Element {
 function DefinitionRow({ entry }: { entry: DefinitionEntry }): JSX.Element {
   return (
     <>
-      <dt>{entry.term}</dt>
-      <dd>
-        {entry.definition} <small>(p. {entry.page})</small>
+      <dt className="font-sans text-body text-fg-body font-semibold">{entry.term}</dt>
+      <dd className="font-sans text-body text-fg-body ml-4">
+        {entry.definition} <span className="text-small text-fg-muted">(p. {entry.page})</span>
       </dd>
     </>
   );
@@ -136,7 +149,8 @@ function DefinitionRow({ entry }: { entry: DefinitionEntry }): JSX.Element {
 function CrossRefRow({ entry }: { entry: CrossReference }): JSX.Element {
   return (
     <li>
-      <strong>{entry.text}</strong> <small>(p. {entry.page})</small>
+      <span className="font-sans text-body text-fg-body font-semibold">{entry.text}</span>{' '}
+      <span className="text-small text-fg-muted">(p. {entry.page})</span>
     </li>
   );
 }

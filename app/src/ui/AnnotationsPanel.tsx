@@ -1,5 +1,18 @@
 import { useState } from 'react';
 import type { Annotation } from '../annotations/annotations';
+import { Section } from './system/Section';
+import { Button } from './system/Button';
+import { Field } from './system/Field';
+
+// Aria/data inventory (preserved verbatim):
+//   aria-label="annotations" (section)
+//   aria-label="edit note" (form)
+//   aria-label="edit note text" (textarea)
+//   aria-label="edit note" (button)
+//   aria-label="delete note" (button)
+//   aria-label="add note" (form)
+//   aria-label="new note" (textarea)
+//   className="visually-hidden" (span) — handled by Field's label rendering
 
 interface AnnotationsPanelProps {
   leaseId: string;
@@ -22,10 +35,10 @@ export function AnnotationsPanel({
 
   if (paragraphIndex === null) {
     return (
-      <section aria-label="annotations">
-        <h2>Notes</h2>
-        <p>Click a finding to attach a note.</p>
-      </section>
+      <Section label="annotations">
+        <h3 className="text-heading uppercase text-fg-muted mb-3">Notes</h3>
+        <p className="text-body text-fg-faint">Click a finding to attach a note.</p>
+      </Section>
     );
   }
 
@@ -49,46 +62,55 @@ export function AnnotationsPanel({
   }
 
   return (
-    <section aria-label="annotations">
-      <h2>Notes</h2>
+    <Section label="annotations" className="space-y-3">
+      <h3 className="text-heading uppercase text-fg-muted mb-3">Notes</h3>
       {forParagraph.length === 0 ? (
-        <p>No notes yet for this paragraph.</p>
+        <p className="text-body text-fg-faint">No notes yet for this paragraph.</p>
       ) : (
-        <ul>
+        <ul className="space-y-2">
           {forParagraph.map((a) => (
-            <li key={a.id}>
+            <li key={a.id} className="bg-paper-sunken border border-rule rounded-sm p-3">
               {editing?.id === a.id ? (
-                <form onSubmit={onEditSubmit} aria-label="edit note">
+                <form onSubmit={onEditSubmit} aria-label="edit note" className="space-y-2">
                   <label>
                     <span className="visually-hidden">Edit note text</span>
                     <textarea
                       aria-label="edit note text"
                       value={editing.text}
                       onChange={(e) => setEditing({ ...editing, text: e.target.value })}
+                      className="w-full border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
                     />
                   </label>
-                  <button type="submit">Save</button>
-                  <button type="button" onClick={() => setEditing(null)}>
-                    Cancel
-                  </button>
+                  <div className="flex gap-2">
+                    <Button type="submit" variant="subtle" size="sm">Save</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(null)}>
+                      Cancel
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <>
-                  <p>{a.text}</p>
-                  <button
-                    type="button"
-                    aria-label="edit note"
-                    onClick={() => setEditing({ id: a.id, text: a.text })}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="delete note"
-                    onClick={() => onDelete(a.id)}
-                  >
-                    Delete
-                  </button>
+                  <p className="text-body text-fg-body mb-2">{a.text}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label="edit note"
+                      onClick={() => setEditing({ id: a.id, text: a.text })}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label="delete note"
+                      onClick={() => onDelete(a.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </>
               )}
             </li>
@@ -96,18 +118,17 @@ export function AnnotationsPanel({
         </ul>
       )}
 
-      <form onSubmit={onSubmit} aria-label="add note">
-        <h3>Add note</h3>
-        <label>
-          Note
-          <textarea
-            aria-label="new note"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-        </label>
-        <button type="submit">Add note</button>
+      <form onSubmit={onSubmit} aria-label="add note" className="space-y-2">
+        <h4 className="text-heading uppercase text-fg-muted">Add note</h4>
+        <Field
+          as="textarea"
+          label="Note"
+          aria-label="new note"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <Button type="submit" variant="subtle" size="sm">Add note</Button>
       </form>
-    </section>
+    </Section>
   );
 }
