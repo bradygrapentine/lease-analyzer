@@ -189,12 +189,12 @@ cd ..
 RUN_REAL_MODEL=1 npx playwright test --project=chromium tests/e2e/hybrid-golden.spec.ts
 ```
 
-**Known gap (Wave 26 fix):** the spec currently fails even with
-assets present, because `loadClassifier.ts` doesn't configure
-`@xenova/transformers`'s local-model path — the runtime falls back
-to fetching from huggingface.co and the upload path silently
-degrades to deterministic-only. The spec is shipped now to document
-the contract; the loader fix unsticks it without spec edits.
+First-run wall time on the local box: roughly 30–60 s (16 MiB ONNX
+fetch + WASM init + per-paragraph embedding). Subsequent runs reuse
+the browser's HTTP cache and complete in a couple of seconds. The
+spec disables service-worker registration before navigation so the
+SW precache doesn't race with the direct fetch (Chromium throws
+`ERR_CACHE_WRITE_FAILURE` on the 16 MiB file under that race).
 
 ## Run commands
 

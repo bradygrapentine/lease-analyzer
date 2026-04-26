@@ -20,6 +20,13 @@ export default defineConfig({
         // int8-quantized MiniLM-L3 weights (~17.5 MiB); the previous 5 MiB
         // cap excluded them.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm,mjs,onnx,txt,json}'],
+        // ONNX Runtime WASM (~9.5 MiB) is intentionally NOT precached:
+        // adding it would push the precache past its 30 MiB budget and
+        // racing the precache write with transformers' direct fetch
+        // throws ERR_CACHE_WRITE_FAILURE in fresh profiles. It's still
+        // served same-origin (CSP requires it) — just on-demand, not
+        // up-front.
+        globIgnores: ['classifier/onnx-runtime/**'],
         maximumFileSizeToCacheInBytes: 18 * 1024 * 1024,
         navigateFallback: 'index.html',
       },

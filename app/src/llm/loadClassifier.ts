@@ -31,13 +31,30 @@ let cached: Promise<EmbedFunction> | null = null;
 
 /**
  * Load (or return cached) the on-device classifier. Dynamic-imports
- * @xenova/transformers so the runtime stays out of the app shell. Wave
- * 20 has no production caller; tests pin the lazy-import contract.
+ * @xenova/transformers so the runtime stays out of the app shell.
+ *
+ * Local-only contract: the downloader (`npm run build:classifier-assets`)
+ * places the model under `app/public/classifier/<modelId>/`, so the
+ * served path is `/classifier/Xenova/paraphrase-MiniLM-L3-v2/<file>`.
+ * Setting `env.localModelPath = '/classifier/'` and disabling remote
+ * fallback ensures transformers reads from same-origin (CSP requires
+ * it) and never silently degrades to a huggingface.co fetch when the
+ * weights are missing — a missing-asset error surfaces immediately
+ * and the upload-path fallback (Wave 24-A) catches it cleanly.
  */
 export function loadClassifier(modelId: string = DEFAULT_MODEL_ID): Promise<EmbedFunction> {
   if (cached) return cached;
   cached = (async () => {
     const transformers = await import('@xenova/transformers');
+    transformers.env.localModelPath = '/classifier/';
+    transformers.env.allowRemoteModels = false;
+    // Self-host the ONNX Runtime WASM so the classifier never reaches
+    // out to a CDN (the default `wasmPaths` is jsdelivr — blocked by
+    // the app's `connect-src 'self'` CSP). Single-thread SIMD: the
+    // threaded variants need SharedArrayBuffer (COOP/COEP), which the
+    // app doesn't enable.
+    transformers.env.backends.onnx.wasm.wasmPaths = '/classifier/onnx-runtime/';
+    transformers.env.backends.onnx.wasm.numThreads = 1;
     const pipeline = transformers.pipeline as (task: string, model: string) => Promise<unknown>;
     const extractor = (await pipeline('feature-extraction', modelId)) as (
       input: string | string[],
