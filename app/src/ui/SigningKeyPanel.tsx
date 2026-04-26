@@ -1,3 +1,12 @@
+// Wave 27-C — design pass rewrite.
+// Semantic attributes preserved verbatim:
+//   aria-label="signing key"   (section)
+//   aria-label="public key"    (span)
+//   aria-label="key history"   (ul)
+//
+import { Section } from './system/Section';
+import { Button } from './system/Button';
+
 export interface SigningKeyState {
   /** base64 raw public key, or null if no key exists. */
   publicKey: string | null;
@@ -37,62 +46,67 @@ export function SigningKeyPanel({
 }: SigningKeyPanelProps): JSX.Element {
   const hasKey = state.publicKey !== null;
   return (
-    <section aria-label="signing key">
-      <h2>Signing key</h2>
+    <Section label="signing key" className="space-y-3 px-4 py-4">
+      <h2 className="text-heading uppercase text-fg-muted">Signing key</h2>
       {hasKey ? (
-        <p>
-          <span aria-label="public key">Key: </span>
-          <code>{truncate(state.publicKey ?? '')}</code>
+        <p className="text-body text-fg-body">
+          <span aria-label="public key" className="text-small text-fg-muted">Key: </span>
+          <code className="font-mono text-mono text-fg-muted">{truncate(state.publicKey ?? '')}</code>
         </p>
       ) : (
-        <p>No signing key.</p>
+        <p className="text-body text-fg-faint">No signing key.</p>
       )}
-      {!hasKey && (
-        <button
-          type="button"
-          onClick={() => {
-            const pp = window.prompt('Set a passphrase for the new signing key:');
-            if (!pp) return;
-            void onCreateKey(pp);
-          }}
-        >
-          Create key
-        </button>
-      )}
-      {hasKey && (
-        <button
-          type="button"
-          onClick={() => {
-            if (state.publicKey) void onExportPublicKey(state.publicKey);
-          }}
-        >
-          Export public key
-        </button>
-      )}
-      {hasKey && onRotateKey && (
-        <button
-          type="button"
-          onClick={() => {
-            const pp = window.prompt(
-              'Set a passphrase for the new (rotated) signing key:',
-            );
-            if (!pp) return;
-            void onRotateKey(pp);
-          }}
-        >
-          Rotate key
-        </button>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {!hasKey && (
+          <Button
+            variant="subtle"
+            size="sm"
+            onClick={() => {
+              const pp = window.prompt('Set a passphrase for the new signing key:');
+              if (!pp) return;
+              void onCreateKey(pp);
+            }}
+          >
+            Create key
+          </Button>
+        )}
+        {hasKey && (
+          <Button
+            variant="subtle"
+            size="sm"
+            onClick={() => {
+              if (state.publicKey) void onExportPublicKey(state.publicKey);
+            }}
+          >
+            Export public key
+          </Button>
+        )}
+        {hasKey && onRotateKey && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const pp = window.prompt(
+                'Set a passphrase for the new (rotated) signing key:',
+              );
+              if (!pp) return;
+              void onRotateKey(pp);
+            }}
+          >
+            Rotate key
+          </Button>
+        )}
+      </div>
       {keys && keys.length > 0 && (
-        <ul aria-label="key history">
+        <ul aria-label="key history" className="space-y-1 mt-2">
           {keys.map((k) => (
-            <li key={k.id}>
+            <li key={k.id} className="text-small text-fg-muted">
               <span>{k.id}</span>
               {' — '}
-              <code>{truncate(k.fingerprint)}</code>
+              <code className="font-mono text-mono">{truncate(k.fingerprint)}</code>
               {' — '}
               {k.retiredAt === null ? (
-                <span>active</span>
+                <span className="text-positive">active</span>
               ) : (
                 <span>retired @ {new Date(k.retiredAt).toISOString()}</span>
               )}
@@ -100,7 +114,7 @@ export function SigningKeyPanel({
           ))}
         </ul>
       )}
-    </section>
+    </Section>
   );
 }
 

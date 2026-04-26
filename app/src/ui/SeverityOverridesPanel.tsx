@@ -1,4 +1,13 @@
+// Wave 27-C — design pass rewrite.
+// Semantic attributes preserved verbatim:
+//   aria-label="severity overrides"              (section, both branches)
+//   aria-label={`override severity for ${r.id}`} (select)
+//   aria-label={`apply across portfolio for ${r.id}`} (checkbox)
+//   aria-label={`clear override for ${r.id}`}   (button)
+//
 import type { ChangeEvent } from 'react';
+import { Section } from './system/Section';
+import { Button } from './system/Button';
 
 export type OverrideSeverity = 'info' | 'warn' | 'error';
 
@@ -46,12 +55,12 @@ export function SeverityOverridesPanel({
     portfolioOverrides !== undefined && onScopeChange !== undefined;
   if (rules.length === 0) {
     return (
-      <section aria-label="severity overrides">
-        <h2>Severity overrides</h2>
-        <p>
+      <Section label="severity overrides" className="space-y-2 px-4 py-4">
+        <h2 className="text-heading uppercase text-fg-muted">Severity overrides</h2>
+        <p className="text-body text-fg-faint">
           <em>No rules available to override.</em>
         </p>
-      </section>
+      </Section>
     );
   }
 
@@ -67,87 +76,92 @@ export function SeverityOverridesPanel({
   }
 
   return (
-    <section aria-label="severity overrides">
-      <h2>Severity overrides</h2>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Rule</th>
-            <th scope="col">Built-in</th>
-            <th scope="col">Override</th>
-            {showScopeToggle ? <th scope="col">Scope</th> : null}
-            <th scope="col">
-              <span className="visually-hidden">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rules.map((r) => {
-            const current = overrides[r.id];
-            const hasOverride = current !== undefined;
-            const value: string = current ?? CLEAR_VALUE;
-            return (
-              <tr key={r.id}>
-                <td>
-                  <strong>{r.title}</strong>
-                  <div>
-                    <small>{r.id}</small>
-                  </div>
-                </td>
-                <td>{SEVERITY_LABEL[r.severity]}</td>
-                <td>
-                  <label>
-                    <span className="visually-hidden">
-                      Override severity for {r.title}
-                    </span>
-                    <select
-                      aria-label={`override severity for ${r.id}`}
-                      value={value}
-                      onChange={(e) => handleChange(r.id, e)}
-                    >
-                      <option value={CLEAR_VALUE}>— use built-in —</option>
-                      <option value="info">{SEVERITY_LABEL.info}</option>
-                      <option value="warn">{SEVERITY_LABEL.warn}</option>
-                      <option value="error">{SEVERITY_LABEL.error}</option>
-                    </select>
-                  </label>
-                </td>
-                {showScopeToggle ? (
-                  <td>
-                    <label>
-                      <input
-                        type="checkbox"
-                        aria-label={`apply across portfolio for ${r.id}`}
-                        checked={portfolioOverrides?.[r.id] !== undefined}
-                        onChange={(e) =>
-                          onScopeChange?.(
-                            r.id,
-                            e.target.checked ? 'portfolio' : 'lease',
-                          )
-                        }
-                      />
-                      <span className="visually-hidden">
-                        Apply across portfolio for {r.title}
+    <Section label="severity overrides" className="space-y-3 px-4 py-4">
+      <h2 className="text-heading uppercase text-fg-muted">Severity overrides</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-small text-fg-body border-collapse">
+          <thead>
+            <tr className="border-b border-rule">
+              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Rule</th>
+              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Built-in</th>
+              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Override</th>
+              {showScopeToggle ? <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Scope</th> : null}
+              <th scope="col" className="text-left py-1 text-fg-muted font-sans">
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rules.map((r) => {
+              const current = overrides[r.id];
+              const hasOverride = current !== undefined;
+              const value: string = current ?? CLEAR_VALUE;
+              return (
+                <tr key={r.id} className="even:bg-paper-sunken border-b border-rule-subtle">
+                  <td className="py-2 pr-3 align-top">
+                    <strong className="text-body text-fg-body font-sans">{r.title}</strong>
+                    <div>
+                      <small className="font-mono text-mono text-fg-muted">{r.id}</small>
+                    </div>
+                  </td>
+                  <td className="py-2 pr-3 align-top">{SEVERITY_LABEL[r.severity]}</td>
+                  <td className="py-2 pr-3 align-top">
+                    <label className="flex flex-col gap-1">
+                      <span className="sr-only">
+                        Override severity for {r.title}
                       </span>
+                      <select
+                        aria-label={`override severity for ${r.id}`}
+                        value={value}
+                        className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-small text-fg focus:outline focus:outline-2 focus:outline-ink"
+                        onChange={(e) => handleChange(r.id, e)}
+                      >
+                        <option value={CLEAR_VALUE}>— use built-in —</option>
+                        <option value="info">{SEVERITY_LABEL.info}</option>
+                        <option value="warn">{SEVERITY_LABEL.warn}</option>
+                        <option value="error">{SEVERITY_LABEL.error}</option>
+                      </select>
                     </label>
                   </td>
-                ) : null}
-                <td>
-                  <button
-                    type="button"
-                    onClick={() => onChange(r.id, null)}
-                    disabled={!hasOverride}
-                    aria-label={`clear override for ${r.id}`}
-                  >
-                    Clear
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </section>
+                  {showScopeToggle ? (
+                    <td className="py-2 pr-3 align-top">
+                      <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          aria-label={`apply across portfolio for ${r.id}`}
+                          checked={portfolioOverrides?.[r.id] !== undefined}
+                          onChange={(e) =>
+                            onScopeChange?.(
+                              r.id,
+                              e.target.checked ? 'portfolio' : 'lease',
+                            )
+                          }
+                        />
+                        <span className="sr-only">
+                          Apply across portfolio for {r.title}
+                        </span>
+                      </label>
+                    </td>
+                  ) : null}
+                  <td className="py-2 align-top">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onChange(r.id, null)}
+                      disabled={!hasOverride}
+                      aria-label={`clear override for ${r.id}`}
+                    >
+                      Clear
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Section>
   );
 }
 

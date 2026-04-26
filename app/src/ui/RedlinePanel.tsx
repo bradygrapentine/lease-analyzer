@@ -1,7 +1,20 @@
+// Wave 27-C — design pass rewrite.
+// Semantic attributes preserved verbatim (e2e critical — redline-flow.spec.ts):
+//   aria-label="redline"                           (section, both branches)
+//   aria-label="export redlined html"              (button)
+//   data-para-index={i}                            (li)
+//   aria-label={`edit paragraph ${i + 1}`}        (form and button)
+//   aria-label={`paragraph ${i + 1} text`}        (textarea)
+//   aria-label={`paragraph ${i + 1} edited badge`} (span)
+//   aria-label={`revert paragraph ${i + 1}`}      (button)
+//   aria-label={`accept paragraph ${i + 1}`}      (label in review mode)
+//
 import { useEffect, useRef, useState } from 'react';
 import type { LeaseDocument } from '../parser/types';
 import type { RedlineEdit } from '../redline/redline';
 import { CounterSignPanel } from './CounterSignPanel';
+import { Section } from './system/Section';
+import { Button } from './system/Button';
 
 /**
  * Wave 9 Part B — when the lease is being viewed inside a review-mode
@@ -66,10 +79,10 @@ export function RedlinePanel({
 
   if (!doc) {
     return (
-      <section aria-label="redline">
-        <h2>Redline</h2>
-        <p>Upload a lease to start editing.</p>
-      </section>
+      <Section label="redline" className="space-y-2 px-4 py-4">
+        <h2 className="text-heading uppercase text-fg-muted">Redline</h2>
+        <p className="text-body text-fg-faint">Upload a lease to start editing.</p>
+      </Section>
     );
   }
 
@@ -96,21 +109,21 @@ export function RedlinePanel({
   }
 
   return (
-    <section aria-label="redline">
-      <div className="redline-header">
-        <h2>Redline</h2>
-        <button type="button" onClick={onExportHtml} aria-label="export redlined html">
+    <Section label="redline" className="space-y-3 px-4 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-heading uppercase text-fg-muted">Redline</h2>
+        <Button type="button" variant="subtle" size="sm" onClick={onExportHtml} aria-label="export redlined html">
           Export redlined HTML
-        </button>
+        </Button>
       </div>
 
-      <ol className="redline-paragraphs">
+      <ol className="space-y-2">
         {doc.paragraphs.map((p, i) => {
           const edit = editsByIndex.get(i);
           const isEditing = editingIndex === i;
           const displayText = edit ? edit.after : p.text;
           return (
-            <li key={i} data-para-index={i}>
+            <li key={i} data-para-index={i} className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 space-y-2">
               {isEditing ? (
                 <form
                   onSubmit={(e) => {
@@ -118,9 +131,10 @@ export function RedlinePanel({
                     saveEditing();
                   }}
                   aria-label={`edit paragraph ${i + 1}`}
+                  className="space-y-2"
                 >
-                  <label>
-                    <span className="visually-hidden">
+                  <label className="flex flex-col gap-1">
+                    <span className="sr-only">
                       Paragraph {i + 1} text
                     </span>
                     <textarea
@@ -129,59 +143,69 @@ export function RedlinePanel({
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       rows={4}
+                      className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg font-sans w-full focus:outline focus:outline-2 focus:outline-ink"
                     />
                   </label>
-                  <button type="submit">Save</button>
-                  <button type="button" onClick={cancelEditing}>
-                    Cancel
-                  </button>
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm">Save</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={cancelEditing}>
+                      Cancel
+                    </Button>
+                  </div>
                 </form>
               ) : (
                 <>
-                  <p className={edit ? 'para para-edited' : 'para'}>
+                  <p className={`text-body font-sans ${edit ? 'text-fg line-through decoration-severity-high/60' : 'text-fg-body'}`}>
                     {displayText}
                   </p>
-                  {edit ? (
-                    <span aria-label={`paragraph ${i + 1} edited badge`}>
-                      (edited)
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    aria-label={`edit paragraph ${i + 1}`}
-                    onClick={() => startEditing(i, displayText)}
-                  >
-                    Edit
-                  </button>
-                  {edit ? (
-                    <button
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {edit ? (
+                      <span aria-label={`paragraph ${i + 1} edited badge`}
+                        className="inline-flex items-center px-1.5 py-0.5 rounded-sm border border-severity-medium/30 bg-severity-medium/10 text-severity-medium text-small">
+                        edited
+                      </span>
+                    ) : null}
+                    <Button
                       type="button"
-                      aria-label={`revert paragraph ${i + 1}`}
-                      onClick={() => onDeleteEdit(i)}
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`edit paragraph ${i + 1}`}
+                      onClick={() => startEditing(i, displayText)}
                     >
-                      Revert
-                    </button>
-                  ) : null}
-                  {reviewMode && edit ? (() => {
-                    const editId = reviewMode.editIdByParagraphIndex[i];
-                    if (!editId) return null;
-                    const accepted = decisions[editId] ?? false;
-                    return (
-                      <label aria-label={`accept paragraph ${i + 1}`}>
-                        <input
-                          type="checkbox"
-                          checked={accepted}
-                          onChange={(e) =>
-                            setDecisions((prev) => ({
-                              ...prev,
-                              [editId]: e.target.checked,
-                            }))
-                          }
-                        />
-                        Accept
-                      </label>
-                    );
-                  })() : null}
+                      Edit
+                    </Button>
+                    {edit ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`revert paragraph ${i + 1}`}
+                        onClick={() => onDeleteEdit(i)}
+                      >
+                        Revert
+                      </Button>
+                    ) : null}
+                    {reviewMode && edit ? (() => {
+                      const editId = reviewMode.editIdByParagraphIndex[i];
+                      if (!editId) return null;
+                      const accepted = decisions[editId] ?? false;
+                      return (
+                        <label aria-label={`accept paragraph ${i + 1}`} className="inline-flex items-center gap-1.5 text-small text-fg-body cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={accepted}
+                            onChange={(e) =>
+                              setDecisions((prev) => ({
+                                ...prev,
+                                [editId]: e.target.checked,
+                              }))
+                            }
+                          />
+                          Accept
+                        </label>
+                      );
+                    })() : null}
+                  </div>
                 </>
               )}
             </li>
@@ -201,6 +225,6 @@ export function RedlinePanel({
           onSign={reviewMode.onSignAndExport}
         />
       ) : null}
-    </section>
+    </Section>
   );
 }

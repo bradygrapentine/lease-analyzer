@@ -1,3 +1,12 @@
+// Wave 27 Part C — design pass rewrite.
+// This is a pure coordinating component; per-panel rewrites landed in their
+// own files. The only change here is the outer container styling: a
+// `divide-y divide-rule` stack replaces the raw fragment so panel borders
+// produce a clean ledger effect.
+//
+// No semantic attributes live at this level — all aria-*/role/data-* are
+// on the child panels and are preserved verbatim there.
+//
 // Wave 21 Part B — extracted JSX for the bottom-pane panel stack of
 // App.tsx (LibraryPanel + LibraryCompareForm + TemplatesPanel +
 // PackManagerPanel-with-marketplace + custom-rule-builder details +
@@ -22,6 +31,7 @@ import { BulkImportPanel } from './BulkImportPanel';
 import { AuditLogPanel } from './AuditLogPanel';
 import { SigningKeyPanel } from './SigningKeyPanel';
 import { ComparePanel } from './ComparePanel';
+import { Section } from './system/Section';
 import type { LeaseRecord, LeaseMetadata } from '../storage/storage';
 import type { ClauseTemplate } from '../templates/types';
 import type { Finding } from '../rules/types';
@@ -91,7 +101,7 @@ export function AppLibraryAndPacksPane({
   onDownloadAuditLog,
 }: AppLibraryAndPacksPaneProps): JSX.Element {
   return (
-    <>
+    <div className="divide-y divide-rule">
       <LibraryPanel
         leases={library}
         standardId={standardId}
@@ -117,13 +127,15 @@ export function AppLibraryAndPacksPane({
         signatureStatusByPackId={packs.packSignatureStatus}
         marketplace={marketplace}
       />
-      <details>
-        <summary>Custom rule builder</summary>
-        <CustomRuleBuilderPanel
-          doc={customRuleBuilderDoc}
-          existingRuleIds={packs.existingRuleIds}
-          onSave={(rule) => void packs.saveCustomRule(rule)}
-        />
+      <details className="px-4 py-3">
+        <summary className="text-heading uppercase text-fg-muted cursor-pointer select-none">Custom rule builder</summary>
+        <div className="pt-2">
+          <CustomRuleBuilderPanel
+            doc={customRuleBuilderDoc}
+            existingRuleIds={packs.existingRuleIds}
+            onSave={(rule) => void packs.saveCustomRule(rule)}
+          />
+        </div>
       </details>
       <JurisdictionPickerPanel
         available={jurisdictionOptions.map((j) => j.code)}
@@ -135,18 +147,19 @@ export function AppLibraryAndPacksPane({
         overrides={severityOverridesPanelMap}
         onChange={severityOverridesPanelOnChange}
       />
-      <section aria-label="diff rule pack">
-        <h2>Diff rule pack</h2>
-        <p>
-          Load a <code>.lgpack.json</code> file to see how it differs from the currently active rule
+      <Section label="diff rule pack" className="space-y-3 px-4 py-4">
+        <h2 className="text-heading uppercase text-fg-muted">Diff rule pack</h2>
+        <p className="text-body text-fg-body">
+          Load a <code className="font-mono text-mono text-fg-muted">.lgpack.json</code> file to see how it differs from the currently active rule
           set. Nothing is saved until you import it via the pack manager above.
         </p>
-        <label>
-          <span className="visually-hidden">Pack file to diff</span>
+        <label className="inline-flex flex-col gap-1">
+          <span className="sr-only">Pack file to diff</span>
           <input
             type="file"
             accept=".lgpack.json,application/json"
             aria-label="pack file to diff"
+            className="text-small text-fg-body file:mr-2 file:h-7 file:px-2 file:rounded-sm file:border file:border-rule file:bg-paper-raised file:text-small file:text-fg-body file:cursor-pointer hover:file:bg-paper-sunken"
             onChange={(e) => {
               const f = e.target.files?.[0];
               e.target.value = '';
@@ -155,7 +168,7 @@ export function AppLibraryAndPacksPane({
           />
         </label>
         {packs.packDiff && <PackDiffPanel diff={packs.packDiff} />}
-      </section>
+      </Section>
       <BulkImportPanel onImport={(files, onProgress) => packs.bulkImportFiles(files, onProgress)} />
       <AuditLogPanel
         entries={auditEntries}
@@ -185,6 +198,6 @@ export function AppLibraryAndPacksPane({
             : {})}
         />
       )}
-    </>
+    </div>
   );
 }

@@ -1,3 +1,13 @@
+// Wave 27-C — design pass rewrite.
+// Semantic attributes preserved verbatim:
+//   aria-label="rule packs"                          (section)
+//   aria-label={`Enable pack ${p.id}`}               (checkbox)
+//   aria-label={`Signature status: ${badgeLabel(status)}`} (span)
+//   data-signature-status={status}                   (span)
+//   aria-label={`Delete pack ${p.id}`}               (button)
+//   role="status"                                    (p — status/error messages)
+//   aria-expanded={browseOpen}                       (button — marketplace toggle)
+//
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { RulePackFile } from '../rules/packSchema';
@@ -5,6 +15,8 @@ import {
   MarketplacePanel,
   type MarketplacePanelProps,
 } from './MarketplacePanel';
+import { Section } from './system/Section';
+import { Button } from './system/Button';
 
 /**
  * Signature trust vocabulary surfaced in the panel. Intentionally a
@@ -51,6 +63,13 @@ function badgeLabel(status: PackSignatureBadge): string {
   }
 }
 
+const BADGE_CLASS: Record<PackSignatureBadge, string> = {
+  verified: 'bg-positive/10 text-positive border-positive/30',
+  invalid: 'bg-severity-high/10 text-severity-high border-severity-high/30',
+  unknown: 'bg-paper-sunken text-fg-muted border-rule',
+  community: 'bg-paper-sunken text-fg-muted border-rule',
+};
+
 export function PackManagerPanel({
   builtInName,
   installed,
@@ -82,78 +101,91 @@ export function PackManagerPanel({
   }
 
   return (
-    <section aria-label="rule packs">
-      <h2>Rule packs</h2>
-      <ul>
-        <li>
-          <strong>{builtInName}</strong> <em>(built-in)</em>
+    <Section label="rule packs" className="space-y-3 px-4 py-4">
+      <h2 className="text-heading uppercase text-fg-muted">Rule packs</h2>
+      <ul className="space-y-2">
+        <li className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 text-body text-fg-muted">
+          <strong className="text-fg-body">{builtInName}</strong> <em>(built-in)</em>
         </li>
         {installed.map((p) => {
-          const status: PackSignatureBadge =
+          const sig: PackSignatureBadge =
             signatureStatusByPackId?.[p.id] ?? 'community';
           return (
-            <li key={p.id}>
-              <label>
+            <li key={p.id} className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 flex items-start gap-2">
+              <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
                 <input
                   type="checkbox"
                   aria-label={`Enable pack ${p.id}`}
                   checked={enabled.has(p.id)}
+                  className="rounded-sm"
                   onChange={(e) => onToggle(p.id, e.target.checked)}
                 />
-                <strong>{p.name}</strong>{' '}
+                <span className="text-body text-fg-body font-sans">
+                  <strong>{p.name}</strong>
+                </span>
                 <span
-                  aria-label={`Signature status: ${badgeLabel(status)}`}
-                  data-signature-status={status}
+                  aria-label={`Signature status: ${badgeLabel(sig)}`}
+                  data-signature-status={sig}
+                  className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border text-small font-sans ${BADGE_CLASS[sig]}`}
                 >
-                  [{badgeLabel(status)}]
-                </span>{' '}
-                <small>
+                  {badgeLabel(sig)}
+                </span>
+                <small className="text-small text-fg-muted">
                   v{p.version} · {p.rules.length} rule{p.rules.length === 1 ? '' : 's'}
                 </small>
               </label>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => onDelete(p.id)}
                 aria-label={`Delete pack ${p.id}`}
               >
                 Delete
-              </button>
+              </Button>
             </li>
           );
         })}
         {installed.length === 0 && (
-          <li>
+          <li className="text-body text-fg-faint">
             <em>No additional packs installed.</em>
           </li>
         )}
       </ul>
 
-      <label htmlFor="pack-import-input">Import rule pack</label>
-      <input
-        id="pack-import-input"
-        ref={inputRef}
-        type="file"
-        accept=".lgpack.json,application/json"
-        onChange={(e) => {
-          void handleFile(e);
-        }}
-      />
+      <div className="space-y-1">
+        <label htmlFor="pack-import-input" className="text-small text-fg-muted font-sans">
+          Import rule pack
+        </label>
+        <input
+          id="pack-import-input"
+          ref={inputRef}
+          type="file"
+          accept=".lgpack.json,application/json"
+          className="block text-small text-fg-body file:mr-2 file:h-7 file:px-2 file:rounded-sm file:border file:border-rule file:bg-paper-raised file:text-small file:text-fg-body file:cursor-pointer hover:file:bg-paper-sunken"
+          onChange={(e) => {
+            void handleFile(e);
+          }}
+        />
+      </div>
 
-      {status !== null && <p role="status">{status}</p>}
-      {error !== null && <p role="status">Error: {error}</p>}
+      {status !== null && <p role="status" className="text-small text-positive">{status}</p>}
+      {error !== null && <p role="status" className="text-small text-severity-high">Error: {error}</p>}
 
       {marketplace !== undefined && (
-        <div>
-          <button
+        <div className="border-t border-rule pt-3 space-y-2">
+          <Button
             type="button"
+            variant="subtle"
+            size="sm"
             onClick={() => setBrowseOpen((v) => !v)}
             aria-expanded={browseOpen}
           >
             {browseOpen ? 'Hide included packs' : 'Browse included packs'}
-          </button>
+          </Button>
           {browseOpen && <MarketplacePanel {...marketplace} />}
         </div>
       )}
-    </section>
+    </Section>
   );
 }
