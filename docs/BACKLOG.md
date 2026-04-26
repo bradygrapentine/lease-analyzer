@@ -634,6 +634,42 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       held green since 2026-04-25 — closing the row. If the flake
       returns, reopen with the new failure mode rather than
       reapplying the same fix.
+- [ ] **Tauri CI workflow cleanup.** `docs/CLAUDE.md` lists the Tauri
+      desktop wrapper as "stub dir exists; no code", but
+      `.github/workflows/tauri.yml` still runs
+      `Tauri build (ubuntu-latest / macos-latest / windows-latest)`
+      against the stub. Wave 29 unblock work scoped the trigger to
+      `app/src-tauri/**` + the workflow file (PR #121) so it no
+      longer fires on JS-only PRs, but the underlying choice
+      remains: delete the workflow to match the stub reality, or
+      wire it up to actual Rust source. Surfaced 2026-04-26 while
+      unblocking Wave 28's broken-CI ghost.
+- [ ] **npm-audit triage refresh.** As of 2026-04-26 PR #121, audit
+      reports 4 critical + 9 moderate vulns. Build-only chains
+      (`esbuild` → `vite` → `vitest`, `uuid` → `@storybook/addon-actions`)
+      are tolerable. The runtime-shipping chain
+      `protobufjs` → `onnx-proto` → `onnxruntime-web` (introduced
+      with Phase 18 transformers.js in Wave 22) is the one that
+      deserves a real look — either upgrade `onnxruntime-web` past
+      the affected protobufjs range or document the residual risk.
+      Wave 26-B's `package.json` `overrides` block has aged out;
+      refresh it. Note that during Wave 29 unblock work,
+      `npm-audit` was dropped from required GitHub branch-protection
+      checks — that is **temporary** and should be reinstated as a
+      required check once this row closes.
+- [ ] **Branch-protection self-healing.** When the Tauri workflow row
+      above ships (delete or repair), also clean up the
+      `Tauri build (ubuntu-latest / macos-latest)` entries from the
+      `main` branch protection's required-status-checks list, so a
+      future ghost-job doesn't reappear and silently block PRs.
+      Same hygiene if the npm-audit row reinstates that check —
+      verify the context name matches the actual job name (CI was
+      green-by-bypass for ~4 waves while branch protection gated on
+      misnamed/missing checks; see project memory
+      `project_ci_mergify_discrepancy.md`). Also consider
+      reinstating `enforce_admins: true` once the failing-but-not-
+      required checks are gone — currently disabled to allow merge
+      on red rollups.
 
 ## Known unknowns & risk register
 
