@@ -199,6 +199,10 @@ export function AppCurrentPane({
           highlight={
             selected ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null) : null
           }
+          selectedParagraph={
+            selected ? (status.result.doc.paragraphs[selected.paragraphIndex] ?? null) : null
+          }
+          selectedFinding={selected}
         />
       </div>
       {selected && (
