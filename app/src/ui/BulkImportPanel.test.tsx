@@ -13,18 +13,13 @@ function makeFile(name: string): File {
 describe('BulkImportPanel', () => {
   it('renders a file input with the expected accessible label', () => {
     render(<BulkImportPanel onImport={vi.fn()} />);
-    expect(
-      screen.getByLabelText(/bulk import files/i),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/bulk import files/i)).toBeInTheDocument();
   });
 
   it('streams per-file status and renders a summary when done', async () => {
     const user = userEvent.setup();
     const onImport = vi.fn(
-      async (
-        _files: File[],
-        onProgress: (r: BulkResult) => void,
-      ): Promise<BulkSummary> => {
+      async (_files: File[], onProgress: (r: BulkResult) => void): Promise<BulkSummary> => {
         onProgress({ fileName: 'a.pdf', hash: 'h1', status: 'ok', leaseId: 'id-a' });
         onProgress({ fileName: 'b.pdf', hash: 'h2', status: 'skipped' });
         return { ok: 1, skipped: 1, errors: 0 };
@@ -47,13 +42,42 @@ describe('BulkImportPanel', () => {
     expect(status1.textContent).toMatch(/Skipped/);
   });
 
+  it('renders one row per top-level PDF entry inside a zip input', async () => {
+    const user = userEvent.setup();
+    const onImport = vi.fn(
+      async (_files: File[], onProgress: (r: BulkResult) => void): Promise<BulkSummary> => {
+        onProgress({ fileName: 'batch.zip/a.pdf', hash: 'h1', status: 'ok', leaseId: 'id-a' });
+        onProgress({ fileName: 'batch.zip/b.pdf', hash: 'h2', status: 'skipped' });
+        onProgress({
+          fileName: 'batch.zip/broken.pdf',
+          hash: '',
+          status: 'error',
+          error: 'corrupted PDF',
+        });
+        return { ok: 1, skipped: 1, errors: 1 };
+      },
+    );
+
+    render(<BulkImportPanel onImport={onImport} />);
+    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    const zipFile = new File([new Uint8Array([0])], 'batch.zip', { type: 'application/zip' });
+    await user.upload(input, [zipFile]);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(/bulk import summary/i)).toHaveTextContent(
+        /Imported 1 · skipped 1 · errors 1/,
+      ),
+    );
+    expect(screen.getByText('batch.zip/a.pdf')).toBeInTheDocument();
+    expect(screen.getByText('batch.zip/b.pdf')).toBeInTheDocument();
+    expect(screen.getByText('batch.zip/broken.pdf')).toBeInTheDocument();
+    expect(screen.getByText(/corrupted PDF/)).toBeInTheDocument();
+  });
+
   it('surfaces errors per file', async () => {
     const user = userEvent.setup();
     const onImport = vi.fn(
-      async (
-        _files: File[],
-        onProgress: (r: BulkResult) => void,
-      ): Promise<BulkSummary> => {
+      async (_files: File[], onProgress: (r: BulkResult) => void): Promise<BulkSummary> => {
         onProgress({
           fileName: 'oops.pdf',
           hash: '',
