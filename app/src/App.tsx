@@ -18,21 +18,11 @@ import {
   readFileBytes,
 } from './App/appHelpers';
 import { loadGlossary, type GlossaryEntry } from './glossary/loadGlossary';
-import { LibraryPanel } from './ui/LibraryPanel';
-import { ComparePanel } from './ui/ComparePanel';
-import { LibraryCompareForm } from './ui/LibraryCompareForm';
-import { TemplatesPanel } from './ui/TemplatesPanel';
-import { PackManagerPanel } from './ui/PackManagerPanel';
 import { loadCuratedManifest, type CuratedPackEntry } from './rules/curatedPacks';
 import { validatePackFile } from './rules/packSchema';
 import { diffPack } from './rules/packDiff';
 import { verifySignedPack } from './rules/packSigning';
 import { JURISDICTION_OPTIONS } from './rules/jurisdictions';
-import { JurisdictionPickerPanel } from './ui/JurisdictionPickerPanel';
-import { SeverityOverridesPanel } from './ui/SeverityOverridesPanel';
-import { PackDiffPanel } from './ui/PackDiffPanel';
-import { AuditLogPanel } from './ui/AuditLogPanel';
-import { BulkImportPanel } from './ui/BulkImportPanel';
 import {
   overridesToPanel,
   severityToOverride as severityToOverrideSeverity,
@@ -45,10 +35,8 @@ import {
   type ChainVerification,
 } from './audit/auditLog';
 import { buildAuditLogJson, downloadAuditLogBlob } from './audit/auditExport';
-import { SigningKeyPanel } from './ui/SigningKeyPanel';
 import { PortfolioPanel } from './ui/PortfolioPanel';
 import { paragraphShingles } from './portfolio/shingles';
-import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
 import { AppRedlinePane } from './ui/AppRedlinePane';
 import { discoverOcrLanguages, type OcrLanguage } from './ocr/availableLanguages';
 import type { Finding } from './rules/types';
@@ -71,6 +59,7 @@ import { I18nProvider } from './i18n/I18nProvider';
 import { AppHeader } from './ui/AppHeader';
 import { AppFooterControls } from './ui/AppFooterControls';
 import { AppCurrentPane } from './ui/AppCurrentPane';
+import { AppLibraryAndPacksPane } from './ui/AppLibraryAndPacksPane';
 import { useAppCallbacks } from './App/useAppCallbacks';
 import { StandardSuitePanel } from './ui/StandardSuitePanel';
 import {
@@ -440,44 +429,16 @@ function AppContent(): JSX.Element {
         />
       )}
 
-      <LibraryPanel
-        leases={library}
+      <AppLibraryAndPacksPane
+        library={library}
         standardId={standardId}
-        onOpen={(id) => void onOpenLibrary(id)}
-        onDelete={(id) => void onDeleteLibrary(id)}
-        onSetStandard={(id) => void setStandardId(id).then(refreshLibrary)}
-        onRename={(id, name) => void renameLease(id, name).then(refreshLibrary)}
-      />
-
-      <LibraryCompareForm leases={library} onCompare={(a, b) => void onCompare(a, b)} />
-
-      <TemplatesPanel
         templates={templates}
-        onSave={(input) => void saveTemplate(input).then(refreshTemplates)}
-        onUpdate={(id, patch) => void updateTemplate(id, patch).then(refreshTemplates)}
-        onDelete={(id) => void deleteTemplate(id).then(refreshTemplates)}
-      />
-
-      <PackManagerPanel
-        builtInName="Built-in rules (v1)"
-        installed={packs.installedPacks}
-        enabled={packs.enabledPacks}
-        onImport={packs.importPackFile}
-        onToggle={(id, enabled) => void packs.togglePack(id, enabled)}
-        onDelete={(id) => void packs.deletePack(id)}
-        signatureStatusByPackId={packs.packSignatureStatus}
+        packs={packs}
         marketplace={{
           loadManifest: loadCuratedManifest,
           onInstall: async (entry: CuratedPackEntry) => {
-            // Same-origin fetch of the curated pack JSON. The pack is
-            // re-verified inside `importPackFile` (signed envelopes go
-            // through `verifySignedPack`); we additionally peek at the
-            // bytes here so the marketplace can surface a verified vs.
-            // invalid badge without round-tripping through IDB state.
             const res = await fetch(entry.path);
-            if (!res.ok) {
-              throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
-            }
+            if (!res.ok) throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
             const text = await res.text();
             const parsed: unknown = JSON.parse(text);
             let signature: 'verified' | 'invalid' = 'verified';
@@ -499,11 +460,8 @@ function AppContent(): JSX.Element {
           },
           onPreviewDiff: async (entry: CuratedPackEntry) => {
             const res = await fetch(entry.path);
-            if (!res.ok) {
-              throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
-            }
+            if (!res.ok) throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
             const parsed: unknown = await res.json();
-            // Signed-envelope packs need to be unwrapped before diffing.
             let candidate: unknown = parsed;
             if (
               parsed !== null &&
@@ -517,9 +475,7 @@ function AppContent(): JSX.Element {
               else throw new Error(`Invalid signed pack: ${v.reason ?? 'unknown'}`);
             }
             const result = validatePackFile(candidate);
-            if (!result.ok) {
-              throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
-            }
+            if (!result.ok) throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
             const d = diffPack(packs.activeRules, result.pack);
             return {
               added: d.added.map((r) => r.id),
@@ -528,97 +484,43 @@ function AppContent(): JSX.Element {
             };
           },
         }}
-      />
-
-      <details>
-        <summary>Custom rule builder</summary>
-        <CustomRuleBuilderPanel
-          doc={status.kind === 'analyzed' ? status.result.doc : null}
-          existingRuleIds={packs.existingRuleIds}
-          onSave={(rule) => void packs.saveCustomRule(rule)}
-        />
-      </details>
-
-      <JurisdictionPickerPanel
-        available={JURISDICTION_OPTIONS.map((j) => j.code)}
-        selected={packs.selectedJurisdictions}
-        onChange={(next) => void packs.setSelectedJurisdictions(next)}
-      />
-
-      <SeverityOverridesPanel
-        rules={packs.activeRules.map((r) => ({
+        jurisdictionOptions={JURISDICTION_OPTIONS}
+        severityOverridesPanelRows={packs.activeRules.map((r) => ({
           id: r.id,
           title: r.title,
           severity: severityToOverrideSeverity(r.severity),
         }))}
-        overrides={overridesToPanel(packs.severityOverrides)}
-        onChange={(ruleId, sev) => void packs.setSeverityOverride(ruleId, sev)}
-      />
-
-      <section aria-label="diff rule pack">
-        <h2>Diff rule pack</h2>
-        <p>
-          Load a <code>.lgpack.json</code> file to see how it differs from the currently active rule
-          set. Nothing is saved until you import it via the pack manager above.
-        </p>
-        <label>
-          <span className="visually-hidden">Pack file to diff</span>
-          <input
-            type="file"
-            accept=".lgpack.json,application/json"
-            aria-label="pack file to diff"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (f) void packs.comparePackFile(f);
-            }}
-          />
-        </label>
-        {packs.packDiff && <PackDiffPanel diff={packs.packDiff} />}
-      </section>
-
-      <BulkImportPanel onImport={(files, onProgress) => packs.bulkImportFiles(files, onProgress)} />
-
-      <AuditLogPanel
-        entries={auditEntries}
-        verification={auditVerification}
-        onRefresh={() => void refreshAuditLog()}
-        onVerify={() => {
+        severityOverridesPanelMap={overridesToPanel(packs.severityOverrides)}
+        severityOverridesPanelOnChange={(ruleId, sev) =>
+          void packs.setSeverityOverride(ruleId, sev)
+        }
+        customRuleBuilderDoc={status.kind === 'analyzed' ? status.result.doc : null}
+        auditEntries={auditEntries}
+        auditVerification={auditVerification}
+        signingKey={signingKey}
+        comparison={comparison}
+        onOpenLibrary={(id) => void onOpenLibrary(id)}
+        onDeleteLibrary={(id) => void onDeleteLibrary(id)}
+        onSetStandard={(id) => void setStandardId(id).then(refreshLibrary)}
+        onRenameLibrary={(id, name) => void renameLease(id, name).then(refreshLibrary)}
+        onCompare={(a, b) => void onCompare(a, b)}
+        onSaveTemplate={(input) => void saveTemplate(input).then(refreshTemplates)}
+        onUpdateTemplate={(id, patch) => void updateTemplate(id, patch).then(refreshTemplates)}
+        onDeleteTemplate={(id) => void deleteTemplate(id).then(refreshTemplates)}
+        onRefreshAuditLog={() => void refreshAuditLog()}
+        onVerifyAuditChain={() => {
           void (async (): Promise<void> => {
             setAuditVerification(await verifyAuditChain());
           })();
         }}
-        onDownload={() => {
-          const json = buildAuditLogJson(auditEntries, auditVerification);
+        onDownloadAuditLog={(entries, verification) => {
+          const json = buildAuditLogJson(entries, verification);
           downloadAuditLogBlob(
             json,
             `leaseguard-audit-${new Date().toISOString().slice(0, 10)}.json`,
           );
         }}
       />
-
-      <SigningKeyPanel
-        state={{ publicKey: signingKey.publicKey }}
-        onCreateKey={(pp) => void signingKey.createKey(pp)}
-        onExportPublicKey={(pk) => void signingKey.exportKeyToClipboard(pk)}
-      />
-
-      {comparison && (
-        <ComparePanel
-          aName={comparison.a.name}
-          bName={comparison.b.name}
-          aFindings={comparison.a.findings}
-          bFindings={comparison.b.findings}
-          {...(comparison.a.rulePackVersion !== comparison.b.rulePackVersion
-            ? {
-                packVersionMismatch: {
-                  a: comparison.a.rulePackVersion,
-                  b: comparison.b.rulePackVersion,
-                },
-              }
-            : {})}
-        />
-      )}
 
       <AppFooterControls
         onExportArchive={() => void exportEncryptedArchiveFlow()}
