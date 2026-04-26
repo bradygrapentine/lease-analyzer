@@ -24,26 +24,34 @@ writes to an append-only, hash-chained audit log, and findings can be
 exported as Ed25519-signed JSON. Rule packs can be imported in a
 signed envelope; the app verifies before installing.
 
-## Quickstart
+## Getting started
+
+Full onboarding: [`docs/SETUP.md`](./docs/SETUP.md). The 30-second
+version:
 
 ```bash
-cd app
-npm install
-npm run dev          # Vite dev server on http://localhost:5173
+npm install            # repo-root: husky + Playwright runner
+cd app && npm install  # app workspace
+npm run dev            # Vite dev server on http://localhost:5173
 ```
+
+## Contributing
+
+Branches, PRs, the local gate, and what not to land:
+[`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md).
 
 Other scripts (all from `app/`):
 
-| Command                | What it does                                |
-|------------------------|---------------------------------------------|
-| `npm run build`        | Production build (`dist/` + service worker + leaseWorker chunk) |
-| `npm run preview`      | Serve the production build                  |
-| `npm run typecheck`    | `tsc -b --noEmit` (strict)                  |
-| `npm run lint`         | ESLint (0 warnings expected)                |
-| `npm test`             | Vitest run                                  |
-| `npm run test:coverage`| Vitest with v8 coverage + thresholds        |
-| `npm run storybook`    | Panel previews on :6006                     |
-| `npm run check:budget` | Bundle-size budget gate                     |
+| Command                 | What it does                                                    |
+| ----------------------- | --------------------------------------------------------------- |
+| `npm run build`         | Production build (`dist/` + service worker + leaseWorker chunk) |
+| `npm run preview`       | Serve the production build                                      |
+| `npm run typecheck`     | `tsc -b --noEmit` (strict)                                      |
+| `npm run lint`          | ESLint (0 warnings expected)                                    |
+| `npm test`              | Vitest run                                                      |
+| `npm run test:coverage` | Vitest with v8 coverage + thresholds                            |
+| `npm run storybook`     | Panel previews on :6006                                         |
+| `npm run check:budget`  | Bundle-size budget gate                                         |
 
 ## Docs
 
