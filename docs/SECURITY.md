@@ -255,3 +255,64 @@ the NOTICE already attributes. The unit test in
 `app/src/security/notice.test.ts` asserts that the NOTICE file is
 reachable at build time and contains the expected attribution
 strings; a refactor that drops or empties the file fails CI.
+
+## 6. Versioning + signed-format compatibility
+
+The signed-findings envelope is identified by
+`EXPORT_SCHEMA = 'leaseguard.findings.v1'` in
+`app/src/storage/exportReport.ts`. The signature covers the canonical
+2-space-indented `JSON.stringify` of the payload with the `signature`
+field stripped. The signing key is Ed25519; the public key is the raw
+32-byte key encoded as base64 inside `SignatureBlock.publicKey`.
+
+### v1 payload shape (pinned)
+
+The fields under the `v1` signature, exactly as `exportFindingsJson`
+emits them:
+
+- `schema: 'leaseguard.findings.v1'`
+- `lease: { name, pageCount, paragraphCount, sectionCount }`
+- `inputHash: string | null`
+- `rulePackVersion: string | null`
+- `findings: Array<{ ruleId, severity, category, title, explanation,
+  citation, page, snippet, span, confidence, negated }>` —
+  `confidence` is rounded to 2 decimal places before signing
+- `deviations: Array<{ id, baselineFingerprint, currentFingerprint,
+  deviates }>`
+
+The `signature` block (`{ publicKey, signature, signedAt }`) is
+appended **after** signing and is not itself covered by the signature.
+`verifySignedExport` re-canonicalizes by stripping `signature` and
+re-running `JSON.stringify(rest, null, 2)`.
+
+### Triggers for cutting `v2`
+
+Bump `EXPORT_SCHEMA` to `leaseguard.findings.v2` whenever **any** of
+the following change:
+
+1. The set of top-level keys in the payload (adding `tenant`,
+   removing `deviations`, renaming any of the above).
+2. The shape of any nested object or array element under the
+   signature — including additive fields on `findings[*]` or
+   `deviations[*]`. There is no backward-compatible change to a
+   signed payload; any change to the bytes-under-signature is a new
+   envelope version.
+3. The canonicalization rules: indent width, key ordering, number
+   serialization (e.g., changing `confidence` rounding precision),
+   line-ending convention.
+4. The signature algorithm (Ed25519 → anything else) or the public-key
+   encoding (raw 32-byte / base64 → SPKI / hex / etc.).
+5. The `SignatureBlock` shape.
+
+When `v2` ships, `verifySignedExport` must dispatch on the `schema`
+field and keep the `v1` verifier code path indefinitely. Existing
+`v1` exports on user devices must remain verifiable forever — old
+exports are evidence; rotating them out is not an option.
+
+### What this section pins
+
+This is the policy companion to the operational rules in
+[`RELEASING.md`](./RELEASING.md). `RELEASING.md` says **when** to
+bump versions; this section says **what compatibility guarantee** the
+signed-export bump implies. They must move together: a `v2` envelope
+PR must update both files in the same change.

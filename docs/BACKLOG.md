@@ -538,12 +538,15 @@ Things worth a deliberate decision before they surprise us.
       code-signing cert; deferred until real distribution channels
       exist. Re-open when we're ready to ship installers outside the
       PWA (2026-04-25).
-- [ ] **Release & versioning policy** — no version bumps yet; decide
-      when rule-pack changes bump `RULE_PACK_VERSION` vs the package
-      version. Tie to the signed-export format.
-      Decision: open — Wave 11 is content + risk-register only;
-      release-policy decision belongs in a future trust-infra wave
-      (2026-04-25).
+- [x] **Release & versioning policy** — `RULE_PACK_VERSION`,
+      `app/package.json` version, release tags, and the signed-export
+      envelope (`leaseguard.findings.vN`) are now four independent
+      axes with explicit bump rules in
+      [`RELEASING.md`](./RELEASING.md). Signed-format compatibility
+      contract (v1 payload shape + triggers for v2) lives in
+      [`SECURITY.md`](./SECURITY.md) §6. Decision: closed — the two
+      docs are the gate; any future PR that bumps a version cites
+      whichever section justifies the bump (2026-04-25).
 - [x] **Crash-log privacy review** —
       Decision: `diagnosticsReport` now emits a `summary: string[]`
       field enumerating every category included (`userAgent`,
