@@ -9,6 +9,17 @@ import { join } from 'node:path';
 
 const ASSETS_DIR = 'dist/assets';
 const TESSERACT_DIR = 'dist/tesseract';
+// Phase 18 classifier directory. Wave 20-C reserves it as part of the
+// "OCR + classifier ≤ 30 MiB combined precache" contract. The directory
+// stays empty until Wave 21+ ships the classifier; the combined cap
+// passes trivially while empty and tightens automatically the moment
+// the classifier lands.
+const CLASSIFIER_DIR = 'dist/classifier';
+// Combined precache cap (Tesseract assets + classifier). Wave 18-B
+// recommended Xenova/paraphrase-MiniLM-L3-v2 at ~17.5 MiB; OCR
+// language data (eng.traineddata.gz) is ~10 MiB; 30 MiB allows headroom
+// for tokenizer + configs + small future updates without busting.
+const COMBINED_PRECACHE_CAP = 30 * 1024 * 1024;
 
 const BUDGETS = [
   // Main app shell — everything that isn't pdf.js
@@ -85,10 +96,12 @@ async function main() {
   } catch {
     console.log(`note: ${TESSERACT_DIR} missing — OCR assets not built yet`);
   }
+  let tessTotalBytes = 0;
   for (const budget of TESSERACT_BUDGETS) {
     const matches = tessEntries.filter((e) => budget.pattern.test(e));
     for (const name of matches) {
       const info = await stat(join(TESSERACT_DIR, name));
+      tessTotalBytes += info.size;
       const ok = info.size <= budget.maxBytes;
       const tag = ok ? 'ok' : 'OVER';
       console.log(
@@ -100,6 +113,37 @@ async function main() {
         );
       }
     }
+  }
+
+  // Phase 18 classifier (lazy-loaded, precached). Wave 20-C reserves the
+  // directory; Wave 21+ ships the actual model files. Sum every byte
+  // under dist/classifier/ recursively if present.
+  let classifierTotalBytes = 0;
+  let classifierEntries = [];
+  try {
+    classifierEntries = await readdir(CLASSIFIER_DIR);
+  } catch {
+    // Directory missing is the expected state for Wave 20-C — the
+    // classifier hasn't shipped yet. No warning needed.
+  }
+  for (const name of classifierEntries) {
+    const info = await stat(join(CLASSIFIER_DIR, name));
+    if (info.isFile()) classifierTotalBytes += info.size;
+  }
+
+  // Combined OCR + classifier precache cap. The contract from Wave 18-B's
+  // model selection: "OCR + classifier ≤ 30 MiB combined precache." Trivially
+  // passes while the classifier directory is empty; tightens automatically
+  // when Wave 21+ adds model files.
+  const combinedTotal = tessTotalBytes + classifierTotalBytes;
+  const combinedTag = combinedTotal <= COMBINED_PRECACHE_CAP ? 'ok' : 'OVER';
+  console.log(
+    `[${combinedTag}] OCR + classifier  combined  ${fmt(combinedTotal)} / ${fmt(COMBINED_PRECACHE_CAP)}`,
+  );
+  if (combinedTotal > COMBINED_PRECACHE_CAP) {
+    failures.push(
+      `OCR + classifier combined precache is ${fmt(combinedTotal)}, over the 30 MiB Phase 18 cap`,
+    );
   }
 
   if (failures.length > 0) {
