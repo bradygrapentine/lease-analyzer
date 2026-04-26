@@ -38,7 +38,10 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] ESLint + Prettier
 - [x] Vitest wired; `npm run test:coverage` with thresholds in CI
 - [ ] Pre-commit hook (`lint-staged`) — opt-in; CI is authoritative
-- [ ] Playwright smoke test (browser sanity is currently manual via Chrome DevTools MCP)
+- [x] Playwright smoke test. Landed chromium-only in Wave 12 Part B
+      (`tests/e2e/golden.spec.ts`); extended to a 3-way `chromium` /
+      `firefox` / `webkit` matrix in Wave 14 Part B
+      (`playwright.config.ts` + `.github/workflows/e2e.yml`).
 - [x] CSP `default-src 'self'` + local pdf.worker + no-CDN contract
 - [x] GitHub Actions: typecheck + lint + coverage on PR
 - [x] Bundled synthetic fixtures (residential + commercial leases via pdf-lib)
