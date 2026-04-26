@@ -154,7 +154,10 @@ New UI panels live in `src/ui/` and follow a four-file convention:
    `kind` (`analyze`, `export`, `import-pack`, `pack-signature-verified`,
    `pack-signature-invalid`, `save-lease`, `delete-lease`, `bulk-import`,
    `custom-rule-save`, `redline-edit`, `version-save`, `version-restore`,
-   `version-delete`) or add a new one — `kind` is a free-form string.
+   `version-delete`, `llm-classify`) or add a new one — `kind` is a
+   free-form string. `llm-classify` fires once per Phase 18 hybrid
+   finding (Wave 22-A); payload includes `{ ruleId, paragraphIndex,
+   modelId, similarity }`.
 
 ## Testing patterns
 
