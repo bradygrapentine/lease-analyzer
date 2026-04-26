@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { type AnalysisResult } from '../ui/analyzeFile';
 import { runOcr } from '../ocr/runOcr';
 import { analyze } from '../rules/analyze';
-import { runHybridAnalyze, type EmbedFunction } from '../rules/hybridAnalyze';
+import { runClassifierPass, runHybridAnalyze, type EmbedFunction } from '../rules/hybridAnalyze';
 import { isPhase18Enabled } from '../llm/featureFlag';
 import { DEFAULT_MODEL_ID, loadClassifier } from '../llm/loadClassifier';
 import { RULE_PACK_V1 } from '../rules/packV1';
@@ -138,7 +138,37 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         // hand the worker (or inline pipeline) a dedicated copy and keep
         // the original for the viewer. The worker-backed client also
         // transfers the copy's buffer; the viewer's copy is untouched.
-        const result: AnalysisResult = await client.parseAndAnalyze(copyBytes(bytes), activeRules);
+        const baseResult: AnalysisResult = await client.parseAndAnalyze(
+          copyBytes(bytes),
+          activeRules,
+        );
+        // Phase 18 hybrid path on the upload flow (Wave 24-A): run the
+        // classifier pass on the main thread after the worker returns
+        // deterministic findings. Worker source stays untouched —
+        // transformers.js + WebGPU don't currently fit in the worker.
+        // When the flag is off OR the classifier files are missing OR
+        // transformers.js fails to bootstrap, this is a no-op and the
+        // upload path stays byte-identical to Wave 23.
+        let result = baseResult;
+        if (isPhase18Enabled()) {
+          const embedFn = await loadClassifierEmbedFn();
+          if (embedFn) {
+            const extras = await runClassifierPass({
+              doc: baseResult.doc,
+              rules: activeRules,
+              baseFindings: baseResult.findings,
+              embedFn,
+              ...(audit ? { audit } : {}),
+              modelId: DEFAULT_MODEL_ID,
+            });
+            if (extras.length > 0) {
+              result = {
+                doc: baseResult.doc,
+                findings: [...baseResult.findings, ...extras],
+              };
+            }
+          }
+        }
         const newId = await saveLease({
           name: fileName,
           doc: result.doc,
@@ -172,7 +202,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         setStatus({ kind: 'error', message: friendlyError(err) });
       }
     },
-    [onLibraryChange, activeRules, client],
+    [onLibraryChange, activeRules, client, audit],
   );
 
   const ocr = useCallback(
