@@ -181,13 +181,9 @@ New UI panels live in `src/ui/` and follow a four-file convention:
 
 ## Deferred / explicitly out of scope
 
-- Span-level highlight bbox computation. Wave 15-C shipped viewport
-  clipping + `prefers-reduced-motion` opt-out on the existing paragraph
-  bbox; per-span bbox highlighting is tracked as a planned follow-up
-  wave because `Finding.span` is `{start, end}` char offsets, not a
-  bbox — the parser needs to attach a per-span bounding box first.
-  See the BACKLOG row under Phase 8.
-- Full WCAG 2.1 AA audit.
+- Full WCAG 2.1 AA audit. (Wave 28-F shipped a fix-as-found pass:
+  axe-core scans on accordion + severity table, `landmark-unique`
+  fix in `SectionGroup`. A full external AA audit remains deferred.)
 - Tauri desktop wrapper (stub dir exists; no code).
 - Cloud sync / accounts / telemetry.
 - Pre-commit hooks via `lint-staged` (CI is authoritative).
