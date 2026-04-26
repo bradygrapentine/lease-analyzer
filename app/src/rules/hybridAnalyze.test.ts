@@ -159,6 +159,81 @@ describe('runHybridAnalyze', () => {
     expect(findings).toHaveLength(0);
   });
 
+  it('fires one llm-classify audit entry per hybrid finding when audit is supplied', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+      async () => undefined,
+    );
+    const findings = await runHybridAnalyze({
+      doc: doc(['The renewal clause grants additional renewal terms upon notice.']),
+      rules: [rule()],
+      enabled: true,
+      embedFn,
+      audit,
+      modelId: 'Xenova/test-model',
+      threshold: 0.3,
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.confidence).toBe(0.5);
+    expect(audit).toHaveBeenCalledTimes(1);
+    const payload = audit.mock.calls[0]?.[0];
+    expect(payload?.kind).toBe('llm-classify');
+    expect(payload?.payload).toMatchObject({
+      ruleId: 'r1',
+      paragraphIndex: 0,
+      modelId: 'Xenova/test-model',
+    });
+    expect(typeof (payload?.payload as { similarity?: unknown }).similarity).toBe('number');
+  });
+
+  it('does not fire any audit entries when the flag is off', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+      async () => undefined,
+    );
+    await runHybridAnalyze({
+      doc: doc(['Renewal text here.']),
+      rules: [rule()],
+      enabled: false,
+      embedFn,
+      audit,
+    });
+    expect(audit).not.toHaveBeenCalled();
+  });
+
+  it('does not fire any audit entries when zero hybrid findings are emitted', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+      async () => undefined,
+    );
+    await runHybridAnalyze({
+      doc: doc(['Renewal text but with very high threshold.']),
+      rules: [rule()],
+      enabled: true,
+      embedFn,
+      audit,
+      threshold: 0.99,
+    });
+    expect(audit).not.toHaveBeenCalled();
+  });
+
+  it('audit payload defaults modelId to "unknown" when not supplied', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+      async () => undefined,
+    );
+    await runHybridAnalyze({
+      doc: doc(['The renewal clause grants additional renewal terms upon notice.']),
+      rules: [rule()],
+      enabled: true,
+      embedFn,
+      audit,
+      threshold: 0.3,
+    });
+    const payload = audit.mock.calls[0]?.[0]?.payload as { modelId?: string };
+    expect(payload?.modelId).toBe('unknown');
+  });
+
   it('skips rules whose title has no 4+-char tokens (cheap pre-filter is empty)', async () => {
     const embedFn = vi.fn(makeStubEmbedder());
     const shortTitle = rule({ title: 'A B C' });

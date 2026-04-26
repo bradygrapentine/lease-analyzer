@@ -26,6 +26,11 @@ export interface EmbedFunction {
   (texts: string[]): Promise<Float32Array[]>;
 }
 
+export interface HybridAnalyzeAuditEntry {
+  kind: string;
+  payload: Record<string, unknown>;
+}
+
 export interface HybridAnalyzeOptions {
   doc: LeaseDocument;
   rules: Rule[] | CompiledRule[];
@@ -33,6 +38,20 @@ export interface HybridAnalyzeOptions {
   embedFn: EmbedFunction | null;
   threshold?: number;
   maxLlmCalls?: number;
+  /**
+   * Optional audit callback. When supplied, fires one
+   * `kind: 'llm-classify'` entry per hybrid finding emitted, with a
+   * `{ ruleId, paragraphIndex, modelId, similarity }` payload. Wave 23
+   * will pass `safeAudit` here when it wires the real model. No-op
+   * if the flag is off or the classifier emits zero hybrid findings.
+   */
+  audit?: (entry: HybridAnalyzeAuditEntry) => Promise<void> | void;
+  /**
+   * Identifies the model that produced the embeddings — used in audit
+   * payloads. Defaults to `'unknown'` so callers without a real model
+   * can still ship attestation entries with sane shape.
+   */
+  modelId?: string;
 }
 
 const DEFAULT_THRESHOLD = 0.7;
@@ -46,6 +65,8 @@ export async function runHybridAnalyze(opts: HybridAnalyzeOptions): Promise<Find
   const { doc, rules, enabled, embedFn } = opts;
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
   const maxLlmCalls = opts.maxLlmCalls ?? DEFAULT_MAX_LLM_CALLS;
+  const audit = opts.audit;
+  const modelId = opts.modelId ?? 'unknown';
 
   const baseFindings = analyze(doc, rules);
 
@@ -140,6 +161,21 @@ export async function runHybridAnalyze(opts: HybridAnalyzeOptions): Promise<Find
       negated: false,
       rulePackVersion: RULE_PACK_VERSION,
     });
+    if (audit) {
+      // Fire-and-await one attestation per hybrid finding. Errors in
+      // the audit callback do NOT abort the analyze pipeline (the
+      // safeAudit pattern is the caller's responsibility — see
+      // App.tsx's safeAudit wrapper for the production version).
+      await audit({
+        kind: 'llm-classify',
+        payload: {
+          ruleId: rule.id,
+          paragraphIndex: w.pIdx,
+          modelId,
+          similarity: sim,
+        },
+      });
+    }
   }
 
   return [...baseFindings, ...extras];
