@@ -234,6 +234,29 @@ describe('runHybridAnalyze', () => {
     expect(payload?.modelId).toBe('unknown');
   });
 
+  it('hybrid findings carry evidence: { modelId, similarity }; deterministic findings do not', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    const findings = await runHybridAnalyze({
+      doc: doc([
+        'This lease shall auto-renew annually.',
+        'The renewal clause grants additional renewal terms upon notice.',
+      ]),
+      rules: [rule()],
+      enabled: true,
+      embedFn,
+      modelId: 'Xenova/test-model',
+      threshold: 0.3,
+    });
+    expect(findings).toHaveLength(2);
+    const deterministic = findings.find((f) => f.confidence >= 0.7);
+    const hybrid = findings.find((f) => f.confidence === 0.5);
+    expect(deterministic?.evidence).toBeUndefined();
+    expect(hybrid?.evidence).toEqual({
+      modelId: 'Xenova/test-model',
+      similarity: expect.any(Number),
+    });
+  });
+
   it('cosine returns 0 for zero-length vectors (no extra finding emitted)', async () => {
     const zeroEmbedder: EmbedFunction = async (texts) => texts.map(() => new Float32Array(0));
     const findings = await runHybridAnalyze({

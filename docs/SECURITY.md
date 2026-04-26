@@ -12,7 +12,9 @@ items closed out in Wave 11 (see `docs/BACKLOG.md` → "Known unknowns &
 risk register"). When a related design changes, update the matching
 section here in the same PR.
 
-**Last review:** 2026-04-25 (Wave 16-F).
+**Last review:** 2026-04-26 (Wave 23-C — CSP `'wasm-unsafe-eval'`
+added to `script-src` for Phase 18 ONNX runtime; static analysis
+only, empirical Chrome verification deferred to Wave 24 e2e).
 
 Findings from the 2026-04-25 pass:
 
@@ -145,7 +147,8 @@ specific lease, the stack trace can encode the **shape** of the trigger
 `app/index.html` sets:
 
 ```
-Content-Security-Policy: default-src 'self'; script-src 'self';
+Content-Security-Policy: default-src 'self';
+  script-src 'self' 'wasm-unsafe-eval';
   style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:;
   font-src 'self' data:; connect-src 'self' blob:;
   worker-src 'self' blob:; object-src 'none'; base-uri 'self';
@@ -153,9 +156,21 @@ Content-Security-Policy: default-src 'self'; script-src 'self';
 ```
 
 This is the Phase 0 / Phase 6 promise: zero third-party origins, no
-inline scripts, no eval. Workers and blob URLs are permitted because
-the PWA ships `pdf.worker`, the lease-analysis Web Worker, and the
-tesseract worker — all served same-origin.
+inline scripts. Workers and blob URLs are permitted because the PWA
+ships `pdf.worker`, the lease-analysis Web Worker, and the tesseract
+worker — all served same-origin.
+
+`'wasm-unsafe-eval'` was added in Wave 23-C to allow Phase 18's
+ONNX Runtime Web (used by `@xenova/transformers`) to instantiate
+its WebAssembly module from a fetched buffer. Chrome's CSP enforcer
+requires this directive for any `WebAssembly.instantiate` /
+`WebAssembly.compile` call when CSP is set via `<meta>`. The
+classifier itself is served same-origin from `/classifier/` (Wave
+23-A); the directive does NOT loosen `default-src` or allow
+arbitrary external WebAssembly. Empirical runtime verification
+(loading the model in real Chrome and watching the console for CSP
+violations) is the manual follow-up tracked as Wave 24's e2e work
+— this section reflects the static analysis only.
 
 ### Build-time gate (`npm run check:csp`)
 

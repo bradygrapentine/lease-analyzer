@@ -85,6 +85,15 @@ export interface Finding {
    * existing finding consumers keep working unchanged.
    */
   deviation?: { fromFingerprint: string };
+  /**
+   * Wave 23 Part C — Phase 18 hybrid attestation. Set on findings
+   * emitted by the on-device classifier pass (confidence 0.5);
+   * absent on deterministic regex/proximity findings. Mirrors the
+   * Wave 22-A `'llm-classify'` audit-log payload so consumers that
+   * don't have access to the audit log can still display the LLM
+   * provenance (future UI badge, JSON export attestation).
+   */
+  evidence?: { modelId: string; similarity: number };
 }
 
 export interface RuleMatch {
