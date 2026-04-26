@@ -7,7 +7,13 @@
 // `needsOcr` derivations into a dedicated hook) is a Wave 21
 // candidate.
 
-import type { Dispatch, SetStateAction } from 'react';
+// Aria/data inventory (preserved verbatim):
+//   role="status" + className="ocr-banner" (div)
+//   aria-live="polite" + className="ocr-progress" (p)
+//   role="alert" (p)
+//   aria-label="selected finding" (article — now Card as="article")
+
+import { useMemo, type Dispatch, type SetStateAction } from 'react';
 import type { OcrLanguage } from '../ocr/availableLanguages';
 import { FindingsPanel } from './FindingsPanel';
 import { PdfViewer } from './PdfViewer';
@@ -23,6 +29,8 @@ import { matchTemplates } from '../templates/matchTemplates';
 import { buildSummary, copyToClipboard } from '../workflow/copySummary';
 import { exportFindingsAsHtml, downloadHandoffZip } from '../App/appHelpers';
 import { useI18n } from '../i18n/I18nContext';
+import { Card } from './system/Card';
+import { Button } from './system/Button';
 import type { Finding } from '../rules/types';
 import type { LeaseDocument } from '../parser/types';
 import type { ClauseTemplate } from '../templates/types';
@@ -104,14 +112,17 @@ export function AppCurrentPane({
 }: AppCurrentPaneProps): JSX.Element {
   const { t } = useI18n();
   const ocr = needsOcr(status.result.doc);
+  const leaseFacts = useMemo(() => extractLeaseFacts(status.result.doc), [status]);
   return (
     <div className="results">
-      <div className="results-actions">
-        <button type="button" onClick={onExportJson}>
+      <div className="results-actions flex flex-wrap gap-2 mb-3">
+        <Button type="button" variant="subtle" size="sm" onClick={onExportJson}>
           {t('findings.export.json')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="subtle"
+          size="sm"
           onClick={() =>
             exportFindingsAsHtml({
               fileName: status.fileName,
@@ -121,23 +132,23 @@ export function AppCurrentPane({
           }
         >
           {t('findings.export.html')}
-        </button>
+        </Button>
         {hasSigningKey && (
-          <button type="button" onClick={onExportSignedJson}>
+          <Button type="button" variant="subtle" size="sm" onClick={onExportSignedJson}>
             {t('findings.export.signed')}
-          </button>
+          </Button>
         )}
       </div>
       {ocr.likelyScanned && (
-        <div role="status" className="ocr-banner">
-          <p>
+        <div role="status" className="ocr-banner bg-paper-sunken border border-rule rounded-sm p-3 mb-3 space-y-2">
+          <p className="text-body text-fg-body">
             This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page). Text
             extraction may be incomplete.
           </p>
           {status.bytes && ocrState.kind !== 'running' && (
-            <button type="button" onClick={onAttemptOcr}>
+            <Button type="button" variant="subtle" size="sm" onClick={onAttemptOcr}>
               Attempt OCR
-            </button>
+            </Button>
           )}
           <OcrLanguagePickerPanel
             available={ocrLanguages}
@@ -145,11 +156,15 @@ export function AppCurrentPane({
             onChange={setOcrLanguage}
           />
           {ocrState.kind === 'running' && (
-            <p aria-live="polite" className="ocr-progress">
+            <p aria-live="polite" className="ocr-progress text-body text-fg-body">
               Running OCR: {ocrState.stage} ({Math.round(ocrState.pct * 100)}%)
             </p>
           )}
-          {ocrState.kind === 'error' && <p role="alert">OCR failed: {ocrState.message}</p>}
+          {ocrState.kind === 'error' && (
+            <p role="alert" className="text-body text-severity-high">
+              OCR failed: {ocrState.message}
+            </p>
+          )}
         </div>
       )}
       <div className="split">
@@ -159,7 +174,7 @@ export function AppCurrentPane({
             setSelected(f);
             setSelectedPage(f.page);
           }}
-          definitions={extractLeaseFacts(status.result.doc).definitions}
+          definitions={leaseFacts.definitions}
           glossary={glossaryEntries}
           plainEnglishByRuleId={plainEnglishByRuleId}
           suggestedTextByRuleId={suggestedTextByRuleId}
@@ -187,12 +202,14 @@ export function AppCurrentPane({
         />
       </div>
       {selected && (
-        <article aria-label="selected finding">
-          <h3>{selected.title}</h3>
-          <p>{selected.explanation}</p>
-          <blockquote>{selected.snippet}</blockquote>
-          <small>Page {selected.page}</small>
-        </article>
+        <Card as="article" aria-label="selected finding" className="p-4 space-y-2 my-3">
+          <h3 className="text-heading uppercase text-fg-muted">{selected.title}</h3>
+          <p className="text-body text-fg-body">{selected.explanation}</p>
+          <blockquote className="border-l-2 border-rule pl-3 font-mono text-mono text-fg-muted italic">
+            {selected.snippet}
+          </blockquote>
+          <span className="text-small text-fg-muted">Page {selected.page}</span>
+        </Card>
       )}
       <AnnotationsPanel
         leaseId={analyzedLeaseId ?? ''}
@@ -217,7 +234,7 @@ export function AppCurrentPane({
         suggestedEdit={selected ? suggestedEditByRuleId[selected.ruleId] : undefined}
       />
       <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
-      <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
+      <LeaseFactsPanel facts={leaseFacts} />
       <WorkflowPanel
         leaseName={status.fileName}
         findings={status.result.findings}

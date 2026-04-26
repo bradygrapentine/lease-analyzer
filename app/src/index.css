@@ -69,6 +69,10 @@
 
   /* Single shadow */
   --shadow-paper: 0 1px 0 rgba(42, 35, 22, 0.05);
+
+  /* PDF highlight overlay — semi-transparent by design; no opaque hex form exists */
+  --color-highlight: rgba(255, 235, 59, 0.35);
+  --color-highlight-border: rgba(255, 193, 7, 0.9);
 }
 
 /* Base */

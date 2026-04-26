@@ -94,14 +94,15 @@ export function PdfViewer({
       top: `${top}px`,
       width: `${width}px`,
       height: `${height}px`,
-      background: 'rgba(255, 235, 59, 0.35)',
-      border: '1px solid rgba(255, 193, 7, 0.9)',
+      background: 'var(--color-highlight)',
+      border: '1px solid var(--color-highlight-border)',
       pointerEvents: 'none',
     };
   }
 
   return (
     <section aria-label="pdf viewer" className="pdf-viewer">
+      <div className="pdf-viewer-legacy">
       {Array.from({ length: pageCount }, (_, i) => {
         const pageNum = i + 1;
         const overlay = highlight?.page === pageNum ? highlight : null;
@@ -125,6 +126,7 @@ export function PdfViewer({
           </div>
         );
       })}
+      </div>
     </section>
   );
 }

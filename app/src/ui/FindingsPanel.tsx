@@ -5,6 +5,25 @@ import type { DefinitionEntry } from '../facts/types';
 import type { GlossaryEntry } from '../glossary/loadGlossary';
 import { highlightDefinedTerms } from './highlightDefinedTerms';
 import { useInViewport } from './useInViewport';
+import { Button } from './system/Button';
+import { Card } from './system/Card';
+
+// Aria/data inventory (preserved verbatim):
+//   aria-label="findings" (aside)
+//   aria-label="search findings" (input)
+//   role="group" + aria-label="severity filters" (div)
+//   role="group" + aria-label="category filters" (div)
+//   aria-pressed + aria-label="severity ${sev}" (severity filter buttons)
+//   aria-pressed + aria-label="category ${cat}" (category filter buttons)
+//   aria-labelledby="findings-${sev}" (section)
+//   id="findings-${sev}" (h2)
+//   aria-expanded + aria-label="toggle ${sev}" (collapse button)
+//   data-finding-key (li and button — both)
+//   aria-expanded + aria-label="Identified by on-device classifier..." (llm badge button)
+//   aria-expanded + aria-label="what this means for ${finding.title}" (explainer button)
+//   aria-label="apply suggestion for ${finding.title}" (button)
+//   aria-label="promote to standard ${finding.title}" (button)
+//   aria-hidden="true" + data-finding-placeholder (placeholder div)
 
 const SEVERITY_ORDER: Severity[] = ['high', 'medium', 'low', 'info'];
 const SEVERITY_LABEL: Record<Severity, string> = {
@@ -94,8 +113,8 @@ export function FindingsPanel({
 
   if (findings.length === 0) {
     return (
-      <aside aria-label="findings">
-        <p>No findings yet. Upload a lease to analyze.</p>
+      <aside aria-label="findings" className="p-4">
+        <p className="text-body text-fg-faint">No findings yet. Upload a lease to analyze.</p>
       </aside>
     );
   }
@@ -126,8 +145,8 @@ export function FindingsPanel({
   }
 
   return (
-    <aside aria-label="findings">
-      <div className="controls">
+    <aside aria-label="findings" className="flex flex-col gap-2">
+      <div className="controls px-3 pt-3 space-y-2">
         <label>
           <span className="visually-hidden">Search findings</span>
           <input
@@ -136,57 +155,68 @@ export function FindingsPanel({
             placeholder="Search findings…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            className="w-full border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
           />
         </label>
 
-        <div role="group" aria-label="severity filters">
+        <div role="group" aria-label="severity filters" className="flex flex-wrap gap-1">
           {SEVERITY_ORDER.map((sev) => (
-            <button
+            <Button
               key={sev}
               type="button"
+              variant="ghost"
+              size="sm"
+              pressed={!hiddenSeverities.has(sev)}
               aria-pressed={!hiddenSeverities.has(sev)}
               aria-label={`severity ${sev}`}
               onClick={() => toggleInSet(hiddenSeverities, sev, setHiddenSeverities)}
             >
               {SEVERITY_LABEL[sev]}
-            </button>
+            </Button>
           ))}
         </div>
 
-        <div role="group" aria-label="category filters">
+        <div role="group" aria-label="category filters" className="flex flex-wrap gap-1">
           {categories.map((cat) => (
-            <button
+            <Button
               key={cat}
               type="button"
+              variant="ghost"
+              size="sm"
+              pressed={!hiddenCategories.has(cat)}
               aria-pressed={!hiddenCategories.has(cat)}
               aria-label={`category ${cat}`}
               onClick={() => toggleInSet(hiddenCategories, cat, setHiddenCategories)}
             >
               {cat}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      <div ref={listRef} onKeyDown={onListKeyDown}>
+      <div ref={listRef} onKeyDown={onListKeyDown} className="flex-1 overflow-y-auto px-3 pb-3 space-y-3">
         {SEVERITY_ORDER.map((sev) => {
           const group = bySeverity[sev];
           if (!group || group.length === 0) return null;
           const isCollapsed = collapsed.has(sev);
           return (
             <section key={sev} aria-labelledby={`findings-${sev}`}>
-              <h2 id={`findings-${sev}`}>
+              <h2 id={`findings-${sev}`} className="mb-1">
                 <button
                   type="button"
                   aria-expanded={!isCollapsed}
                   aria-label={`toggle ${sev}`}
                   onClick={() => toggleInSet(collapsed, sev, setCollapsed)}
+                  className="flex w-full items-center justify-between text-heading uppercase font-sans text-fg-muted py-1 hover:text-fg transition-colors"
                 >
-                  {SEVERITY_LABEL[sev]} ({group.length})
+                  <span>
+                    {SEVERITY_LABEL[sev]} ({group.length})
+                  </span>
+                  <span aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span>
                 </button>
               </h2>
               {!isCollapsed && (
-                <ul>
+                <ul className="space-y-2">
                   {group.map((finding) => {
                     const key = findingKey(finding);
                     const plain = plainEnglishByRuleId?.[finding.ruleId];
@@ -330,93 +360,116 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
   return (
     <li ref={liRef} data-finding-key={key}>
       {inView ? (
-        <div ref={fullRef}>
-          <button
-            type="button"
-            className="finding-btn"
-            data-finding-key={key}
-            ref={btnRef}
-            onClick={() => onSelect(finding)}
-          >
-            <strong>{finding.title}</strong>
-            {finding.negated && <span aria-label="negated"> (possibly not applicable)</span>}
-            {finding.deviation && (
-              <span
-                className="finding-deviation-badge"
-                aria-label="Deviates from verified baseline"
-              >
-                {' '}
-                deviates from verified pack
+        <Card accent={finding.severity as Severity} className="overflow-hidden">
+          <div ref={fullRef}>
+            <button
+              type="button"
+              className="finding-btn w-full text-left p-3 space-y-1"
+              data-finding-key={key}
+              ref={btnRef}
+              onClick={() => onSelect(finding)}
+            >
+              <span className="font-sans text-body text-fg-body font-semibold">
+                {finding.title}
               </span>
-            )}
-            <div>{finding.explanation}</div>
-            {(definitions && definitions.length > 0) || (glossary && glossary.length > 0) ? (
-              <small className="finding-snippet">
-                {highlightDefinedTerms(finding.snippet, definitions ?? [], glossary)}
-              </small>
-            ) : null}
-            <small>Page {finding.page}</small>
-          </button>
-          {finding.evidence ? (
-            <div className="finding-llm-detail">
-              <button
-                type="button"
-                className="finding-llm-badge"
-                aria-expanded={isHybridDetailOpen}
-                aria-label={`Identified by on-device classifier (similarity ${Math.round(
-                  finding.evidence.similarity * 100,
-                )}%)`}
-                title={`On-device classifier (similarity ${Math.round(
-                  finding.evidence.similarity * 100,
-                )}%)`}
-                onClick={toggleHybridDetail}
-              >
-                ~
-              </button>
-              {isHybridDetailOpen ? (
-                <dl className="finding-llm-evidence">
-                  <dt>Model</dt>
-                  <dd>{finding.evidence.modelId}</dd>
-                  <dt>Similarity</dt>
-                  <dd>{Math.round(finding.evidence.similarity * 100)}%</dd>
-                  <dt>Threshold</dt>
-                  <dd>Above the 70% similarity floor</dd>
-                </dl>
+              {finding.negated && (
+                <span aria-label="negated" className="text-small text-fg-muted ml-1">
+                  {' '}(possibly not applicable)
+                </span>
+              )}
+              {finding.deviation && (
+                <span
+                  className="finding-deviation-badge text-small text-fg-muted ml-1"
+                  aria-label="Deviates from verified baseline"
+                >
+                  {' '}deviates from verified pack
+                </span>
+              )}
+              <div className="text-body text-fg-body">{finding.explanation}</div>
+              {(definitions && definitions.length > 0) || (glossary && glossary.length > 0) ? (
+                <span className="finding-snippet block font-mono text-mono text-fg-muted">
+                  {highlightDefinedTerms(finding.snippet, definitions ?? [], glossary)}
+                </span>
               ) : null}
-            </div>
-          ) : null}
-          {plain ? (
-            <div className="finding-plain-english">
-              <button
-                type="button"
-                aria-expanded={isExplainerOpen}
-                aria-label={`what this means for ${finding.title}`}
-                onClick={toggleExplainer}
-              >
-                What this means
-              </button>
-              {isExplainerOpen ? <p>{plain}</p> : null}
-            </div>
-          ) : null}
-          {onApplySuggestion && suggestedText ? (
-            <button
-              type="button"
-              aria-label={`apply suggestion for ${finding.title}`}
-              onClick={() => onApplySuggestion(finding, finding.paragraphIndex, suggestedText)}
-            >
-              Apply suggestion
+              <span className="text-small text-fg-muted">Page {finding.page}</span>
             </button>
-          ) : null}
-          {onPromoteToStandard && leaseId !== undefined ? (
-            <button
-              type="button"
-              aria-label={`promote to standard ${finding.title}`}
-              onClick={() => onPromoteToStandard(leaseId, finding.paragraphIndex)}
-            >
-              Promote to standard
-            </button>
-          ) : null}
-        </div>
+            {finding.evidence ? (
+              <div className="finding-llm-detail px-3 pb-2">
+                {/* LLM badge intentionally rendered as <button> (not <Badge>) because
+                    Wave 25-B made it the click-to-explain disclosure trigger — it
+                    toggles aria-expanded and reveals the model/similarity/threshold
+                    detail panel. <Badge> is a non-interactive <span>. */}
+                <button
+                  type="button"
+                  className="finding-llm-badge inline-flex items-center gap-1 text-small text-fg-muted border border-rule rounded-sm px-2 py-0.5 hover:bg-paper-sunken transition-colors"
+                  aria-expanded={isHybridDetailOpen}
+                  aria-label={`Identified by on-device classifier (similarity ${Math.round(
+                    finding.evidence.similarity * 100,
+                  )}%)`}
+                  title={`On-device classifier (similarity ${Math.round(
+                    finding.evidence.similarity * 100,
+                  )}%)`}
+                  onClick={toggleHybridDetail}
+                >
+                  ~
+                </button>
+                {isHybridDetailOpen ? (
+                  <dl className="finding-llm-evidence mt-2 space-y-1 text-small text-fg-body">
+                    <dt className="text-fg-muted">Model</dt>
+                    <dd className="font-mono text-mono ml-2">{finding.evidence.modelId}</dd>
+                    <dt className="text-fg-muted">Similarity</dt>
+                    <dd className="ml-2">{Math.round(finding.evidence.similarity * 100)}%</dd>
+                    <dt className="text-fg-muted">Threshold</dt>
+                    <dd className="ml-2">Above the 70% similarity floor</dd>
+                  </dl>
+                ) : null}
+              </div>
+            ) : null}
+            {plain ? (
+              <div className="finding-plain-english px-3 pb-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-expanded={isExplainerOpen}
+                  aria-label={`what this means for ${finding.title}`}
+                  onClick={toggleExplainer}
+                >
+                  What this means
+                </Button>
+                {isExplainerOpen ? (
+                  <p className="mt-1 text-body text-fg-body">{plain}</p>
+                ) : null}
+              </div>
+            ) : null}
+            {(onApplySuggestion && suggestedText) || (onPromoteToStandard && leaseId !== undefined) ? (
+              <div className="flex gap-2 px-3 pb-3">
+                {onApplySuggestion && suggestedText ? (
+                  <Button
+                    type="button"
+                    variant="subtle"
+                    size="sm"
+                    aria-label={`apply suggestion for ${finding.title}`}
+                    onClick={() => onApplySuggestion(finding, finding.paragraphIndex, suggestedText)}
+                  >
+                    Apply suggestion
+                  </Button>
+                ) : null}
+                {onPromoteToStandard && leaseId !== undefined ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`promote to standard ${finding.title}`}
+                    onClick={() => onPromoteToStandard(leaseId, finding.paragraphIndex)}
+                  >
+                    Promote to standard
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </Card>
       ) : (
         <div
           aria-hidden="true"
