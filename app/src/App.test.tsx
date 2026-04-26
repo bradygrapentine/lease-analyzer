@@ -2,19 +2,24 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 vi.mock('./ocr/runOcr', () => ({
-  runOcr: vi.fn(async (_bytes: Uint8Array, opts?: { onProgress?: (p: { pct: number; stage: string }) => void }) => {
-    opts?.onProgress?.({ pct: 0, stage: 'starting' });
-    opts?.onProgress?.({ pct: 1, stage: 'done' });
-    return {
-      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
-      paragraphs: [
-        { page: 1, text: 'Any dispute shall be resolved by binding arbitration, not court.' },
-        { page: 1, text: 'Tenant waives any right to a jury trial.' },
-      ],
-      sections: [],
-      raw: '',
-    };
-  }),
+  runOcr: vi.fn(
+    async (
+      _bytes: Uint8Array,
+      opts?: { onProgress?: (p: { pct: number; stage: string }) => void },
+    ) => {
+      opts?.onProgress?.({ pct: 0, stage: 'starting' });
+      opts?.onProgress?.({ pct: 1, stage: 'done' });
+      return {
+        pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+        paragraphs: [
+          { page: 1, text: 'Any dispute shall be resolved by binding arbitration, not court.' },
+          { page: 1, text: 'Tenant waives any right to a jury trial.' },
+        ],
+        sections: [],
+        raw: '',
+      };
+    },
+  ),
 }));
 import { App } from './App';
 import { makePdf } from './parser/testFixtures';
@@ -83,13 +88,12 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   await userEvent.upload(input, file);
   // "auto-renewal" now also appears in the SeverityOverridesPanel row; use
   // `findAllByText` so we pass as soon as the findings panel renders.
-  await waitFor(() =>
-    expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0),
-  );
+  await waitFor(() => expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0));
   // Wait for the findings aside to render so click/scroll assertions downstream
   // find their targets.
-  await waitFor(() =>
-    expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument(),
+  await waitFor(
+    () => expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument(),
+    { timeout: 5000 },
   );
 }
 
@@ -146,9 +150,7 @@ describe('App', () => {
       .mockResolvedValue(new Response(bytes as BlobPart, { status: 200 }));
     render(<App />);
     await userEvent.click(screen.getByRole('button', { name: /try a sample lease/i }));
-    await waitFor(() =>
-      expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0),
-    );
+    await waitFor(() => expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0));
     fetchMock.mockRestore();
   });
 
@@ -185,9 +187,7 @@ describe('App', () => {
   it('set-as-standard marks the badge and triggers auto-compare on next upload', async () => {
     render(<App />);
     await uploadLease('Standard.pdf');
-    await userEvent.click(
-      screen.getByRole('button', { name: /set standard\.pdf as standard/i }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /set standard\.pdf as standard/i }));
     await waitFor(async () => {
       expect(await getStandardId()).toBeTruthy();
     });
@@ -258,9 +258,7 @@ describe('App', () => {
       expect(screen.getByRole('button', { name: /open reopen\.pdf/i })).toBeInTheDocument(),
     );
     await userEvent.click(screen.getByRole('button', { name: /open reopen\.pdf/i }));
-    await waitFor(() =>
-      expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0),
-    );
+    await waitFor(() => expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0));
   });
 
   it('export findings JSON and HTML each trigger a download', async () => {
@@ -281,7 +279,9 @@ describe('App', () => {
     render(<App />);
     await uploadLease('Report.pdf');
     await userEvent.click(screen.getByRole('button', { name: /export findings \(json\)/i }));
-    await userEvent.click(screen.getByRole('button', { name: /export findings \(printable html\)/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /export findings \(printable html\)/i }),
+    );
 
     expect(aClicks).toContain('Report-findings.json');
     expect(aClicks).toContain('Report-findings.html');

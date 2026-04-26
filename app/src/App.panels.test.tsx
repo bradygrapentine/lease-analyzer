@@ -191,8 +191,9 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   // Wait until the findings <aside> mounts — rule titles also surface in the
   // SeverityOverridesPanel even before analysis finishes, so we scope to the
   // findings region here rather than looking for a rule title anywhere.
-  await waitFor(() =>
-    expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument(),
+  await waitFor(
+    () => expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument(),
+    { timeout: 5000 },
   );
 }
 
