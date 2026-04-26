@@ -345,4 +345,53 @@ describe('runHybridAnalyze', () => {
     expect(findings).toEqual([]);
     expect(embedFn).not.toHaveBeenCalled();
   });
+
+  // Wave 29 Part B (Phase 2): rules may declare `hybridAnchors`,
+  // additional substrings merged into the keyword pre-filter so a
+  // paragraph that doesn't share any title tokens can still qualify
+  // for the embedding pass when it contains a known anchor phrase.
+  it('hybridAnchors merge into pre-filter so an off-title paragraph qualifies', async () => {
+    const embedFn = vi.fn(makeStubEmbedder());
+    // Title-only tokens are {indemnification, landlord} — the test
+    // paragraph contains neither, but it does contain the anchor
+    // phrase "hold harmless". Without anchors the rule would be
+    // skipped; with anchors it should produce a hybrid finding.
+    const r = rule({
+      id: 'indemnification',
+      title: 'Indemnification of landlord',
+      match: { type: 'keywordProximity', keywords: ['xxxx', 'yyyy'], window: 40 },
+      hybridAnchors: ['hold harmless'],
+    });
+    const paragraphText =
+      'Tenant agrees to hold harmless the property owner from any third-party claims arising on the premises.';
+    const findings = await runHybridAnalyze({
+      doc: doc([paragraphText]),
+      rules: [r],
+      enabled: true,
+      embedFn,
+      threshold: 0.0,
+    });
+    expect(embedFn).toHaveBeenCalled();
+    expect(findings.length).toBe(1);
+    expect(findings[0]?.ruleId).toBe('indemnification');
+    expect(findings[0]?.confidence).toBe(0.5);
+
+    // Sanity: same paragraph + same rule WITHOUT anchors → no
+    // pre-filter overlap, no embed call, no finding.
+    const embedFn2 = vi.fn(makeStubEmbedder());
+    const rNoAnchors = rule({
+      id: 'indemnification',
+      title: 'Indemnification of landlord',
+      match: { type: 'keywordProximity', keywords: ['xxxx', 'yyyy'], window: 40 },
+    });
+    const findings2 = await runHybridAnalyze({
+      doc: doc([paragraphText]),
+      rules: [rNoAnchors],
+      enabled: true,
+      embedFn: embedFn2,
+      threshold: 0.0,
+    });
+    expect(embedFn2).not.toHaveBeenCalled();
+    expect(findings2).toEqual([]);
+  });
 });

@@ -36,6 +36,7 @@ export const RULE_PACK_V1: Rule[] = [
       keywords: ['early', 'termination'],
       window: 40,
     },
+    hybridAnchors: ['buyout fee', 'lease break fee'],
   },
   {
     id: 'assignment-subletting',
@@ -54,6 +55,7 @@ export const RULE_PACK_V1: Rule[] = [
       keywords: ['sublet', 'consent'],
       window: 60,
     },
+    hybridAnchors: ['underlet', 'transfer this lease'],
   },
   {
     id: 'late-fees',
@@ -106,6 +108,7 @@ export const RULE_PACK_V1: Rule[] = [
       keywords: ['waive', 'jury'],
       window: 40,
     },
+    hybridAnchors: ['trial by jury'],
   },
   {
     id: 'arbitration',
@@ -124,6 +127,7 @@ export const RULE_PACK_V1: Rule[] = [
       pattern: '\\b(?:binding\\s+)?arbitration\\b',
       flags: 'i',
     },
+    hybridAnchors: ['JAMS', 'AAA', 'ADR'],
   },
   {
     id: 'indemnification',
@@ -142,6 +146,7 @@ export const RULE_PACK_V1: Rule[] = [
       keywords: ['indemnify', 'landlord'],
       window: 60,
     },
+    hybridAnchors: ['hold harmless', 'save harmless'],
   },
   {
     id: 'rent-escalation',
@@ -160,6 +165,7 @@ export const RULE_PACK_V1: Rule[] = [
       keywords: ['rent', 'increase'],
       window: 40,
     },
+    hybridAnchors: ['CPI', 'step-up', 'escalation'],
   },
   {
     id: 'personal-guaranty',
@@ -178,5 +184,6 @@ export const RULE_PACK_V1: Rule[] = [
       pattern: '\\bpersonal(?:ly)?\\s+guarant(?:y|ee|or)\\b',
       flags: 'i',
     },
+    hybridAnchors: ['personally liable'],
   },
 ];
