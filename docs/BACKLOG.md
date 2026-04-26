@@ -17,11 +17,11 @@ enough to land in one PR.
 | Axis         | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Gate                                         |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | Source       | ~135 non-test files + ~105 test files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests        | ~960 passing (app) + 8 in `cli/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `npm test`                                   |
-| Coverage     | thresholds 90/85/90/90 (see `docs/TESTING.md` for current numbers)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `npm run test:coverage`                      |
+| Tests        | ~1123 passing (app) + 8 in `cli/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `npm test`                                   |
+| Coverage     | thresholds 95/88/91/95 (see `docs/TESTING.md` for current numbers)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `npm run test:coverage`                      |
 | Bundles      | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in)                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `npm run check:budget`                       |
 | IndexedDB    | main `leaseguard` **v5** (`leases` + `settings` + `clauseTemplates` + `paragraphShingles`, post Wave 10-B); 9 side dbs: `leaseguard-packs` v3 (`signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1, `leaseguard-standards` **v1** (Wave 10-C). `leaseguard-packs` `settings` store also gains a `severityOverridesByLease` key (Wave 10-D) without a schema bump. | migrations tested                            |
-| App.tsx      | decomposed into per-panel containers around `usePipeline` (Wave 7-D)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | —                                            |
+| App.tsx      | 10 hooks under `src/App/use*.ts` (Wave 7-D + follow-ups); `<AppHeader>` extracted (Wave 17-A); App.tsx ~958 lines, target ~600                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | —                                            |
 | CLI          | `leaseguard-verify` (Node, no browser, no network) — `cli/` workspace, 3 tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `cd cli && npm test`                         |
 | Build        | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `npm run build`                              |
 | Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `npm run typecheck && npm run lint`          |
@@ -539,7 +539,7 @@ and the precache-cost tradeoff need empirical measurement first. See
       (the LLM never overrides a confident regex match).
 - [ ] **Per-finding evidence attestation** — extend `Finding` with
       an optional `evidence: { tokens: number; modelId: string;
-    score: number }` field that the LLM path populates. The audit
+  score: number }` field that the LLM path populates. The audit
       log gets a new `kind: 'llm-classify'` entry per finding the
       LLM was responsible for. Existing finding consumers stay
       working unchanged (additive field).
@@ -572,7 +572,7 @@ and the precache-cost tradeoff need empirical measurement first. See
       `transformers.js` + ONNX Runtime Web, or a smaller
       `web-llm`-class loader) doesn't need any new CSP directives
       beyond the existing `default-src 'self'` + `worker-src 'self'
-    blob:` envelope. Done = `scripts/check-csp.mjs` stays green
+  blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       and the dist build serves the model from same-origin.
 
 ## Cross-cutting tech debt
@@ -603,16 +603,26 @@ and the precache-cost tradeoff need empirical measurement first. See
       content fingerprint of installed packs, enabled pack ids, selected
       jurisdictions, and severity overrides (skip-first-mount dedupes
       the post-upload analyze).
-- [ ] **App.tsx decomposition** — currently ~1540 lines (was ~835 at
-      the last footprint refresh) because every panel mounts its own
-      handlers inline. Split into child hooks:
-      `usePackManager`, `useAnnotations`, `useRedlineState`,
-      `useVersionHistory`, `useSideLetter`, `useCounterOffers`,
-      `useSigningKey`. Target: App.tsx under ~600 lines.
-- [ ] `App.panels.test.tsx` intermittently times out under coverage
-      instrumentation (v8 + jsdom). Add a per-test timeout bump or
-      split the panel-mount smoke tests into a smaller file so
-      `npm run test:coverage` stays green without `--testTimeout` hacks.
+- [ ] **App.tsx decomposition** — currently ~958 lines (down from
+      1007 after Wave 17-A extracted `<AppHeader>`; was ~1540 at the
+      last footprint refresh before Wave 7-D's hook extractions).
+      All seven hooks the original row called for (`usePackManager`,
+      `useAnnotations`, `useRedlineState`, `useVersionHistory`,
+      `useSideLetter`, `useCounterOffers`, `useSigningKey`) plus
+      three more (`usePipeline`, `useReanalyzeOnRulesChange`,
+      `useReviewMode`) are extracted. The remaining ~360 lines past
+      the ~600-line target are JSX render and inline callbacks that
+      need either (a) more sub-component extraction (Wave 17-A
+      shipped one; the rest is a Wave 18 candidate), or (b) lifting
+      derived-state `useMemo`s into a dedicated hook before the JSX
+      can split cleanly.
+- [x] `App.panels.test.tsx` intermittently times out under coverage
+      instrumentation (v8 + jsdom). Wave 12-D set
+      `vi.setConfig({ testTimeout: 15_000 })` per-file; Wave 16-A
+      bumped the shared `uploadLease` `waitFor` to 5s. Both have
+      held green since 2026-04-25 — closing the row. If the flake
+      returns, reopen with the new failure mode rather than
+      reapplying the same fix.
 
 ## Known unknowns & risk register
 
