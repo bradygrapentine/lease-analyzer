@@ -1,3 +1,4 @@
+import { createRef } from 'react';
 import { describe, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -62,6 +63,12 @@ describe('Button', () => {
     render(<Button onClick={onClick}>x</Button>);
     await userEvent.click(screen.getByRole('button'));
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards a ref to the underlying <button>', () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(<Button ref={ref}>x</Button>);
+    expect(ref.current).toBeInstanceOf(HTMLButtonElement);
   });
 
   it('has no a11y violations across all variants', async () => {

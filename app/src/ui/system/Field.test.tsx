@@ -63,4 +63,20 @@ describe('Field', () => {
     );
     await expectAxeClean(container);
   });
+
+  it('two Field instances on the same page get distinct description IDs (no collision)', () => {
+    render(
+      <>
+        <Field as="input" label="Same" description="first" />
+        <Field as="input" label="Same" description="second" />
+      </>,
+    );
+    const inputs = screen.getAllByRole('textbox');
+    expect(inputs).toHaveLength(2);
+    const id1 = inputs[0]!.getAttribute('aria-describedby');
+    const id2 = inputs[1]!.getAttribute('aria-describedby');
+    expect(id1).toBeTruthy();
+    expect(id2).toBeTruthy();
+    expect(id1).not.toBe(id2);
+  });
 });

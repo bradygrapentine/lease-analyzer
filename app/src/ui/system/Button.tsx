@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 type Variant = 'default' | 'ghost' | 'subtle';
 type Size = 'sm' | 'md';
@@ -31,21 +31,18 @@ const SIZE: Record<Size, string> = {
   md: 'h-9 px-3 text-body rounded',
 };
 
-export function Button({
-  variant = 'default',
-  size = 'md',
-  pressed,
-  className = '',
-  type = 'button',
-  ...rest
-}: ButtonProps): JSX.Element {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = 'default', size = 'md', pressed, className = '', type = 'button', ...rest },
+  ref,
+) {
   const pressedClass = pressed ? 'ring-1 ring-inset ring-ink' : '';
   return (
     <button
+      ref={ref}
       type={type}
       aria-pressed={pressed}
       className={`inline-flex items-center justify-center font-sans transition-colors ${VARIANT[variant]} ${SIZE[size]} ${pressedClass} ${className}`}
       {...rest}
     />
   );
-}
+});

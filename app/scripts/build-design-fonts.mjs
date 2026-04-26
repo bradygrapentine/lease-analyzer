@@ -14,11 +14,11 @@ const FILES = [
   // Source Serif 4 from Adobe's official OFL distribution on Github.
   // Latin subset (no Cyrillic / Greek) keeps each weight under ~50 KiB.
   {
-    url: 'https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.woff2',
+    url: 'https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@5.2.9/latin-400-normal.woff2',
     name: 'source-serif-4-400.woff2',
   },
   {
-    url: 'https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-600-normal.woff2',
+    url: 'https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@5.2.9/latin-600-normal.woff2',
     name: 'source-serif-4-600.woff2',
   },
 ];
