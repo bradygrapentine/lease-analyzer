@@ -132,8 +132,9 @@ export async function runClassifierPass(opts: RunClassifierPassOptions): Promise
   const work: Work[] = [];
   for (let pIdx = 0; pIdx < doc.paragraphs.length; pIdx++) {
     if (flagged.has(pIdx)) continue;
-    const para = doc.paragraphs[pIdx];
-    if (!para) continue;
+    // pIdx < doc.paragraphs.length, so the indexed access is always
+    // defined; the `!` strips a TypeScript-narrowing branch.
+    const para = doc.paragraphs[pIdx]!;
     const lower = para.text.toLowerCase();
     for (let rIdx = 0; rIdx < rulesArr.length; rIdx++) {
       const kws = ruleKeywords[rIdx];
@@ -156,8 +157,11 @@ export async function runClassifierPass(opts: RunClassifierPassOptions): Promise
   // Embed paragraphs and rule titles in two batched calls. De-dupe.
   const paraIdxs = Array.from(new Set(work.map((w) => w.pIdx)));
   const ruleIdxs = Array.from(new Set(work.map((w) => w.rIdx)));
-  const paraTexts = paraIdxs.map((i) => doc.paragraphs[i]?.text ?? '');
-  const ruleTexts = ruleIdxs.map((i) => rulesArr[i]?.title ?? '');
+  // paraIdxs / ruleIdxs come from `work` items pushed only when the
+  // outer loops asserted the index was in bounds against the same
+  // arrays — the indexed accesses can't return undefined.
+  const paraTexts = paraIdxs.map((i) => doc.paragraphs[i]!.text);
+  const ruleTexts = ruleIdxs.map((i) => rulesArr[i]!.title);
 
   const [paraVecs, ruleVecs] = await Promise.all([embedFn(paraTexts), embedFn(ruleTexts)]);
 
@@ -179,9 +183,11 @@ export async function runClassifierPass(opts: RunClassifierPassOptions): Promise
     if (!pv || !rv) continue;
     const sim = cosine(pv, rv);
     if (sim < threshold) continue;
-    const rule = rulesArr[w.rIdx];
-    const para = doc.paragraphs[w.pIdx];
-    if (!rule || !para) continue;
+    // w.rIdx / w.pIdx were both bounds-checked against rulesArr /
+    // doc.paragraphs when `work` was populated, so the lookups always
+    // yield defined values here — strip the TS-narrowing branches.
+    const rule = rulesArr[w.rIdx]!;
+    const para = doc.paragraphs[w.pIdx]!;
     extras.push({
       ruleId: rule.id,
       severity: rule.severity,
@@ -225,8 +231,11 @@ function cosine(a: Float32Array, b: Float32Array): number {
   let na = 0;
   let nb = 0;
   for (let i = 0; i < n; i++) {
-    const av = a[i] ?? 0;
-    const bv = b[i] ?? 0;
+    // i < n = min(a.length, b.length), so both indexed accesses are
+    // in-bounds and Float32Array always returns a number — drop the
+    // `?? 0` defaults that v8 was counting as branches.
+    const av = a[i]!;
+    const bv = b[i]!;
     dot += av * bv;
     na += av * av;
     nb += bv * bv;

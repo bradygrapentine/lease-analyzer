@@ -67,16 +67,15 @@ export default defineConfig({
         'src/worker/leaseWorker.ts',
       ],
       thresholds: {
-        // Raised 2026-04-25 after Wave 16 Part A test additions
-        // (appHelpers, useVersionHistory, clauseClusters edge cases).
-        // Actuals sit at 96.63 / 88.31 / 93.03 / 96.63; the +1 branch
-        // bump (87 → 88) is the honest ceiling without (a) decomposing
-        // App.tsx (38 missed branches; tracked as a Wave 17 candidate)
-        // and (b) reducing v8's defensive-guard noise from
-        // `noUncheckedIndexedAccess` (`?? 0` / `?? ''` paths it counts
-        // as branches but that runtime cannot reach).
+        // Raised 2026-04-26 (Wave 24-C) after surgical removal of
+        // unreachable defensive guards in `hybridAnalyze.ts` (loop-
+        // bounded indexed accesses no longer pay v8's `?? 0` / `?? ''`
+        // branch tax). Actuals sit at 97.27 / 89.61 / 93.71 / 97.27;
+        // the +1 branch bump (88 → 89) is the honest ceiling absent
+        // either (a) decomposing App.tsx further or (b) another guard
+        // sweep on remaining `noUncheckedIndexedAccess` artifacts.
         statements: 95,
-        branches: 88,
+        branches: 89,
         functions: 91,
         lines: 95,
       },
