@@ -17,6 +17,7 @@
     "build:example-pack": "node scripts/build-example-pack.mjs",
     "build:curated-packs": "node scripts/build-curated-packs.mjs",
     "build:tesseract-assets": "node scripts/build-tesseract-assets.mjs",
+    "build:classifier-assets": "node scripts/build-classifier-assets.mjs",
     "build:scanned-fixture": "node scripts/build-scanned-fixture.mjs src/__fixtures__/scanned-residential.pdf",
     "postinstall": "node scripts/build-tesseract-assets.mjs",
     "check:budget": "node scripts/check-bundle-budget.mjs",

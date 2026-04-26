@@ -75,6 +75,28 @@ gzip app/public/tesseract/eng.traineddata
 Without this file, the "Attempt OCR" button on a scanned-PDF banner
 returns an error. The rest of the app is unaffected.
 
+## Phase 18 classifier (optional)
+
+The on-device hybrid-rules classifier is opt-in (gated behind the
+`?phase18=on` feature flag). Like Tesseract, the runtime is bundled
+but the model weights are **not** in git — they're a one-time manual
+drop:
+
+```bash
+cd app
+npm run build:classifier-assets
+```
+
+This downloads ~17.5 MiB of `Xenova/paraphrase-MiniLM-L3-v2` files
+into `app/public/classifier/`. Idempotent — subsequent runs no-op
+when the files are already present. NOT auto-run on `npm install`
+(CI builds that don't need the classifier shouldn't pay the fetch
+cost).
+
+Without this drop, the hybrid path silently falls back to the
+deterministic rules engine even when the flag is on. The rest of
+the app is unaffected.
+
 ## Troubleshooting
 
 ### Pre-commit hook didn't run

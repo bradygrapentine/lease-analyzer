@@ -11,3 +11,9 @@ coverage
 playwright-report/
 test-results/
 worktrees/
+
+# Phase 18 classifier weights — manually dropped via
+# `npm run build:classifier-assets`, never committed (mirrors the
+# tesseract eng.traineddata convention).
+app/public/classifier/*
+!app/public/classifier/.gitkeep
