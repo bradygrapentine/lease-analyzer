@@ -171,8 +171,10 @@ Local-only, CSP-compatible.
       Landed in wave 2 (`src/ui/highlightDefinedTerms.ts`); FindingsPanel
       wraps defined terms in its snippet with a tooltip when
       `definitions` prop is supplied.
-- [ ] Golden tests: a commercial lease fixture exercising table +
-      definitions + references simultaneously.
+- [x] Golden tests: a commercial lease fixture exercising table +
+      definitions + references simultaneously. Shipped in Wave 29-A
+      (PR #TBD): `src/rules/fixtures/commercial-full.ts` + four new
+      assertions in `src/rules/golden.test.ts`.
 - [x] **Per-span bbox highlighting.** Shipped in Wave 28-A + 28-E.
       Parser now attaches `Paragraph.lines: LineSpan[]` (each line
       keeps its char-offset range + bbox); `PdfViewer` renders one
