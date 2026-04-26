@@ -1,45 +1,35 @@
 import { useCallback, useState } from 'react';
-import {
-  buildSideLetterHtml,
-  type SideLetterSigner,
-} from '../negotiation/sideLetter';
+import { buildSideLetterHtml, type SideLetterSigner } from '../negotiation/sideLetter';
+import { buildSideLetterPdf } from '../workflow/sideLetterPdf';
 import type { RedlineEdit } from '../redline/redline';
-import { downloadBlob, stripPdfExt } from './appHelpers';
+import { downloadBlob, downloadBlobBytes, stripPdfExt } from './appHelpers';
 
 export interface SideLetterSignerDraft {
   name: string;
   title: string;
 }
 
+export interface SideLetterRenderInput {
+  leaseName: string;
+  edits: RedlineEdit[];
+  sectionFor?: (paragraphIndex: number) => string | undefined;
+}
+
 export interface UseSideLetterApi {
   signerDraft: SideLetterSignerDraft;
   setSignerDraft: (draft: SideLetterSignerDraft) => void;
-  /**
-   * Render the side-letter HTML using the current signer draft. `sectionFor`
-   * lets callers map paragraph indices to section labels — falls back to
-   * `Page N, ¶ M` inside `buildSideLetterHtml`.
-   */
-  buildHtml: (input: {
-    leaseName: string;
-    edits: RedlineEdit[];
-    sectionFor?: (paragraphIndex: number) => string | undefined;
-  }) => string;
-  /**
-   * Open the rendered side-letter in a popup window. If the browser blocks
-   * the popup we fall back to triggering a file download instead — keeps
-   * the UI affordance discoverable.
-   */
-  preview: (input: {
-    leaseName: string;
-    edits: RedlineEdit[];
-    sectionFor?: (paragraphIndex: number) => string | undefined;
-  }) => void;
+  /** Pure HTML render (no side effects); shared by preview + download. */
+  buildHtml: (input: SideLetterRenderInput) => string;
+  /** Current in-panel preview HTML, or null when nothing has been generated. */
+  previewHtml: string | null;
+  /** Render the side-letter HTML and stash it for in-panel iframe display. */
+  preview: (input: SideLetterRenderInput) => void;
+  /** Hide the in-panel preview without re-rendering. */
+  clearPreview: () => void;
   /** Download the rendered side-letter HTML as a file. */
-  download: (input: {
-    leaseName: string;
-    edits: RedlineEdit[];
-    sectionFor?: (paragraphIndex: number) => string | undefined;
-  }) => void;
+  download: (input: SideLetterRenderInput) => void;
+  /** Download the rendered side-letter as a PDF. */
+  downloadPdf: (input: SideLetterRenderInput) => Promise<void>;
 }
 
 function trimmedSigner(draft: SideLetterSignerDraft): SideLetterSigner | undefined {
@@ -50,19 +40,15 @@ function trimmedSigner(draft: SideLetterSignerDraft): SideLetterSigner | undefin
   return out;
 }
 
-/**
- * Owns the side-letter signer draft and exposes a single render helper. The
- * preview / download decision lives in App.tsx (popup vs file download is a
- * UI concern, not a hook concern).
- */
 export function useSideLetter(): UseSideLetterApi {
   const [signerDraft, setSignerDraft] = useState<SideLetterSignerDraft>({
     name: '',
     title: '',
   });
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
-  const buildHtml = useCallback<UseSideLetterApi['buildHtml']>(
-    (input) => {
+  const buildHtmlForInput = useCallback(
+    (input: SideLetterRenderInput): string => {
       const signer = trimmedSigner(signerDraft);
       return buildSideLetterHtml({
         leaseName: input.leaseName,
@@ -74,32 +60,51 @@ export function useSideLetter(): UseSideLetterApi {
     [signerDraft],
   );
 
-  const download = useCallback<UseSideLetterApi['download']>(
-    (input) => {
-      const html = buildHtml(input);
-      downloadBlob(
-        html,
-        'text/html',
-        `${stripPdfExt(input.leaseName)}-side-letter.html`,
-      );
-    },
-    [buildHtml],
-  );
-
   const preview = useCallback<UseSideLetterApi['preview']>(
     (input) => {
-      const html = buildHtml(input);
-      const win = window.open('', '_blank', 'noopener,noreferrer');
-      if (win) {
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
-      } else {
-        download(input);
-      }
+      setPreviewHtml(buildHtmlForInput(input));
     },
-    [buildHtml, download],
+    [buildHtmlForInput],
   );
 
-  return { signerDraft, setSignerDraft, buildHtml, preview, download };
+  const clearPreview = useCallback((): void => {
+    setPreviewHtml(null);
+  }, []);
+
+  const download = useCallback<UseSideLetterApi['download']>(
+    (input) => {
+      const html = buildHtmlForInput(input);
+      downloadBlob(html, 'text/html', `${stripPdfExt(input.leaseName)}-side-letter.html`);
+    },
+    [buildHtmlForInput],
+  );
+
+  const downloadPdf = useCallback<UseSideLetterApi['downloadPdf']>(
+    async (input) => {
+      const signer = trimmedSigner(signerDraft);
+      const bytes = await buildSideLetterPdf({
+        leaseName: input.leaseName,
+        edits: input.edits,
+        sectionFor: input.sectionFor ?? ((): string | undefined => undefined),
+        ...(signer !== undefined ? { signer } : {}),
+      });
+      downloadBlobBytes(
+        bytes,
+        'application/pdf',
+        `${stripPdfExt(input.leaseName)}-side-letter.pdf`,
+      );
+    },
+    [signerDraft],
+  );
+
+  return {
+    signerDraft,
+    setSignerDraft,
+    buildHtml: buildHtmlForInput,
+    previewHtml,
+    preview,
+    clearPreview,
+    download,
+    downloadPdf,
+  };
 }
