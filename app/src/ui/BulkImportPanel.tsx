@@ -8,10 +8,7 @@ export interface BulkImportPanelProps {
    * back via `onProgress` (invoked once per file, same order as the batch)
    * and the final summary via the returned promise.
    */
-  onImport: (
-    files: File[],
-    onProgress: (result: BulkResult) => void,
-  ) => Promise<BulkSummary>;
+  onImport: (files: File[], onProgress: (result: BulkResult) => void) => Promise<BulkSummary>;
 }
 
 type Row =
@@ -33,21 +30,21 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
 
     setBusy(true);
     setSummary(null);
+    // For PDF inputs we get one progress event per file; for `.zip` inputs
+    // we get one per top-level PDF entry, which the workflow streams in
+    // arrival order. Append rows as results come in rather than pre-sizing
+    // the table — the zip entry count is unknown until the archive is
+    // walked.
     const initial: Row[] = files.map((f) => ({
       fileName: f.name,
       status: 'pending',
     }));
     setRows(initial);
 
-    // Track results by file name + index so duplicate file names don't clobber.
-    const results = new Map<number, Row>();
-    files.forEach((f, i) => results.set(i, { fileName: f.name, status: 'pending' }));
-
-    let seen = 0;
+    const results: Row[] = [];
     const finalSummary = await onImport(files, (result: BulkResult) => {
-      const idx = seen++;
-      results.set(idx, result);
-      setRows(files.map((_, i) => results.get(i) ?? { fileName: files[i]?.name ?? '', status: 'pending' }));
+      results.push(result);
+      setRows([...results]);
     });
     setSummary(finalSummary);
     setBusy(false);
@@ -57,15 +54,16 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
     <section aria-label="bulk import">
       <h2>Bulk import</h2>
       <p>
-        Select multiple PDF leases to analyze and save in one pass. Exact
-        duplicates (by content hash) are skipped automatically.
+        Select multiple PDF leases — or a single <code>.zip</code> of PDFs — to analyze and save in
+        one pass. Exact duplicates (by content hash) are skipped automatically. Top-level zip
+        entries only; nested folders are ignored.
       </p>
       <label>
         <span className="visually-hidden">Bulk import files</span>
         <input
           ref={inputRef}
           type="file"
-          accept="application/pdf"
+          accept="application/pdf,application/zip,.pdf,.zip"
           multiple
           aria-label="bulk import files"
           disabled={busy}
