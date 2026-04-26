@@ -89,11 +89,22 @@ which is also directly covered.
 ## Coverage thresholds
 
 Defined in `app/vite.config.ts` under `test.coverage.thresholds`.
-Current floors: **stmt 95 / branch 87 / func 91 / line 95**. Actuals
-as of 2026-04-18: 97.03 / 88.08 / 93.21 / 97.03. Floors leave ~2 points
-of headroom on stmt/func/line and ~1 on branch so a single honest
-regression doesn't break CI. Raise floors in lock-step with actuals;
-never set a floor you don't already have headroom on.
+Current floors: **stmt 95 / branch 88 / func 91 / line 95**. Actuals
+as of 2026-04-25: 96.63 / 88.31 / 93.03 / 96.63. Floors leave ~1.5
+points of headroom on stmt/line and func, ~0.3 on branch — branch is
+the tight one because the two structural ceilings on the codebase
+keep it sticky:
+
+- `App.tsx` is 1007 lines with 38 missed branches; raising branch
+  coverage past ~89 means decomposing it (tracked as a Wave 17
+  candidate, not a Wave 16 task).
+- `noUncheckedIndexedAccess` produces `?? 0` / `?? ''` defensive
+  guards that v8 counts as branches but that runtime cannot reach.
+  These show up across the parser / matchers / diff code as
+  permanently uncovered branches.
+
+Raise floors in lock-step with actuals; never set a floor you don't
+already have headroom on.
 
 Excludes: test/bench/stories files, barrels (`index.ts`), `main.tsx`,
 `parser/env.d.ts`, `parser/testFixtures.ts`, and
