@@ -64,12 +64,16 @@ export function SectionGroup({
       {/*
         Wave 28 Part C bugfix: aria-labelledby now points to the disclosure
         button (which carries the title) rather than the panel's own id.
-        Self-referencing aria-labelledby caused the region's accessible name
-        to equal its full text content, which collided with descendant
-        labels (`getByLabelText` matched both the real <label> and this
-        wrapper).
+        Wave 28 Part F (a11y sweep): dropped `role="region"` on the panel —
+        the disclosure pattern (button[aria-expanded][aria-controls] +
+        panel[hidden]) is sufficient for AT. Promoting the panel to a
+        landmark region collided with descendant Section landmarks
+        (e.g. LibraryPanel's `<section aria-label="library">` matches the
+        outer "Library" disclosure's accessible name → axe
+        landmark-unique violation). aria-labelledby is retained so
+        readers still announce the group title when focus enters.
       */}
-      <div id={panelId} role="region" aria-labelledby={headerId} hidden={!open} className={open ? bodyPad : ''}>
+      <div id={panelId} aria-labelledby={headerId} hidden={!open} className={open ? bodyPad : ''}>
         {open && children}
       </div>
     </Card>
