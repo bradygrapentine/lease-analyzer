@@ -160,6 +160,7 @@ export async function runHybridAnalyze(opts: HybridAnalyzeOptions): Promise<Find
       confidence: 0.5,
       negated: false,
       rulePackVersion: RULE_PACK_VERSION,
+      evidence: { modelId, similarity: sim },
     });
     if (audit) {
       // Fire-and-await one attestation per hybrid finding. Errors in
