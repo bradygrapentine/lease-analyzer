@@ -190,8 +190,14 @@ turned those primitives into an ecosystem a third party can audit. See
 
 ### Phase 18 — Hybrid rules + on-device LLM clause classification
 
-**Status:** candidate; nothing committed. Model footprint and CSP
-impact need empirical measurement before any code lands.
+**Status:** shipped across **Waves 21–25** (PRs #82–102 + the Wave
+26-A flow tests). End-to-end path: feature flag (`?phase18=on`) →
+asset downloader (`npm run build:classifier-assets`) → upload-path
+classifier pass → `Finding.evidence` payload → click-to-explain
+badge → `llm-classify` audit entry → CSP allowance for `wasm-unsafe-eval`.
+Real-model golden case lives in `tests/e2e/hybrid-golden.spec.ts`,
+gated behind `RUN_REAL_MODEL=1` until a nightly job is wired
+(Wave 27 candidate).
 
 The rules engine catches paraphrased risks unevenly. Regex pins
 auto-renewal language with `\bauto[- ]?renew\b` confidently, but
@@ -225,6 +231,33 @@ modelId }`) recorded in the audit log.
 - WebGPU → WASM → "LLM unavailable" graceful fallback chain.
 - Privacy disclosure update.
 - Paraphrased-clause golden-test fixture exercising the full path.
+
+### Phase 19 — Phase 18 productionization (proposed; Wave 27+)
+
+Phase 18 is functionally complete but operationally raw. The
+Wave 27 candidates queued in [`BACKLOG.md`](./BACKLOG.md) cover:
+
+- **Nightly real-model GHA job** that runs the gated
+  `hybrid-golden.spec.ts` on a schedule. Would have caught the
+  Wave 25 loader/CSP gaps weeks earlier; today the spec is
+  manual-only.
+- **Worker-path classifier** if the main-thread embedding pass
+  proves to block the UI on real-world (non-fixture) leases.
+  Today's per-paragraph latency is sub-second on the sample
+  corpus, but production users will hit larger documents.
+- **Click-to-explain → audit-log linkage** so the disclosure
+  surfaces the matching `llm-classify` entry id alongside the
+  evidence payload.
+- **Branches ≥ 90 push** if a guard-removal sweep on the
+  remaining `noUncheckedIndexedAccess` artifacts in
+  parser/matchers clears the buffer.
+- **`@xenova/transformers` upstream-bump watch** to retire the
+  `protobufjs <7.5.5` accept-risk decision (`SECURITY.md` §7.1)
+  when transformers ships with the fix.
+
+Each candidate is small enough to slot into a future wave alone;
+none is blocked on Phase 18 itself. See `BACKLOG.md` "Cross-cutting
+tech debt" and "Known unknowns / risk register" for the full list.
 
 ---
 
