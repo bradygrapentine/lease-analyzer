@@ -17,11 +17,11 @@ enough to land in one PR.
 | Axis         | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Gate                                         |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | Source       | ~135 non-test files + ~105 test files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests        | ~1123 passing (app) + 8 in `cli/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `npm test`                                   |
+| Tests        | ~1201 passing (app) + 8 in `cli/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `npm test`                                   |
 | Coverage     | thresholds 95/88/91/95 (see `docs/TESTING.md` for current numbers)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `npm run test:coverage`                      |
 | Bundles      | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in)                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `npm run check:budget`                       |
 | IndexedDB    | main `leaseguard` **v5** (`leases` + `settings` + `clauseTemplates` + `paragraphShingles`, post Wave 10-B); 9 side dbs: `leaseguard-packs` v3 (`signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1, `leaseguard-standards` **v1** (Wave 10-C). `leaseguard-packs` `settings` store also gains a `severityOverridesByLease` key (Wave 10-D) without a schema bump. | migrations tested                            |
-| App.tsx      | 10 hooks under `src/App/use*.ts` (Wave 7-D + follow-ups); `<AppHeader>` extracted (Wave 17-A); App.tsx ~958 lines, target ~600                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | —                                            |
+| App.tsx      | 12 hooks under `src/App/use*.ts` (Wave 7-D + Waves 17-21 follow-ups); 5 sub-components extracted (`AppHeader`, `AppRedlinePane`, `AppFooterControls`, `AppCurrentPane`, `AppLibraryAndPacksPane`); App.tsx **541 lines** (below the ~600 target)                                                                                                                                                                                                                                                                                                                                                | —                                            |
 | CLI          | `leaseguard-verify` (Node, no browser, no network) — `cli/` workspace, 3 tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `cd cli && npm test`                         |
 | Build        | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `npm run build`                              |
 | Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `npm run typecheck && npm run lint`          |
@@ -545,6 +545,7 @@ and the precache-cost tradeoff need empirical measurement first. See
       bundled with the rules engine. Re-run the script before
       locking the budget; HuggingFace file sizes drift across
       releases.
+
 - [ ] **Hybrid `analyze()` path: regex/proximity first, LLM as
       tie-breaker** — extend `app/src/rules/analyze.ts` so paragraphs
       whose strongest matcher hit is below a confidence threshold
@@ -555,7 +556,7 @@ and the precache-cost tradeoff need empirical measurement first. See
       (the LLM never overrides a confident regex match).
 - [ ] **Per-finding evidence attestation** — extend `Finding` with
       an optional `evidence: { tokens: number; modelId: string;
-  score: number }` field that the LLM path populates. The audit
+score: number }` field that the LLM path populates. The audit
       log gets a new `kind: 'llm-classify'` entry per finding the
       LLM was responsible for. Existing finding consumers stay
       working unchanged (additive field).
@@ -588,7 +589,7 @@ and the precache-cost tradeoff need empirical measurement first. See
       `transformers.js` + ONNX Runtime Web, or a smaller
       `web-llm`-class loader) doesn't need any new CSP directives
       beyond the existing `default-src 'self'` + `worker-src 'self'
-  blob:` envelope. Done = `scripts/check-csp.mjs` stays green
+blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       and the dist build serves the model from same-origin.
 
 ## Cross-cutting tech debt
@@ -619,19 +620,18 @@ and the precache-cost tradeoff need empirical measurement first. See
       content fingerprint of installed packs, enabled pack ids, selected
       jurisdictions, and severity overrides (skip-first-mount dedupes
       the post-upload analyze).
-- [ ] **App.tsx decomposition** — currently ~958 lines (down from
-      1007 after Wave 17-A extracted `<AppHeader>`; was ~1540 at the
-      last footprint refresh before Wave 7-D's hook extractions).
-      All seven hooks the original row called for (`usePackManager`,
-      `useAnnotations`, `useRedlineState`, `useVersionHistory`,
-      `useSideLetter`, `useCounterOffers`, `useSigningKey`) plus
-      three more (`usePipeline`, `useReanalyzeOnRulesChange`,
-      `useReviewMode`) are extracted. The remaining ~360 lines past
-      the ~600-line target are JSX render and inline callbacks that
-      need either (a) more sub-component extraction (Wave 17-A
-      shipped one; the rest is a Wave 18 candidate), or (b) lifting
-      derived-state `useMemo`s into a dedicated hook before the JSX
-      can split cleanly.
+- [x] **App.tsx decomposition** — original target ≤600 lines.
+      App.tsx is **541 lines** (down from ~1540 pre-Wave-7-D).
+      Shipped across Waves 7-D, 17-A, 18-A, 19-A, 20-B, 21-B:
+      12 hooks under `src/App/use*.ts` (`usePipeline`,
+      `usePackManager`, `useAnnotations`, `useRedlineState`,
+      `useVersionHistory`, `useSideLetter`, `useCounterOffers`,
+      `useSigningKey`, `useReanalyzeOnRulesChange`, `useReviewMode`,
+      `useDerivedAppState`, `useAppCallbacks`) plus 5 sub-components
+      under `src/ui/` (`AppHeader` PR #71, `AppRedlinePane` PR #74,
+      `AppFooterControls` PR #77, `AppCurrentPane` PR #80,
+      `AppLibraryAndPacksPane` PR #84). Coverage thresholds held
+      throughout; behavior unchanged at every step.
 - [x] `App.panels.test.tsx` intermittently times out under coverage
       instrumentation (v8 + jsdom). Wave 12-D set
       `vi.setConfig({ testTimeout: 15_000 })` per-file; Wave 16-A
