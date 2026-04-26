@@ -1,6 +1,9 @@
 import { useCallback, useState } from 'react';
 import { buildSideLetterHtml, type SideLetterSigner } from '../negotiation/sideLetter';
-import { buildSideLetterPdf } from '../workflow/sideLetterPdf';
+// `buildSideLetterPdf` is dynamic-imported inside `downloadPdf` so the
+// pdf-lib runtime (~500 KiB) stays out of the app shell. The PDF path is
+// only reached after a user click, so the chunk-fetch latency is masked
+// by the click-to-download motion.
 import type { RedlineEdit } from '../redline/redline';
 import { downloadBlob, downloadBlobBytes, stripPdfExt } from './appHelpers';
 
@@ -82,6 +85,7 @@ export function useSideLetter(): UseSideLetterApi {
   const downloadPdf = useCallback<UseSideLetterApi['downloadPdf']>(
     async (input) => {
       const signer = trimmedSigner(signerDraft);
+      const { buildSideLetterPdf } = await import('../workflow/sideLetterPdf');
       const bytes = await buildSideLetterPdf({
         leaseName: input.leaseName,
         edits: input.edits,
