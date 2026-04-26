@@ -61,5 +61,8 @@
     "vite-plugin-pwa": "^0.20.5",
     "vitest": "^1.6.0",
     "vitest-axe": "^0.1.0"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
   }
 }
