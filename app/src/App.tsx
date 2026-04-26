@@ -574,6 +574,7 @@ function AppContent(): JSX.Element {
             leaseName={status.fileName}
             edits={redline.redlineEdits}
             signerDraft={sideLetter.signerDraft}
+            previewHtml={sideLetter.previewHtml}
             onSignerChange={(s) => sideLetter.setSignerDraft(s)}
             onPreview={() => {
               if (status.kind !== 'analyzed') return;
@@ -583,6 +584,7 @@ function AppContent(): JSX.Element {
                 sectionFor: sectionForParagraph,
               });
             }}
+            onClosePreview={() => sideLetter.clearPreview()}
             onDownload={() => {
               if (status.kind !== 'analyzed') return;
               sideLetter.download({
@@ -590,6 +592,33 @@ function AppContent(): JSX.Element {
                 edits: redline.redlineEdits,
                 sectionFor: sectionForParagraph,
               });
+              void safeAudit({
+                kind: 'export',
+                payload: {
+                  artifact: 'side-letter',
+                  format: 'html',
+                  leaseName: status.fileName,
+                },
+              });
+            }}
+            onDownloadPdf={() => {
+              if (status.kind !== 'analyzed') return;
+              void sideLetter
+                .downloadPdf({
+                  leaseName: status.fileName,
+                  edits: redline.redlineEdits,
+                  sectionFor: sectionForParagraph,
+                })
+                .then(() =>
+                  safeAudit({
+                    kind: 'export',
+                    payload: {
+                      artifact: 'side-letter',
+                      format: 'pdf',
+                      leaseName: status.fileName,
+                    },
+                  }),
+                );
             }}
           />
         </>

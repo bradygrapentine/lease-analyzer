@@ -74,10 +74,7 @@ import {
   listEditsForLease,
   openRedlineDb,
 } from './redline/redlineStorage';
-import {
-  _resetBulkDedupDbForTests,
-  BULK_DEDUP_DB_NAME,
-} from './workflow/bulkImport';
+import { _resetBulkDedupDbForTests, BULK_DEDUP_DB_NAME } from './workflow/bulkImport';
 import {
   _resetVersionsDbForTests,
   listVersionsForLease,
@@ -120,8 +117,7 @@ interface NodeProcessLike {
   on(event: 'unhandledRejection', fn: (err: unknown) => void): void;
   off(event: 'unhandledRejection', fn: (err: unknown) => void): void;
 }
-const proc = (globalThis as unknown as { process?: NodeProcessLike })
-  .process;
+const proc = (globalThis as unknown as { process?: NodeProcessLike }).process;
 const onUnhandled = (err: unknown): void => {
   if (!isBenignIdbTeardownError(err)) throw err as Error;
 };
@@ -196,9 +192,7 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   // SeverityOverridesPanel even before analysis finishes, so we scope to the
   // findings region here rather than looking for a rule title anywhere.
   await waitFor(() =>
-    expect(
-      screen.getByRole('complementary', { name: /findings/i }),
-    ).toBeInTheDocument(),
+    expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument(),
   );
 }
 
@@ -221,9 +215,7 @@ describe('App panel wire-ups', () => {
     render(<App />);
     await uploadLease();
     await userEvent.click(screen.getByRole('button', { name: /download \.ics/i }));
-    await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent(/no dates/i),
-    );
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/no dates/i));
   });
 
   it('copy summary writes to the clipboard', async () => {
@@ -345,17 +337,12 @@ describe('App panel wire-ups', () => {
     await userEvent.click(
       within(findings).getAllByRole('button', { name: /waiver of jury trial/i })[0]!,
     );
-    await userEvent.type(
-      screen.getByLabelText(/new counter-offer name/i),
-      'Strike clause',
-    );
+    await userEvent.type(screen.getByLabelText(/new counter-offer name/i), 'Strike clause');
     await userEvent.type(
       screen.getByLabelText(/new counter-offer text/i),
       'Propose removal of waiver.',
     );
-    await userEvent.click(
-      screen.getByRole('button', { name: /add counter-offer/i }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /add counter-offer/i }));
     await waitFor(async () => {
       const offers = await listCounterOffers();
       expect(offers.length).toBe(1);
@@ -436,15 +423,11 @@ describe('App panel wire-ups', () => {
     await uploadLease('Auditing.pdf');
     // At least the analyze start/complete entries should appear.
     await waitFor(() => {
-      expect(
-        screen.getByRole('table', { name: /audit entries/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: /audit entries/i })).toBeInTheDocument();
     });
     await userEvent.click(screen.getByRole('button', { name: /verify chain/i }));
     await waitFor(() =>
-      expect(screen.getByTestId('audit-verification')).toHaveTextContent(
-        /chain intact/i,
-      ),
+      expect(screen.getByTestId('audit-verification')).toHaveTextContent(/chain intact/i),
     );
   });
 
@@ -458,9 +441,7 @@ describe('App panel wire-ups', () => {
     ]);
     const bytesB = await makePdf([
       {
-        blocks: [
-          { text: 'Lease B is a totally different document.', x: 72, y: 72 },
-        ],
+        blocks: [{ text: 'Lease B is a totally different document.', x: 72, y: 72 }],
       },
     ]);
     const fileA = new File([bytesA as BlobPart], 'bulk-a.pdf', {
@@ -507,18 +488,12 @@ describe('App panel wire-ups', () => {
     await uploadLease('Custom.pdf');
     // Fill the form through the builder.
     await userEvent.type(screen.getByLabelText(/rule id/i), 'banana-clause');
-    await userEvent.type(
-      screen.getByLabelText(/^title$/i),
-      'Banana clause',
-    );
+    await userEvent.type(screen.getByLabelText(/^title$/i), 'Banana clause');
     await userEvent.type(
       screen.getByLabelText(/^explanation$/i),
       'Flags the word auto-renew as bananas.',
     );
-    await userEvent.type(
-      screen.getByLabelText(/regex pattern/i),
-      'auto-renew',
-    );
+    await userEvent.type(screen.getByLabelText(/regex pattern/i), 'auto-renew');
     await userEvent.click(screen.getByRole('button', { name: /save rule/i }));
     await waitFor(async () => {
       const packs = await listInstalledPacks();
@@ -553,9 +528,7 @@ describe('App panel wire-ups', () => {
     });
     // View toggles to Redline automatically.
     await waitFor(() =>
-      expect(
-        screen.getByRole('region', { name: /redline/i }),
-      ).toBeInTheDocument(),
+      expect(screen.getByRole('region', { name: /redline/i })).toBeInTheDocument(),
     );
   });
 
@@ -598,9 +571,7 @@ describe('App panel wire-ups', () => {
       expect(entries.some((e) => e.kind === 'redline-edit')).toBe(true);
     });
     // Export HTML triggers a download.
-    await userEvent.click(
-      screen.getByRole('button', { name: /export redlined html/i }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /export redlined html/i }));
     expect(aClicks).toContain('Redline-redline.html');
     createSpy.mockRestore();
   });
@@ -666,9 +637,7 @@ describe('App panel wire-ups', () => {
     await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
     // Fill the signer and click download.
     await userEvent.type(screen.getByLabelText(/signer name/i), 'Jane Doe');
-    await userEvent.click(
-      screen.getByRole('button', { name: /download side letter/i }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /download side letter html/i }));
     expect(aClicks).toContain('SideLetter-side-letter.html');
     createSpy.mockRestore();
   });
@@ -694,11 +663,10 @@ describe('App panel wire-ups', () => {
       ],
     };
     // Generate an Ed25519 keypair + signed envelope locally.
-    const kp = (await crypto.subtle.generateKey(
-      { name: 'Ed25519' },
-      true,
-      ['sign', 'verify'],
-    )) as CryptoKeyPair;
+    const kp = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
+      'sign',
+      'verify',
+    ])) as CryptoKeyPair;
     const envelope = await signPack(pack, kp.privateKey, kp.publicKey);
     const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
     await userEvent.upload(
@@ -712,9 +680,7 @@ describe('App panel wire-ups', () => {
     });
     // The badge span for the signed-pack row should report "Verified".
     await waitFor(() => {
-      expect(
-        screen.getByLabelText(/signature status: verified/i),
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText(/signature status: verified/i)).toBeInTheDocument();
     });
     // Audit log captured the verification + import.
     await waitFor(async () => {
@@ -776,33 +742,14 @@ describe('App panel wire-ups', () => {
     createSpy.mockRestore();
   });
 
-  it('SideLetterPanel preview falls back to download when popup is blocked', async () => {
-    const aClicks: string[] = [];
-    const origCreate = document.createElement.bind(document);
-    const createSpy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      const el = origCreate(tag);
-      if (tag === 'a') {
-        el.click = (): void => {
-          aClicks.push(el.getAttribute('download') ?? '');
-        };
-      }
-      return el;
-    });
-    URL.createObjectURL = vi.fn().mockReturnValue('blob:x');
-    URL.revokeObjectURL = vi.fn();
-    // Simulate popup blocker — window.open returns null.
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
-
+  it('SideLetterPanel renders an in-panel preview iframe when Generate preview is clicked', async () => {
     render(<App />);
     await uploadLease('SideLetterPreview.pdf');
     await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
-    await userEvent.click(
-      screen.getByRole('button', { name: /generate side letter preview/i }),
-    );
-    // Popup blocked → fallback downloads the letter.
-    expect(aClicks.some((n) => n.endsWith('-side-letter.html'))).toBe(true);
-    openSpy.mockRestore();
-    createSpy.mockRestore();
+    await userEvent.click(screen.getByRole('button', { name: /generate side letter preview/i }));
+    const iframe = await screen.findByTitle(/side letter preview/i);
+    expect(iframe).toBeInTheDocument();
+    expect(iframe.getAttribute('srcdoc') ?? '').toContain('Side Letter');
   });
 
   it('PackManagerPanel reports "Invalid signature" on a tampered envelope', async () => {
@@ -825,11 +772,10 @@ describe('App panel wire-ups', () => {
         },
       ],
     };
-    const kp = (await crypto.subtle.generateKey(
-      { name: 'Ed25519' },
-      true,
-      ['sign', 'verify'],
-    )) as CryptoKeyPair;
+    const kp = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
+      'sign',
+      'verify',
+    ])) as CryptoKeyPair;
     const envelope = await signPack(pack, kp.privateKey, kp.publicKey);
     // Mutate the payload so the signature no longer matches.
     const tampered = {
@@ -845,9 +791,7 @@ describe('App panel wire-ups', () => {
     );
     // Pack should NOT land in the store; the PackManagerPanel surfaces the
     // verify error via its error banner.
-    await waitFor(() =>
-      expect(screen.getByText(/Invalid signed pack/i)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText(/Invalid signed pack/i)).toBeInTheDocument());
     expect((await listInstalledPacks()).length).toBe(0);
     // Audit log captured the invalid signature event.
     await waitFor(async () => {
@@ -913,8 +857,8 @@ describe('App panel wire-ups', () => {
     );
     // Target the banner div specifically (role=alert). The Dismiss button
     // also matches a label containing "pack version mismatch".
-    expect(
-      screen.getByRole('alert', { name: /pack version mismatch/i }),
-    ).toHaveTextContent(/v1\.0\.0/);
+    expect(screen.getByRole('alert', { name: /pack version mismatch/i })).toHaveTextContent(
+      /v1\.0\.0/,
+    );
   });
 });

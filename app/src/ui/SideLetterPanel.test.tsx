@@ -131,7 +131,7 @@ describe('SideLetterPanel', () => {
         onDownload={onDownload}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /download side letter/i }));
+    await userEvent.click(screen.getByRole('button', { name: /download side letter html/i }));
     expect(onDownload).toHaveBeenCalledTimes(1);
   });
 
@@ -147,5 +147,82 @@ describe('SideLetterPanel', () => {
     );
     expect((screen.getByLabelText(/signer name/i) as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText(/signer title/i) as HTMLInputElement).value).toBe('');
+  });
+
+  it('renders the in-panel preview iframe when previewHtml is provided', () => {
+    render(
+      <SideLetterPanel
+        leaseName="L"
+        edits={[]}
+        previewHtml="<p>hello</p>"
+        onSignerChange={noop}
+        onPreview={noop}
+        onDownload={noop}
+      />,
+    );
+    const iframe = screen.getByTitle(/side letter preview/i) as HTMLIFrameElement;
+    expect(iframe).toBeInTheDocument();
+    expect(iframe.getAttribute('srcdoc')).toBe('<p>hello</p>');
+    expect(iframe.getAttribute('sandbox')).toBe('');
+  });
+
+  it('hides the preview iframe when previewHtml is null', () => {
+    render(
+      <SideLetterPanel
+        leaseName="L"
+        edits={[]}
+        previewHtml={null}
+        onSignerChange={noop}
+        onPreview={noop}
+        onDownload={noop}
+      />,
+    );
+    expect(screen.queryByTitle(/side letter preview/i)).toBeNull();
+  });
+
+  it('Close preview button fires onClosePreview', async () => {
+    const onClosePreview = vi.fn();
+    render(
+      <SideLetterPanel
+        leaseName="L"
+        edits={[]}
+        previewHtml="<p>hi</p>"
+        onSignerChange={noop}
+        onPreview={noop}
+        onClosePreview={onClosePreview}
+        onDownload={noop}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /close side letter preview/i }));
+    expect(onClosePreview).toHaveBeenCalledTimes(1);
+  });
+
+  it('Export PDF button fires onDownloadPdf when handler is provided', async () => {
+    const onDownloadPdf = vi.fn();
+    render(
+      <SideLetterPanel
+        leaseName="L"
+        edits={[]}
+        onSignerChange={noop}
+        onPreview={noop}
+        onDownload={noop}
+        onDownloadPdf={onDownloadPdf}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /download side letter pdf/i }));
+    expect(onDownloadPdf).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the Export PDF button when onDownloadPdf is not provided', () => {
+    render(
+      <SideLetterPanel
+        leaseName="L"
+        edits={[]}
+        onSignerChange={noop}
+        onPreview={noop}
+        onDownload={noop}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /download side letter pdf/i })).toBeNull();
   });
 });

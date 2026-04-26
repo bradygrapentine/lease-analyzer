@@ -29,6 +29,14 @@ const meta = {
       // eslint-disable-next-line no-console
       console.log('[stories] onDownload');
     },
+    onDownloadPdf: () => {
+      // eslint-disable-next-line no-console
+      console.log('[stories] onDownloadPdf');
+    },
+    onClosePreview: () => {
+      // eslint-disable-next-line no-console
+      console.log('[stories] onClosePreview');
+    },
   },
 } satisfies Meta<typeof SideLetterPanel>;
 
@@ -54,5 +62,18 @@ export const WithEdits: Story = {
       }),
     ],
     signerDraft: { name: 'Jane Doe', title: 'General Counsel' },
+  },
+};
+
+export const WithInPanelPreview: Story = {
+  args: {
+    leaseName: 'Acme Lease',
+    edits: [mkEdit({ paragraphIndex: 2, after: 'Lease shall not automatically renew.' })],
+    signerDraft: { name: 'Jane Doe', title: 'General Counsel' },
+    previewHtml: `<!doctype html><html><body style="font-family: system-ui; padding: 1rem">
+<h1>Side Letter</h1><p>Re: Acme Lease</p>
+<ol><li><strong>1. Page N, ¶ 3.</strong> The parties agree that the text of Page N, ¶ 3 is amended to read: "Lease shall not automatically renew.".</li></ol>
+<p>Sincerely,<br><strong>Jane Doe</strong><br>General Counsel</p>
+</body></html>`,
   },
 };
