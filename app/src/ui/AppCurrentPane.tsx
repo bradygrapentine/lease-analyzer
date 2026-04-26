@@ -13,7 +13,7 @@
 //   role="alert" (p)
 //   aria-label="selected finding" (article — now Card as="article")
 
-import type { Dispatch, SetStateAction } from 'react';
+import { useMemo, type Dispatch, type SetStateAction } from 'react';
 import type { OcrLanguage } from '../ocr/availableLanguages';
 import { FindingsPanel } from './FindingsPanel';
 import { PdfViewer } from './PdfViewer';
@@ -112,6 +112,7 @@ export function AppCurrentPane({
 }: AppCurrentPaneProps): JSX.Element {
   const { t } = useI18n();
   const ocr = needsOcr(status.result.doc);
+  const leaseFacts = useMemo(() => extractLeaseFacts(status.result.doc), [status]);
   return (
     <div className="results">
       <div className="results-actions flex flex-wrap gap-2 mb-3">
@@ -173,7 +174,7 @@ export function AppCurrentPane({
             setSelected(f);
             setSelectedPage(f.page);
           }}
-          definitions={extractLeaseFacts(status.result.doc).definitions}
+          definitions={leaseFacts.definitions}
           glossary={glossaryEntries}
           plainEnglishByRuleId={plainEnglishByRuleId}
           suggestedTextByRuleId={suggestedTextByRuleId}
@@ -233,7 +234,7 @@ export function AppCurrentPane({
         suggestedEdit={selected ? suggestedEditByRuleId[selected.ruleId] : undefined}
       />
       <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
-      <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
+      <LeaseFactsPanel facts={leaseFacts} />
       <WorkflowPanel
         leaseName={status.fileName}
         findings={status.result.findings}

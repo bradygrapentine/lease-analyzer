@@ -395,6 +395,10 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
             </button>
             {finding.evidence ? (
               <div className="finding-llm-detail px-3 pb-2">
+                {/* LLM badge intentionally rendered as <button> (not <Badge>) because
+                    Wave 25-B made it the click-to-explain disclosure trigger — it
+                    toggles aria-expanded and reveals the model/similarity/threshold
+                    detail panel. <Badge> is a non-interactive <span>. */}
                 <button
                   type="button"
                   className="finding-llm-badge inline-flex items-center gap-1 text-small text-fg-muted border border-rule rounded-sm px-2 py-0.5 hover:bg-paper-sunken transition-colors"

@@ -78,7 +78,7 @@ export function AnnotationsPanel({
                       aria-label="edit note text"
                       value={editing.text}
                       onChange={(e) => setEditing({ ...editing, text: e.target.value })}
-                      className="w-full border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
+                      className="w-full border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
                     />
                   </label>
                   <div className="flex gap-2">
