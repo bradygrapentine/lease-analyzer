@@ -4,8 +4,17 @@ import { Button } from './system/Button';
 
 // Aria/data inventory (preserved verbatim):
 //   aria-label="upload lease" (input)
-//   role="group" + aria-label="view mode" (div)
-//   aria-pressed={...} on each view-mode button (3 buttons)
+//   role="tablist" + aria-label="view mode" (div) — Wave 29-E
+//   role="tab" + aria-selected + aria-controls on each view-mode
+//     button (3 buttons). aria-pressed retained for back-compat with
+//     existing toggle-pill styling and tests that probe it.
+//
+// Wave 29-E switched the view-mode toggle from `role="group"` +
+// `aria-pressed` to a proper `role="tablist"`, with each button
+// `role="tab"` + `aria-selected` + `aria-controls` pointing at the
+// matching panel id rendered in `App.tsx`. Stable ids:
+//   tab:    `viewmode-tab-${view}`
+//   panel:  `viewmode-panel-${view}`
 
 export type AppViewMode = 'current' | 'portfolio' | 'redline';
 
@@ -64,13 +73,16 @@ export function AppHeader({
         <Button type="button" variant="default" size="sm" onClick={onTrySample}>
           {t('header.trySample')}
         </Button>
-        <div role="group" aria-label="view mode" className="view-toggle flex gap-1">
+        <div role="tablist" aria-label="view mode" className="view-toggle flex gap-1">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             pressed={view === 'current'}
-            aria-pressed={view === 'current'}
+            role="tab"
+            id="viewmode-tab-current"
+            aria-selected={view === 'current'}
+            aria-controls="viewmode-panel-current"
             onClick={() => onViewChange('current')}
           >
             {t('header.view.current')}
@@ -80,7 +92,10 @@ export function AppHeader({
             variant="ghost"
             size="sm"
             pressed={view === 'portfolio'}
-            aria-pressed={view === 'portfolio'}
+            role="tab"
+            id="viewmode-tab-portfolio"
+            aria-selected={view === 'portfolio'}
+            aria-controls="viewmode-panel-portfolio"
             onClick={() => onViewChange('portfolio')}
           >
             {t('header.view.portfolio')}
@@ -91,7 +106,10 @@ export function AppHeader({
               variant="ghost"
               size="sm"
               pressed={view === 'redline'}
-              aria-pressed={view === 'redline'}
+              role="tab"
+              id="viewmode-tab-redline"
+              aria-selected={view === 'redline'}
+              aria-controls="viewmode-panel-redline"
               onClick={() => onViewChange('redline')}
             >
               {t('header.view.redline')}

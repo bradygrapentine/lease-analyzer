@@ -349,7 +349,11 @@ function AppContent(): JSX.Element {
       )}
 
       {view === 'portfolio' && (
-        <>
+        <div
+          role="tabpanel"
+          id="viewmode-panel-portfolio"
+          aria-labelledby="viewmode-tab-portfolio"
+        >
           <PortfolioPanel
             leases={library}
             findingsByLease={portfolioFindings}
@@ -368,22 +372,33 @@ function AppContent(): JSX.Element {
               })();
             }}
           />
-        </>
+        </div>
       )}
 
       {view === 'redline' && status.kind === 'analyzed' && (
-        <AppRedlinePane
-          doc={status.result.doc}
-          leaseName={status.fileName}
-          redline={redline}
-          versionHistory={versionHistory}
-          sideLetter={sideLetter}
-          sectionForParagraph={sectionForParagraph}
-          safeAudit={safeAudit}
-        />
+        <div
+          role="tabpanel"
+          id="viewmode-panel-redline"
+          aria-labelledby="viewmode-tab-redline"
+        >
+          <AppRedlinePane
+            doc={status.result.doc}
+            leaseName={status.fileName}
+            redline={redline}
+            versionHistory={versionHistory}
+            sideLetter={sideLetter}
+            sectionForParagraph={sectionForParagraph}
+            safeAudit={safeAudit}
+          />
+        </div>
       )}
 
       {view === 'current' && status.kind === 'analyzed' && (
+        <div
+          role="tabpanel"
+          id="viewmode-panel-current"
+          aria-labelledby="viewmode-tab-current"
+        >
         <AppCurrentPane
           status={status}
           selected={selected}
@@ -428,6 +443,7 @@ function AppContent(): JSX.Element {
           }}
           setView={setView}
         />
+        </div>
       )}
 
       <AppLibraryAndPacksPane
