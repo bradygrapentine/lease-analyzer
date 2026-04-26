@@ -5,26 +5,26 @@ enough to land in one PR.
 
 ## Status legend
 
-| Mark | Meaning |
-|------|---------|
-| `[x]` | Done and in `main` |
+| Mark  | Meaning                                                 |
+| ----- | ------------------------------------------------------- |
+| `[x]` | Done and in `main`                                      |
 | `[~]` | Partial — scope cut with a note; follow-up ticket below |
-| `[ ]` | Not started |
-| `!`   | Blocker (no blockers at time of writing) |
+| `[ ]` | Not started                                             |
+| `!`   | Blocker (no blockers at time of writing)                |
 
 ## Current footprint
 
-| Axis | Value | Gate |
-|------|-------|------|
-| Source | ~135 non-test files + ~105 test files | `find app/src -name '*.ts' -o -name '*.tsx'` |
-| Tests | ~960 passing (app) + 8 in `cli/` | `npm test` |
-| Coverage | thresholds 90/85/90/90 (see `docs/TESTING.md` for current numbers) | `npm run test:coverage` |
-| Bundles | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in) | `npm run check:budget` |
-| IndexedDB | main `leaseguard` **v5** (`leases` + `settings` + `clauseTemplates` + `paragraphShingles`, post Wave 10-B); 9 side dbs: `leaseguard-packs` v3 (`signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1, `leaseguard-standards` **v1** (Wave 10-C). `leaseguard-packs` `settings` store also gains a `severityOverridesByLease` key (Wave 10-D) without a schema bump. | migrations tested |
-| App.tsx | decomposed into per-panel containers around `usePipeline` (Wave 7-D) | — |
-| CLI | `leaseguard-verify` (Node, no browser, no network) — `cli/` workspace, 3 tests | `cd cli && npm test` |
-| Build | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze | `npm run build` |
-| Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings) | `npm run typecheck && npm run lint` |
+| Axis         | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Gate                                         |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Source       | ~135 non-test files + ~105 test files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `find app/src -name '*.ts' -o -name '*.tsx'` |
+| Tests        | ~960 passing (app) + 8 in `cli/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `npm test`                                   |
+| Coverage     | thresholds 90/85/90/90 (see `docs/TESTING.md` for current numbers)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `npm run test:coverage`                      |
+| Bundles      | app shell ~290 KiB (`index-*.js` + split) · pdf.js api 400 KiB · pdf.worker 1.3 MiB · leaseWorker ~8 KiB · tesseract runtime 8 MiB (opt-in)                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `npm run check:budget`                       |
+| IndexedDB    | main `leaseguard` **v5** (`leases` + `settings` + `clauseTemplates` + `paragraphShingles`, post Wave 10-B); 9 side dbs: `leaseguard-packs` v3 (`signatures` store), `leaseguard-annotations` v1, `leaseguard-counters` v1, `leaseguard-signing` **v2** (multi-key, post Wave 8-D), `leaseguard-audit` v1 (entries gain optional `signedByKeyId`), `leaseguard-redlines` v1, `leaseguard-versions` v1, `leaseguard-bulk-dedup` v1, `leaseguard-standards` **v1** (Wave 10-C). `leaseguard-packs` `settings` store also gains a `severityOverridesByLease` key (Wave 10-D) without a schema bump. | migrations tested                            |
+| App.tsx      | decomposed into per-panel containers around `usePipeline` (Wave 7-D)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | —                                            |
+| CLI          | `leaseguard-verify` (Node, no browser, no network) — `cli/` workspace, 3 tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `cd cli && npm test`                         |
+| Build        | Vite 5 + vite-plugin-pwa → `dist/` with `sw.js`; Web Worker chunk for parse+analyze                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `npm run build`                              |
+| Lint / types | `tsc -b --noEmit` + ESLint clean (0 warnings)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `npm run typecheck && npm run lint`          |
 
 Rough size context: the PWA ships ~2 MB precache without OCR; +8 MB runtime
 and +10 MB of language data once `eng.traineddata.gz` is dropped into
@@ -33,6 +33,7 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 ---
 
 ## Phase 0 — Foundations
+
 - [x] Scaffold Vite + React + TS app in `app/`
 - [x] Strict `tsconfig.json` (`strict`, `noUncheckedIndexedAccess`)
 - [x] ESLint + Prettier
@@ -47,6 +48,7 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] Bundled synthetic fixtures (residential + commercial leases via pdf-lib)
 
 ## Phase 1 — PDF Parser
+
 - [x] `pdfjs-dist` integrated, worker bundled locally
 - [x] `extractPages(bytes) → PageText[]` with positions + fontSize
 - [x] Paragraph reconstruction (line joining, hyphen repair, header/footer strip)
@@ -58,6 +60,7 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] Password-protected PDF → `PasswordProtectedPdfError`
 
 ## Phase 2 — Rules Engine
+
 - [x] `Rule` + `Finding` types, matcher union (regex / keywordProximity / sectionAnchored)
 - [x] `analyze(doc, rules)` with stable ordering + negation post-filter
 - [x] Rule pack v1 (10 rules)
@@ -66,6 +69,7 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] Rule pack versioning stamped on every finding
 
 ## Phase 3 — UI
+
 - [x] Upload control (PDF-only) + sample-lease button
 - [x] Findings panel: severity groups, empty state, negation badge
 - [x] Click finding → selected article, scroll-to-page in viewer
@@ -85,6 +89,7 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
       follow-up — see `docs/TESTING.md` "a11y gate" (2026-04-25).
 
 ## Phase 4 — Local Storage
+
 - [x] IndexedDB wrapper (idb), versioned schema (v1 leases → v2 settings → v3 clauseTemplates); cumulative `if (oldVersion < N)` migration gates
 - [x] Save + list + open + rename + delete
 - [x] Standard-lease pointer + auto-compare on upload
@@ -95,20 +100,22 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] Clause-template CRUD (see Phase 5)
 
 ## Phase 5 — V2: Compare & OCR
+
 - [x] Rule-aware findings diff (added/removed/changed/unchanged)
 - [x] Paragraph-level `diffLeases` with fuzzy Levenshtein matching (threshold 0.6; adds "changed" status with previousText)
 - [x] Compare picker + ComparePanel UI
 - [x] `needsOcr` heuristic + warning banner
 - [x] Tesseract.js OCR engine — opt-in "Attempt OCR" button on the
-  needsOcr banner; tesseract.js is lazy-imported so non-OCR users skip
-  the ~8 MB runtime. Assets served same-origin from `/tesseract/` to
-  satisfy CSP (`build:tesseract-assets` script copies worker + core wasm
-  at postinstall). `eng.traineddata.gz` (~10 MB) is a one-time manual
-  drop into `public/tesseract/`; Workbox precaches everything so offline
-  OCR works, at a cost of ~18 MB to the offline download.
+      needsOcr banner; tesseract.js is lazy-imported so non-OCR users skip
+      the ~8 MB runtime. Assets served same-origin from `/tesseract/` to
+      satisfy CSP (`build:tesseract-assets` script copies worker + core wasm
+      at postinstall). `eng.traineddata.gz` (~10 MB) is a one-time manual
+      drop into `public/tesseract/`; Workbox precaches everything so offline
+      OCR works, at a cost of ~18 MB to the offline download.
 - [x] Per-clause "my standard" template library
 
 ## Phase 6 — Polish & Distribution
+
 - [x] 50-page perf guard in test run
 - [x] PWA manifest + autoUpdate service worker (vite-plugin-pwa)
 - [x] Privacy disclosure `<details>` block + not-legal-advice disclaimer
@@ -274,10 +281,10 @@ Local-only, CSP-compatible.
       through `saveSignedPack`, and surfaces `verified` / `invalid` /
       `community` on the PackManagerPanel.
 - [~] Bundle a small offline marketplace of curated packs as static
-      JSON under `/public/packs/`. Seeded with
-      `example-starter.lgpack.json` produced by
-      `app/scripts/build-example-pack.mjs`; full curated marketplace
-      still open.
+  JSON under `/public/packs/`. Seeded with
+  `example-starter.lgpack.json` produced by
+  `app/scripts/build-example-pack.mjs`; full curated marketplace
+  still open.
 - [ ] Marketplace UI: surface `public/packs/*.lgpack.json` in
       `PackManagerPanel` with a "Browse included packs" list +
       one-click install. Today the seed pack exists on disk but has no
@@ -362,8 +369,7 @@ Local-only, CSP-compatible.
       page-by-page so the first page paints as soon as it resolves
       instead of awaiting the full document.
 - [x] Virtualized `<ul>` in FindingsPanel using IntersectionObserver.
-      Landed wave 4 (`wave4-virtualized`) via `src/ui/useInViewport.ts`
-      + FindingsPanel viewport-gated rendering so long finding lists
+      Landed wave 4 (`wave4-virtualized`) via `src/ui/useInViewport.ts` + FindingsPanel viewport-gated rendering so long finding lists
       stay cheap to scroll.
 - [x] Secondary IndexedDB index on `LeaseRecord.findingCount` +
       `rulePackVersion` so `listLeases` can filter cheaply. Landed
@@ -456,8 +462,7 @@ format.
 ## Phase 16 — Multi-lease intelligence
 
 Plan: [`plans/wave10-portfolio-intelligence.md`](./plans/wave10-portfolio-intelligence.md).
-Turns the portfolio grid (Phase 11) and per-user severity overrides (Phase
-10) into actual analytical leverage across a tenant's library.
+Turns the portfolio grid (Phase 11) and per-user severity overrides (Phase 10) into actual analytical leverage across a tenant's library.
 
 - [x] Portfolio-wide rule rollups — `app/src/portfolio/ruleRollups.ts` +
       `PortfolioRollupsPanel` with severity-resolved aggregation and
@@ -498,6 +503,65 @@ the risk register.
 - [x] Wave 11 Part D — Risk-register closeout: encrypted-archive review,
       crash-log privacy review, CSP regression test, rule-pack rot
       review (`wave11-risk-register`, PR #31). See `docs/SECURITY.md`.
+
+## Phase 18 — Hybrid rules + on-device LLM
+
+Candidate stories. Nothing on "Ready" — model footprint, CSP impact,
+and the precache-cost tradeoff need empirical measurement first. See
+`docs/ROADMAP.md` § Phase 18 for the framing.
+
+- [ ] **Model selection + bundle-size budget gate** — pick a small
+      classification-only model (likely a distilled BERT-class head,
+      not a generative LLM) and add a precache-delta budget gate to
+      `scripts/check-bundle-budget.mjs`. The contract is "OCR plus
+      classifier together stay under <X MB precache" where X is set
+      by what we measure. Done = model picked, weight pinned, budget
+      gate green on a representative build.
+- [ ] **Hybrid `analyze()` path: regex/proximity first, LLM as
+      tie-breaker** — extend `app/src/rules/analyze.ts` so paragraphs
+      whose strongest matcher hit is below a confidence threshold
+      (`< 0.6` is a starting guess) get a second pass through the
+      classifier. Token-budget guard caps total LLM invocations per
+      lease so a worst-case parse doesn't fan out unboundedly.
+      Existing regex / proximity tests must stay green unchanged
+      (the LLM never overrides a confident regex match).
+- [ ] **Per-finding evidence attestation** — extend `Finding` with
+      an optional `evidence: { tokens: number; modelId: string;
+    score: number }` field that the LLM path populates. The audit
+      log gets a new `kind: 'llm-classify'` entry per finding the
+      LLM was responsible for. Existing finding consumers stay
+      working unchanged (additive field).
+- [ ] **Offline-correctness contract: precache the model** — same
+      pattern as Tesseract: Workbox precaches the model weights and
+      tokenizer JSON; `eng.traineddata.gz` becomes a sibling of a
+      new `model/<weights>` directory; same "manual one-time drop
+      required" contract until weight redistribution is licensed
+      (see `docs/SECURITY.md` § 5 for the model the legal review
+      already accepted for tesseract).
+- [ ] **WebGPU → WASM → "LLM unavailable" graceful fallback chain**
+      — runtime detection picks the best available; the
+      classifier UI shows a banner when neither is available and the
+      hybrid path silently no-ops (rules engine still runs). No new
+      audit `kind` for unavailability — the rules-only path is
+      indistinguishable from "LLM disabled" in the audit log.
+- [ ] **Privacy disclosure update** — add a paragraph to the
+      privacy `<details>` block (and `docs/SECURITY.md`) stating
+      that classifier inputs never leave the device, mirroring the
+      existing parse / OCR disclosure. Bundles a re-run of the
+      Wave 11 risk-register privacy check.
+- [ ] **Paraphrased-clause golden test** — extend
+      `src/rules/golden.test.ts` (or a new sibling) with a synthetic
+      commercial lease whose auto-renewal language deliberately
+      paraphrases the regex anchor. Three assertions: (a) regex/
+      proximity miss the paragraph, (b) the LLM tie-breaker catches
+      it, (c) the audit log records the LLM attestation. Without all
+      three, the hybrid path's value proposition is unproven.
+- [ ] **CSP impact audit** — verify the chosen runtime (likely
+      `transformers.js` + ONNX Runtime Web, or a smaller
+      `web-llm`-class loader) doesn't need any new CSP directives
+      beyond the existing `default-src 'self'` + `worker-src 'self'
+    blob:` envelope. Done = `scripts/check-csp.mjs` stays green
+      and the dist build serves the model from same-origin.
 
 ## Cross-cutting tech debt
 
