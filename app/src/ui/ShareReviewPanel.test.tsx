@@ -31,9 +31,7 @@ describe('ShareReviewPanel', () => {
     >(async () => new Uint8Array([1, 2, 3]));
     render(<ShareReviewPanel lease={lease()} onGenerate={onGenerate} />);
     await user.type(screen.getByLabelText(/passphrase/i), 'a-strong-passphrase-12345');
-    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     await user.clear(screen.getByLabelText(/expir/i));
     await user.type(screen.getByLabelText(/expir/i), future);
     await user.click(screen.getByRole('button', { name: /generate/i }));
@@ -66,5 +64,25 @@ describe('ShareReviewPanel', () => {
     const onGenerate = vi.fn();
     render(<ShareReviewPanel lease={lease({ signedPack: false })} onGenerate={onGenerate} />);
     expect(screen.getByRole('button', { name: /generate/i })).toBeDisabled();
+  });
+
+  it('disables generation when no lease is selected', () => {
+    const onGenerate = vi.fn();
+    render(<ShareReviewPanel lease={null} onGenerate={onGenerate} />);
+    expect(screen.getByRole('button', { name: /generate/i })).toBeDisabled();
+  });
+
+  it('surfaces an error when onGenerate rejects', async () => {
+    const user = userEvent.setup();
+    const onGenerate = vi.fn(async () => {
+      throw new Error('crypto failure');
+    });
+    render(<ShareReviewPanel lease={lease()} onGenerate={onGenerate} />);
+    await user.type(screen.getByLabelText(/passphrase/i), 'a-strong-passphrase-12345');
+    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    await user.clear(screen.getByLabelText(/expir/i));
+    await user.type(screen.getByLabelText(/expir/i), future);
+    await user.click(screen.getByRole('button', { name: /generate/i }));
+    expect(await screen.findByText(/crypto failure/i)).toBeInTheDocument();
   });
 });
