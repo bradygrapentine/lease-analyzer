@@ -4,6 +4,7 @@ import { runOcr } from '../ocr/runOcr';
 import { analyze } from '../rules/analyze';
 import { runHybridAnalyze, type EmbedFunction } from '../rules/hybridAnalyze';
 import { isPhase18Enabled } from '../llm/featureFlag';
+import { DEFAULT_MODEL_ID, loadClassifier } from '../llm/loadClassifier';
 import { RULE_PACK_V1 } from '../rules/packV1';
 import type { Rule } from '../rules/types';
 import { getLease, getStandardId, saveLease, type LeaseRecord } from '../storage/storage';
@@ -73,6 +74,32 @@ export interface UsePipelineDeps {
    * main-thread pipeline).
    */
   pipelineClient?: PipelineClient;
+  /**
+   * Optional audit callback. When supplied AND Phase 18's flag is on,
+   * the hybrid analyze path threads this through `runHybridAnalyze`'s
+   * `audit` parameter so each LLM-derived finding fires one
+   * `kind: 'llm-classify'` entry. App.tsx passes its `safeAudit`
+   * wrapper here so audit-write failures stay swallowed.
+   *
+   * Wave 23-B addition — purely additive; existing callers (tests
+   * that don't care about audit attestation) can omit it.
+   */
+  audit?: (entry: { kind: string; payload: Record<string, unknown> }) => Promise<void> | void;
+}
+
+/**
+ * Best-effort load of the on-device classifier. Returns null when the
+ * model files haven't been dropped (`npm run build:classifier-assets`
+ * not run) OR when transformers.js fails to bootstrap (e.g. WebGPU
+ * unavailable in jsdom). Either way the hybrid path silently falls
+ * back to the deterministic engine.
+ */
+async function loadClassifierEmbedFn(): Promise<EmbedFunction | null> {
+  try {
+    return await loadClassifier();
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -93,7 +120,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     null,
   );
 
-  const { onLibraryChange, rules, pipelineClient } = deps;
+  const { onLibraryChange, rules, pipelineClient, audit } = deps;
   const activeRules = rules ?? RULE_PACK_V1;
 
   // Memoize the auto-selected client so we don't spin up a new Worker per
@@ -161,16 +188,21 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         });
         // Phase 18 hybrid path: deterministic engine first; the optional
         // classifier pass only adds findings when the flag is on AND an
-        // embedFn is supplied. Wave 21 ships the seam — no production
-        // caller fetches the real model yet, so embedFn stays null and
-        // the wrapper degrades to plain analyze() at runtime. Wave 22+
-        // wires loadClassifier into this site.
-        const hybridEmbedFn: EmbedFunction | null = null;
+        // embedFn loads cleanly. Wave 23-B wires loadClassifier here;
+        // when the classifier files are missing OR transformers.js fails
+        // to bootstrap (e.g. jsdom, no WebGPU), `loadClassifierEmbedFn`
+        // returns null and the wrapper degrades to plain analyze().
+        const hybridEnabled = isPhase18Enabled();
+        const hybridEmbedFn: EmbedFunction | null = hybridEnabled
+          ? await loadClassifierEmbedFn()
+          : null;
         const findings = await runHybridAnalyze({
           doc,
           rules: activeRules,
-          enabled: isPhase18Enabled(),
+          enabled: hybridEnabled,
           embedFn: hybridEmbedFn,
+          ...(audit ? { audit } : {}),
+          modelId: DEFAULT_MODEL_ID,
         });
         setStatus({
           kind: 'analyzed',
@@ -184,7 +216,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         setOcrState({ kind: 'error', message: friendlyError(err) });
       }
     },
-    [status, activeRules],
+    [status, activeRules, audit],
   );
 
   const reanalyze = useCallback((): void => {

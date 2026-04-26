@@ -184,6 +184,7 @@ function AppContent(): JSX.Element {
   const pipeline = usePipeline({
     onLibraryChange: refreshLibrary,
     rules: packs.activeRules,
+    audit: safeAudit,
   });
   const { status, ocrState, comparison } = pipeline;
   const analyzedLeaseId = status.kind === 'analyzed' ? status.leaseId : null;

@@ -126,6 +126,55 @@ describe('usePipeline', () => {
     }
   });
 
+  it('ocr() falls back to deterministic-only when Phase 18 flag is off', async () => {
+    // Wave 23-B regression check: with the flag default-off, the audit
+    // callback never fires (no llm-classify entries) and the result
+    // shape matches the deterministic-only path.
+    const audit = vi.fn(async () => undefined);
+    const { result } = renderHook(() => usePipeline({ audit }));
+    const bytes = await makeBytes();
+    await act(async () => {
+      await result.current.upload(bytes, 'lease.pdf');
+    });
+    await act(async () => {
+      await result.current.ocr();
+    });
+    // No llm-classify entries when flag is off (the only kind audit
+    // would receive from the OCR path is llm-classify; analyze /
+    // save-lease are wired elsewhere).
+    const llmClassifyCalls = audit.mock.calls.filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (c: any[]) => c[0]?.kind === 'llm-classify',
+    );
+    expect(llmClassifyCalls).toHaveLength(0);
+  });
+
+  it('ocr() falls back gracefully when loadClassifier throws', async () => {
+    // Force the flag on for this test, then expect the inner load to
+    // fail (jsdom can't run @xenova/transformers) and the pipeline to
+    // still complete with deterministic findings.
+    Object.defineProperty(window, 'location', {
+      value: new URL('http://localhost/?phase18=on'),
+      writable: true,
+    });
+    const audit = vi.fn(async () => undefined);
+    const { result } = renderHook(() => usePipeline({ audit }));
+    const bytes = await makeBytes();
+    await act(async () => {
+      await result.current.upload(bytes, 'lease.pdf');
+    });
+    await act(async () => {
+      await result.current.ocr();
+    });
+    // Status reaches 'analyzed' regardless of classifier load failure.
+    expect(result.current.status.kind).toBe('analyzed');
+    // Restore.
+    Object.defineProperty(window, 'location', {
+      value: new URL('http://localhost/'),
+      writable: true,
+    });
+  });
+
   it('open() sets status to analyzed from a LeaseRecord', async () => {
     const { result } = renderHook(() => usePipeline());
     act(() => {
@@ -193,8 +242,7 @@ describe('usePipeline', () => {
   it('reanalyze() re-runs rules over the current doc with current rules', async () => {
     // Start with an empty rule set — no findings after upload.
     const { result, rerender } = renderHook(
-      (props: { rules: import('../rules/types').Rule[] }) =>
-        usePipeline({ rules: props.rules }),
+      (props: { rules: import('../rules/types').Rule[] }) => usePipeline({ rules: props.rules }),
       { initialProps: { rules: [] as import('../rules/types').Rule[] } },
     );
     const bytes = await makeBytes();
