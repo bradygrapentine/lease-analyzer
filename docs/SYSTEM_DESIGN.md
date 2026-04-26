@@ -473,8 +473,22 @@ verify the patch / delta really came from the holder of that key.
 - `renderPdfPages` accepts an `AbortSignal` so stale renders cancel
   when the viewer unmounts or switches documents.
 
+## Desktop CI
+
+`.github/workflows/tauri.yml` runs a 3-OS matrix on every PR:
+`ubuntu-latest` → `.deb`, `macos-latest` → `.app` + `.dmg`,
+`windows-latest` → `.msi`. Each job shares the same Node + Rust setup
+and `cargo tauri build --bundles <platform-specific>`. The Cargo cache
+is keyed on `runner.os` so the three runners don't collide. Artifacts
+upload to the run summary via `actions/upload-artifact@v4`. Jobs run
+with `fail-fast: false` so a regression on one OS doesn't mask the
+status of the others. Code-signing / notarization is intentionally out
+of scope here — the matrix proves the build, not the distribution.
+
 ## Known non-goals (for now)
 
 Cloud sync, accounts, team collaboration, jurisdiction-specific legal
-reasoning, LLM-based summarization. Tauri desktop wrapper has a `src-
-tauri/` stub dir but no code.
+reasoning, LLM-based summarization. The Tauri desktop wrapper now
+builds in CI on Linux, macOS, and Windows (see "Desktop CI" above);
+code-signing / notarization is still pending real Apple Developer +
+Microsoft EV cert credentials.
