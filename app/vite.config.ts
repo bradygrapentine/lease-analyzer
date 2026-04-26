@@ -62,12 +62,16 @@ export default defineConfig({
         'src/worker/leaseWorker.ts',
       ],
       thresholds: {
-        // Raised 2026-04-18 after wave 5 consolidation. Current actuals
-        // sit at 97.03 / 88.08 / 93.21 / 97.03; floors leave ~2 points of
-        // headroom on stmt/func/line and ~1 on branch so a single honest
-        // regression doesn't break CI.
+        // Raised 2026-04-25 after Wave 16 Part A test additions
+        // (appHelpers, useVersionHistory, clauseClusters edge cases).
+        // Actuals sit at 96.63 / 88.31 / 93.03 / 96.63; the +1 branch
+        // bump (87 → 88) is the honest ceiling without (a) decomposing
+        // App.tsx (38 missed branches; tracked as a Wave 17 candidate)
+        // and (b) reducing v8's defensive-guard noise from
+        // `noUncheckedIndexedAccess` (`?? 0` / `?? ''` paths it counts
+        // as branches but that runtime cannot reach).
         statements: 95,
-        branches: 87,
+        branches: 88,
         functions: 91,
         lines: 95,
       },
