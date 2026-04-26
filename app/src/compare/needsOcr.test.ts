@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { needsOcr } from './needsOcr';
+import { needsOcr, OCR_CHAR_THRESHOLD } from './needsOcr';
+import { parseLease } from '../parser/parseLease';
+import { makePdf } from '../parser/testFixtures';
+import { buildScannedFixturePdf } from '../../scripts/build-scanned-fixture.mjs';
 import type { LeaseDocument, PageText } from '../parser/types';
 
 function page(pageNumber: number, text = ''): PageText {
@@ -7,9 +10,7 @@ function page(pageNumber: number, text = ''): PageText {
     pageNumber,
     width: 612,
     height: 792,
-    items: text
-      ? [{ text, x: 72, y: 72, width: text.length * 6, height: 12, fontSize: 12 }]
-      : [],
+    items: text ? [{ text, x: 72, y: 72, width: text.length * 6, height: 12, fontSize: 12 }] : [],
   };
 }
 
@@ -35,5 +36,28 @@ describe('needsOcr', () => {
     const result = needsOcr(doc([]));
     expect(result.likelyScanned).toBe(false);
     expect(result.avgCharsPerPage).toBe(0);
+  });
+
+  it('flags a parsed image-only PDF as likelyScanned', async () => {
+    const bytes = await buildScannedFixturePdf();
+    const parsed = await parseLease(bytes);
+    const result = needsOcr(parsed);
+    expect(result.likelyScanned).toBe(true);
+    expect(result.avgCharsPerPage).toBeLessThan(OCR_CHAR_THRESHOLD);
+  });
+
+  it('does not flag a parsed text-rich residential PDF', async () => {
+    const sentence = 'Tenant shall pay rent of two thousand dollars per month.';
+    const blocks = Array.from({ length: 8 }, (_, i) => ({
+      text: sentence,
+      x: 72,
+      y: 72 + i * 30,
+      size: 12,
+    }));
+    const bytes = await makePdf([{ blocks }, { blocks }]);
+    const parsed = await parseLease(bytes);
+    const result = needsOcr(parsed);
+    expect(result.likelyScanned).toBe(false);
+    expect(result.avgCharsPerPage).toBeGreaterThan(OCR_CHAR_THRESHOLD);
   });
 });

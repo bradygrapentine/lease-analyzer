@@ -50,7 +50,7 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] Heading/section detection (numbered + ALL CAPS heuristics; preamble fallback)
 - [x] `LeaseDocument` type + `parseLease(bytes)` top-level entry
 - [x] Golden-file tests (synthetic residential + commercial)
-- [~] Real scanned-PDF fixture (detection works via `needsOcr`; binary fixture pending)
+- [x] Real scanned-PDF fixture (detection works via `needsOcr`; image-only PDF synthesized in-memory by `app/scripts/build-scanned-fixture.mjs` and exercised end-to-end through `parseLease` in `src/compare/needsOcr.test.ts` — no binary committed, sub-ms build step)
 - [x] 50-page perf budget test (~210ms in CI, budget 3s)
 - [x] Password-protected PDF → `PasswordProtectedPdfError`
 
