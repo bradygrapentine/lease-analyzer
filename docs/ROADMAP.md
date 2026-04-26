@@ -103,8 +103,10 @@ list.
 Tracked in [`BACKLOG.md`](./BACKLOG.md#known-unknowns--risk-register).
 Wave 11-D closed the encrypted-archive security review, crash-log
 privacy review, CSP regression tests, and rule-pack rot review (see
-[`SECURITY.md`](./SECURITY.md)). Open: tesseract licensing audit,
-release / versioning policy.
+[`SECURITY.md`](./SECURITY.md)). Wave 14-C closed the release /
+versioning policy — see [`RELEASING.md`](./RELEASING.md) for bump
+rules and `SECURITY.md` §6 for the signed-format compatibility
+contract.
 
 ---
 
