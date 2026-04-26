@@ -89,19 +89,21 @@ which is also directly covered.
 ## Coverage thresholds
 
 Defined in `app/vite.config.ts` under `test.coverage.thresholds`.
-Current floors: **stmt 95 / branch 88 / func 91 / line 95**. Actuals
-as of 2026-04-25: 96.63 / 88.31 / 93.03 / 96.63. Floors leave ~1.5
-points of headroom on stmt/line and func, ~0.3 on branch — branch is
-the tight one because the two structural ceilings on the codebase
-keep it sticky:
+Current floors: **stmt 95 / branch 89 / func 91 / line 95**. Actuals
+as of 2026-04-26 (post-Wave-24-C): 97.27 / 89.61 / 93.71 / 97.27.
+Floors leave ~2 points of headroom on stmt/line, ~2.7 on func, ~0.6
+on branch — branch is the tight one because the two structural
+ceilings on the codebase keep it sticky:
 
-- `App.tsx` is 1007 lines with 38 missed branches; raising branch
-  coverage past ~89 means decomposing it (tracked as a Wave 17
-  candidate, not a Wave 16 task).
+- `App.tsx` decomposition (Waves 17–21) trimmed it 1007 → 541 lines;
+  remaining branch headroom now comes from continued extraction OR
+  from the next surgical guard sweep.
 - `noUncheckedIndexedAccess` produces `?? 0` / `?? ''` defensive
   guards that v8 counts as branches but that runtime cannot reach.
-  These show up across the parser / matchers / diff code as
-  permanently uncovered branches.
+  Wave 24-C dropped the unreachable subset in `hybridAnalyze.ts`
+  (loop-bounded indexed accesses); these still show up across the
+  parser / matchers / diff code and remain permanently uncovered
+  branches there.
 
 Raise floors in lock-step with actuals; never set a floor you don't
 already have headroom on.
