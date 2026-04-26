@@ -12,7 +12,9 @@ function table(rows: string[][], page = 1): Table {
   const bbox: BoundingBox = { page, xLeft: 0, xRight: 500, yTop: 100, yBottom: 0 };
   return {
     page,
-    rows: rows.map((r, rowIdx) => r.map((t, c) => cell(t, c * 100, c * 100 + 80, 100 - rowIdx * 10))),
+    rows: rows.map((r, rowIdx) =>
+      r.map((t, c) => cell(t, c * 100, c * 100 + 80, 100 - rowIdx * 10)),
+    ),
     bbox,
   };
 }
@@ -138,5 +140,73 @@ describe('extractRentSchedule — edge / negative', () => {
     ]);
     const schedule = extractRentSchedule([t]);
     expect(at(schedule, 0).escalator).toBeCloseTo(3);
+  });
+
+  it('returns empty when the table has fewer than 2 rows (header-only)', () => {
+    const t = table([['Period', 'Rent']]);
+    expect(extractRentSchedule([t])).toEqual([]);
+  });
+
+  it('omits escalator when the cell text contains neither percent nor decimal', () => {
+    const t = table([
+      ['Period', 'Rent', 'Bump'],
+      ['2026-01-01 to 2026-12-31', '$1,000', 'no change'],
+    ]);
+    const schedule = extractRentSchedule([t]);
+    expect(at(schedule, 0).escalator).toBeUndefined();
+  });
+
+  it('skips a row when the rent column has no parseable money string', () => {
+    const t = table([
+      ['Period', 'Rent'],
+      ['2026-01-01 to 2026-12-31', 'TBD'],
+      ['2027-01-01 to 2027-12-31', '$1,030'],
+    ]);
+    const schedule = extractRentSchedule([t]);
+    expect(schedule).toHaveLength(1);
+    expect(at(schedule, 0).from).toBe('2027-01-01');
+  });
+
+  it('skips a row whose dates are unparseable in either column', () => {
+    const t = table([
+      ['Period', 'To', 'Rent'],
+      ['no date here', 'also nothing', '$1,000'],
+      ['2026-01-01', '2026-12-31', '$1,030'],
+    ]);
+    const schedule = extractRentSchedule([t]);
+    expect(schedule).toHaveLength(1);
+    expect(at(schedule, 0).amount).toBe(1030);
+  });
+
+  it('finds headers on row 1 when row 0 is a title row', () => {
+    const t = table([
+      ['Schedule of Rent', '', ''],
+      ['Period', 'Rent', 'Escalator'],
+      ['2026-01-01 to 2026-12-31', '$1,000', '3%'],
+    ]);
+    const schedule = extractRentSchedule([t]);
+    expect(schedule).toHaveLength(1);
+    expect(at(schedule, 0).amount).toBe(1000);
+  });
+
+  it('parses Month-DD-YYYY date strings (e.g. "January 1, 2026")', () => {
+    const t = table([
+      ['Period', 'Rent'],
+      ['January 1, 2026 to December 31, 2026', '$1,000'],
+    ]);
+    const schedule = extractRentSchedule([t]);
+    expect(schedule).toHaveLength(1);
+    expect(at(schedule, 0).amount).toBe(1000);
+  });
+
+  it('expands a "Year (YYYY)" period label into a full calendar year', () => {
+    const t = table([
+      ['Period', 'Rent'],
+      ['Year 1 (2026)', '$1,000'],
+    ]);
+    const schedule = extractRentSchedule([t]);
+    expect(schedule).toHaveLength(1);
+    expect(at(schedule, 0).from).toBe('2026-01-01');
+    expect(at(schedule, 0).to).toBe('2026-12-31');
   });
 });

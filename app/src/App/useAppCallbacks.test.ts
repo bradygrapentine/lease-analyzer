@@ -167,6 +167,72 @@ describe('useAppCallbacks', () => {
     expect(deps.signingKey.signAndDownloadFindings).not.toHaveBeenCalled();
   });
 
+  it('onOpenLibrary is a no-op when the lease id does not exist', async () => {
+    const deps = makeDeps();
+    const { result } = renderHook(() => useAppCallbacks(deps));
+    await act(async () => {
+      await result.current.onOpenLibrary('does-not-exist');
+    });
+    expect(deps.pipeline.open).not.toHaveBeenCalled();
+  });
+
+  it('onOpenLibrary calls pipeline.open when the lease exists', async () => {
+    const id = await saveLease({
+      name: 'Open.pdf',
+      doc: { pages: [], paragraphs: [], sections: [], raw: '' },
+      findings: [],
+    });
+    const deps = makeDeps();
+    const { result } = renderHook(() => useAppCallbacks(deps));
+    await act(async () => {
+      await result.current.onOpenLibrary(id);
+    });
+    expect(deps.pipeline.open).toHaveBeenCalledTimes(1);
+    expect(deps.setSelected).toHaveBeenCalledWith(null);
+  });
+
+  it('onImportArchiveFile is a no-op when no file is selected', async () => {
+    const deps = makeDeps();
+    const { result } = renderHook(() => useAppCallbacks(deps));
+    await act(async () => {
+      await result.current.onImportArchiveFile({
+        target: { files: null, value: '' },
+      } as unknown as Parameters<typeof result.current.onImportArchiveFile>[0]);
+    });
+    expect(deps.pipeline.reset).not.toHaveBeenCalled();
+  });
+
+  it('onExportSignedJson surfaces signing errors via pipeline.setError', async () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('passphrase');
+    const signingKey = fakeSigningKey({
+      signAndDownloadFindings: vi.fn(async () => {
+        throw new Error('decrypt failed');
+      }),
+    });
+    const deps = makeDeps({
+      pipeline: fakePipeline({
+        status: {
+          kind: 'analyzed',
+          fileName: 'L.pdf',
+          result: {
+            doc: { pages: [], paragraphs: [], sections: [], raw: '' },
+            findings: [],
+          },
+          bytes: null,
+        },
+      }),
+      signingKey,
+    });
+    const { result } = renderHook(() => useAppCallbacks(deps));
+    await act(async () => {
+      await result.current.onExportSignedJson();
+    });
+    expect(deps.pipeline.setError).toHaveBeenCalledWith(
+      expect.stringMatching(/Signing failed: decrypt failed/),
+    );
+    promptSpy.mockRestore();
+  });
+
   it('onExportSignedJson is a no-op when the user cancels the passphrase prompt', async () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(null);
     const deps = makeDeps({

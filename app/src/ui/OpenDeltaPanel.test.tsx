@@ -35,4 +35,25 @@ describe('OpenDeltaPanel', () => {
     await user.upload(screen.getByLabelText(/file|delta/i) as HTMLInputElement, file());
     expect(await screen.findByText(/signature invalid/i)).toBeInTheDocument();
   });
+
+  it('surfaces a clear error when readBytes throws (FileReader path failure)', async () => {
+    const user = userEvent.setup();
+    const onPreview = vi.fn(async () => {
+      throw new Error('decode failed');
+    });
+    render(<OpenDeltaPanel onPreview={onPreview} onApply={vi.fn()} />);
+    await user.upload(screen.getByLabelText(/file|delta/i) as HTMLInputElement, file());
+    expect(await screen.findByText(/decode failed/i)).toBeInTheDocument();
+  });
+
+  it('Accept-and-merge button calls onApply when previewed', async () => {
+    const user = userEvent.setup();
+    const onPreview = vi.fn(async () => ({ ok: true as const, preview: '+ x' }));
+    const onApply = vi.fn(async () => undefined);
+    render(<OpenDeltaPanel onPreview={onPreview} onApply={onApply} />);
+    await user.upload(screen.getByLabelText(/file|delta/i) as HTMLInputElement, file());
+    await screen.findByText(/\+ x/);
+    await user.click(screen.getByRole('button', { name: /accept and merge/i }));
+    expect(onApply).toHaveBeenCalledTimes(1);
+  });
 });

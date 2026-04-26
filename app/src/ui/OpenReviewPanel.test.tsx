@@ -63,4 +63,35 @@ describe('OpenReviewPanel', () => {
     await user.click(screen.getByRole('button', { name: /open/i }));
     expect(await screen.findByText(/missing.*pack|install.*pack/i)).toBeInTheDocument();
   });
+
+  it('surfaces a clear "malformed" error when the file is not a review archive', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn(async () => ({ ok: false as const, reason: 'malformed' as const }));
+    render(<OpenReviewPanel onOpen={onOpen} />);
+    await user.upload(screen.getByLabelText(/file|archive/i) as HTMLInputElement, file());
+    await user.type(screen.getByLabelText(/passphrase/i), 'a-strong-passphrase-12345');
+    await user.click(screen.getByRole('button', { name: /open/i }));
+    expect(
+      await screen.findByText(/not a leaseguard review archive|malformed/i),
+    ).toBeInTheDocument();
+  });
+
+  it('errors when the user clicks Open without selecting a file', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    render(<OpenReviewPanel onOpen={onOpen} />);
+    await user.type(screen.getByLabelText(/passphrase/i), 'pp');
+    await user.click(screen.getByRole('button', { name: /open/i }));
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(await screen.findByText(/choose a .*review file/i)).toBeInTheDocument();
+  });
+
+  it('errors when the user submits without a passphrase', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    render(<OpenReviewPanel onOpen={onOpen} />);
+    await user.upload(screen.getByLabelText(/file|archive/i) as HTMLInputElement, file());
+    await user.click(screen.getByRole('button', { name: /open/i }));
+    expect(onOpen).not.toHaveBeenCalled();
+  });
 });
