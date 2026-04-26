@@ -358,3 +358,71 @@ This is the policy companion to the operational rules in
 bump versions; this section says **what compatibility guarantee** the
 signed-export bump implies. They must move together: a `v2` envelope
 PR must update both files in the same change.
+
+## 7. npm audit standing decisions
+
+`npm audit` (in `app/`) reports a small standing set of advisories
+that we've audited and consciously chosen to defer rather than take
+the breaking-change "fix" the auditor proposes. Each entry below
+includes the advisory, what we use the affected code for, why the
+fix is worse than the risk, and the trigger that flips the decision.
+
+Re-run `cd app && npm audit` quarterly (and on every Wave-N start)
+to verify nothing new has crept in.
+
+### 7.1 `protobufjs <7.5.5` — Arbitrary code execution in `parse()`
+
+**Path:** `@xenova/transformers` → `onnxruntime-web` → `onnx-proto` →
+`protobufjs`. Severity: **critical** at the advisory level.
+
+**What we use the dependency for:** Phase 18 hybrid classifier —
+loads a quantized MiniLM-L3 model and produces sentence embeddings
+for paragraph-vs-rule-title cosine similarity. The classifier path
+calls `transformers.pipeline('feature-extraction', ...)`, which
+internally uses ONNX Runtime Web; the path **never** invokes
+`protobufjs.parse()` (the API the advisory targets). Our model file
+ships pre-built and same-origin (Wave 25 fix); the protobuf code is
+only on the model-loading path and operates on bytes we shipped.
+
+**Why we don't take the auditor's fix:** `npm audit fix --force`
+proposes `@xenova/transformers@2.0.1`, which **removes** the model
+class we use. Effectively a Phase 18 rollback.
+
+**Decision (2026-04-26, Wave 26-B):** accept. Re-evaluate when
+`@xenova/transformers` ships an upstream release with `protobufjs
+>= 7.5.5`. Recheck quarterly.
+
+### 7.2 `esbuild <=0.24.2` — dev-server cross-origin reads
+
+**Path:** dev-time tooling — `vite` (5.x) → `esbuild`; also reached
+via `vitest`, `@vitest/coverage-v8`, `vite-node`, `vite-plugin-pwa`.
+Severity: **moderate** at the advisory level.
+
+**What we use the dependency for:** local dev server + the test
+runner's transform pipeline. The advisory affects esbuild's dev
+server; production builds (`npm run build`) emit static assets and
+don't ship esbuild. Risk surface is local-dev only.
+
+**Why we don't take the auditor's fix:** `npm audit fix --force`
+proposes `vite@8.0.10`, a 3-major-version bump. Storybook 8 + the
+current `vite-plugin-pwa` version need a compatibility audit before
+that lands.
+
+**Decision (2026-04-26, Wave 26-B):** accept dev-only risk. The
+**vite 7-or-8 upgrade** is queued as a Wave 27 candidate with
+explicit pre-flight (storybook + vite-plugin-pwa compatibility,
+coverage-threshold revalidation). Re-evaluate after vite-plugin-pwa
+ships a vite-7-compatible release.
+
+### 7.3 Other advisories
+
+The remaining moderate advisories at audit time are transitive
+consequences of 7.2 (the esbuild → vite chain pulls in the same
+advisory through `vite-node`, `vitest`, `@vitest/coverage-v8`,
+`vite-plugin-pwa`). They clear together when 7.2 clears.
+
+### 7.4 What the root `package.json` looks like
+
+The repo-root `package.json` (Playwright runner + husky + lint-staged
+only) reports **0 vulnerabilities**. The advisories above are
+scoped entirely to `app/`.
