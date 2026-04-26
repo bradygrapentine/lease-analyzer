@@ -342,12 +342,14 @@ Local-only, CSP-compatible.
       Landed wave 4 (`wave4-virtualized`) via `src/ui/useInViewport.ts`
       + FindingsPanel viewport-gated rendering so long finding lists
       stay cheap to scroll.
-- [ ] Secondary IndexedDB index on `LeaseRecord.findingCount` +
-      `rulePackVersion` so `listLeases` can filter cheaply.
-      `src/storage/storage.ts` today only indexes `by-createdAt`; a
-      compound index unlocks portfolio-view filtering without a full
-      table scan. Bump the `leaseguard` DB version and add a v4
-      migration gate.
+- [x] Secondary IndexedDB index on `LeaseRecord.findingCount` +
+      `rulePackVersion` so `listLeases` can filter cheaply. Landed
+      Wave 7 Part E (`wave7-idb-index`, PR #9) as the v3 → v4
+      compound index `BY_FINDING_AND_PACK_INDEX` in
+      `src/storage/storage.ts`, with the typed query wrapper
+      `src/storage/listLeasesFiltered.ts` covering exact-match,
+      `findingCount`-only range, and `rulePackVersion`-only fallback
+      paths.
 - [x] Compile + cache regex instances at rule-pack import time. Landed
       wave 4 (`wave4-compileRules`) as `src/rules/compileRules.ts` plus
       a two-layer cache in `src/rules/packStorage.ts`
@@ -494,13 +496,14 @@ the risk register.
       `TemplateMatchesPanel.tsx` (move `classifyMatch` helper to its
       own file or mark it a pure helper). Landed in wave3-perf —
       lint is now clean at 0 warnings.
-- [ ] **Reanalyze-staleness guard**: wire a `useEffect` keyed on
+- [x] **Reanalyze-staleness guard**: wire a `useEffect` keyed on
       `activeRules` (plus jurisdictions + severity overrides) that
-      fires `pipeline.reanalyze()` automatically. Today every caller
-      that mutates rules (custom rule save, jurisdiction toggle,
-      severity override, pack enable/disable) has to remember to call
-      `pipeline.reanalyze()` by hand — missing call = stale findings
-      panel.
+      fires `pipeline.reanalyze()` automatically. Landed Wave 7 Part D
+      (`wave7-appHooks`, PR #6) as `src/App/useReanalyzeOnRulesChange.ts`,
+      mounted once below `usePipeline` in `App.tsx` and keyed on a
+      content fingerprint of installed packs, enabled pack ids, selected
+      jurisdictions, and severity overrides (skip-first-mount dedupes
+      the post-upload analyze).
 - [ ] **App.tsx decomposition** — currently ~1540 lines (was ~835 at
       the last footprint refresh) because every panel mounts its own
       handlers inline. Split into child hooks:
