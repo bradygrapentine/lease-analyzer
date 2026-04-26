@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ChangeEvent } from 'react';
 import { usePipeline } from './App/usePipeline';
 import { usePackManager } from './App/usePackManager';
 import { useAnnotations } from './App/useAnnotations';
@@ -18,8 +17,6 @@ import {
   exportEncryptedArchiveFlow,
   exportFindingsAsHtml,
   exportFindingsAsJson,
-  friendlyError,
-  importEncryptedArchiveFlow,
   readFileBytes,
 } from './App/appHelpers';
 import { FindingsPanel } from './ui/FindingsPanel';
@@ -72,9 +69,6 @@ import type { ClauseTemplate } from './templates/types';
 import { matchTemplates } from './templates/matchTemplates';
 import { saveTemplate, listTemplates, updateTemplate, deleteTemplate } from './storage/templates';
 import {
-  clearStandardId,
-  deleteLease,
-  getLease,
   getOnboardingDismissedAt,
   getStandardId,
   listAllLeaseRecords,
@@ -90,6 +84,8 @@ import { OnboardingTour } from './ui/OnboardingTour';
 import { I18nProvider } from './i18n/I18nProvider';
 import { useI18n } from './i18n/I18nContext';
 import { AppHeader } from './ui/AppHeader';
+import { AppFooterControls } from './ui/AppFooterControls';
+import { useAppCallbacks } from './App/useAppCallbacks';
 import { StandardSuitePanel } from './ui/StandardSuitePanel';
 import {
   deleteStandard,
@@ -306,76 +302,23 @@ function AppContent(): JSX.Element {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  async function handleBytes(bytes: Uint8Array, fileName: string): Promise<void> {
-    setSelected(null);
-    await safeAudit({ kind: 'analyze', payload: { fileName, phase: 'start' } });
-    await pipeline.upload(bytes, fileName);
-    await safeAudit({ kind: 'analyze', payload: { fileName, phase: 'complete' } });
-    void refreshAuditLog();
-  }
-
-  async function onTrySample(): Promise<void> {
-    try {
-      const res = await fetch('/sample.pdf');
-      if (!res.ok) throw new Error(`Could not load sample (${res.status})`);
-      const buf = await res.arrayBuffer();
-      await handleBytes(new Uint8Array(buf), 'Sample lease.pdf');
-    } catch (err) {
-      pipeline.setError(friendlyError(err));
-    }
-  }
-
-  async function onOpenLibrary(id: string): Promise<void> {
-    const record = await getLease(id);
-    if (!record) return;
-    setSelected(null);
-    pipeline.open(record);
-  }
-
-  async function onDeleteLibrary(id: string): Promise<void> {
-    await deleteLease(id);
-    if (standardId === id) await clearStandardId();
-    await safeAudit({ kind: 'delete-lease', payload: { leaseId: id } });
-    await refreshLibrary();
-    void refreshAuditLog();
-  }
-
-  async function onCompare(aId: string, bId: string): Promise<void> {
-    const [a, b] = await Promise.all([getLease(aId), getLease(bId)]);
-    if (!a || !b) return;
-    pipeline.setComparison({ a, b });
-  }
-
-  async function onImportArchiveFile(e: ChangeEvent<HTMLInputElement>): Promise<void> {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    await importEncryptedArchiveFlow(file, {
-      onSuccess: async () => {
-        await refreshLibrary();
-        pipeline.reset();
-        setSelected(null);
-      },
-      onError: (msg) => pipeline.setError(msg),
-    });
-  }
-
-  async function onExportSignedJson(): Promise<void> {
-    if (status.kind !== 'analyzed') return;
-    const passphrase = window.prompt('Passphrase to unlock the signing key:');
-    if (!passphrase) return;
-    try {
-      await signingKey.signAndDownloadFindings({
-        fileName: status.fileName,
-        doc: status.result.doc,
-        findings: status.result.findings,
-        bytes: status.bytes,
-        passphrase,
-      });
-    } catch (err) {
-      pipeline.setError(`Signing failed: ${friendlyError(err)}`);
-    }
-  }
+  const {
+    handleBytes,
+    onTrySample,
+    onOpenLibrary,
+    onDeleteLibrary,
+    onCompare,
+    onImportArchiveFile,
+    onExportSignedJson,
+  } = useAppCallbacks({
+    pipeline,
+    signingKey,
+    safeAudit,
+    refreshAuditLog,
+    refreshLibrary,
+    setSelected,
+    standardId,
+  });
 
   function onExportJson(): void {
     if (status.kind !== 'analyzed') return;
@@ -809,36 +752,20 @@ function AppContent(): JSX.Element {
         />
       )}
 
-      <footer>
-        <button type="button" onClick={() => void exportEncryptedArchiveFlow()}>
-          {t('footer.archive.export')}
-        </button>
-        <label>
-          <span className="visually-hidden">Import encrypted archive</span>
-          Import encrypted archive:
-          <input
-            type="file"
-            accept=".lgarchive,application/octet-stream"
-            aria-label="import encrypted archive"
-            onChange={(e) => void onImportArchiveFile(e)}
-          />
-        </label>
-        <button
-          type="button"
-          onClick={() => {
-            void clearAllFlow({
-              onCleared: async () => {
-                await refreshLibrary();
-                await refreshTemplates();
-                pipeline.reset();
-                setSelected(null);
-              },
-            });
-          }}
-        >
-          {t('footer.clearAll')}
-        </button>
-      </footer>
+      <AppFooterControls
+        onExportArchive={() => void exportEncryptedArchiveFlow()}
+        onImportArchive={(e) => void onImportArchiveFile(e)}
+        onClearAll={() => {
+          void clearAllFlow({
+            onCleared: async () => {
+              await refreshLibrary();
+              await refreshTemplates();
+              pipeline.reset();
+              setSelected(null);
+            },
+          });
+        }}
+      />
     </main>
   );
 }
