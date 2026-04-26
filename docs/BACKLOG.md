@@ -173,18 +173,13 @@ Local-only, CSP-compatible.
       `definitions` prop is supplied.
 - [ ] Golden tests: a commercial lease fixture exercising table +
       definitions + references simultaneously.
-- [ ] **Per-span bbox on `Finding`** so the PDF viewer can highlight the
-      exact matched substring instead of the whole paragraph. Today
-      `Finding.span` is `{start, end}` char offsets into
-      `paragraph.text`; mapping that back to a canvas bbox requires
-      walking the paragraph's `PageText.items[]` (each item has
-      x/y/width/height). Plan: extend `Finding` with a derived
-      `spanBbox: BoundingBox` populated by the rules engine when the
-      span maps cleanly to one or more text items, and consumed by
-      `PdfViewer.tsx` (multiple rects when the span straddles items).
-      Out of scope for Wave 15-C (shipped clipping + reduced-motion
-      only); track as a dedicated follow-up wave because it touches
-      parser → rules → ui in lockstep.
+- [x] **Per-span bbox highlighting.** Shipped in Wave 28-A + 28-E.
+      Parser now attaches `Paragraph.lines: LineSpan[]` (each line
+      keeps its char-offset range + bbox); `PdfViewer` renders one
+      highlight rect per overlapping line via `computeSpanRects`,
+      with paragraph-bbox fallback for legacy persisted leases.
+      Non-breaking — `lines` is optional; legacy leases get the
+      Wave 15-C paragraph-rect highlight until re-parsed.
 
 ## Phase 9 — Negotiation support
 
