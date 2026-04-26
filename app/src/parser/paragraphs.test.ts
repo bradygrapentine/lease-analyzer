@@ -59,6 +59,50 @@ describe('reconstructParagraphs', () => {
     expect(bbox!.yBottom).toBeLessThanOrEqual(685);
   });
 
+  it('attaches per-line spans whose char ranges sum to paragraph length', () => {
+    const pages = [page([item('First line of body', 700), item('second line here', 685)])];
+    const paras = reconstructParagraphs(pages);
+    expect(paras).toHaveLength(1);
+    const p = at(paras, 0);
+    expect(p.lines).toBeDefined();
+    expect(p.lines!.length).toBe(2);
+    // First line covers [0, "First line of body".length)
+    expect(p.lines![0]!.start).toBe(0);
+    expect(p.lines![0]!.end).toBe('First line of body'.length);
+    // Last line ends exactly at paragraph text length
+    expect(p.lines![p.lines!.length - 1]!.end).toBe(p.text.length);
+    // Each line's bbox is on the same page
+    for (const line of p.lines!) {
+      expect(line.bbox.page).toBe(p.page);
+    }
+  });
+
+  it('attaches a single line span for an unmerged paragraph', () => {
+    const pages = [page([item('Lonely paragraph.', 700)])];
+    const paras = reconstructParagraphs(pages);
+    const p = at(paras, 0);
+    expect(p.lines).toBeDefined();
+    expect(p.lines!.length).toBe(1);
+    expect(p.lines![0]!.start).toBe(0);
+    expect(p.lines![0]!.end).toBe(p.text.length);
+  });
+
+  it('preserves correct line offsets across hyphen-repaired joins', () => {
+    const pages = [page([item('exam-', 700), item('ple word', 685)])];
+    const paras = reconstructParagraphs(pages);
+    const p = at(paras, 0);
+    expect(p.text).toBe('example word');
+    expect(p.lines).toBeDefined();
+    expect(p.lines!.length).toBe(2);
+    // First line "exam-" → after repair, prior text becomes "exam" (len 4),
+    // so the second line starts at offset 4 with no separator.
+    expect(p.lines![0]!.start).toBe(0);
+    // Hyphen-repair drops the trailing '-' so first line's end shrinks to "exam".length.
+    expect(p.lines![0]!.end).toBe(4);
+    expect(p.lines![1]!.start).toBe(4);
+    expect(p.lines![1]!.end).toBe(p.text.length);
+  });
+
   it('strips repeating page-header lines', () => {
     const makePage = (n: number): PageText =>
       page(
