@@ -523,12 +523,28 @@ and the precache-cost tradeoff need empirical measurement first. See
       configs ~1 KiB combined; total +6 precache entries / +67045 KiB
       (~65.47 MiB). Against the existing 17-entry / 11901 KiB
       baseline that is a +563% precache delta — DistilBERT-quantized
-      alone is ~5.6x the entire current shell+OCR precache. Implication
-      for the budget gate: a ceiling like "OCR + classifier ≤ 80 MiB
-      precache" is achievable with this model, but anything tighter
-      (≤ 25 MiB combined) requires a smaller candidate (MiniLM-L6 ≈
-      22 MiB int8, fastText, or a hand-distilled head). Re-run the
-      script before locking the budget.
+      alone is ~5.6x the entire current shell+OCR precache.
+
+      **Compared 2026-04-25** (Wave 18-B, `--all` candidates):
+      | candidate                        | total size | + precache delta |
+      |----------------------------------|------------|------------------|
+      | Xenova/distilbert-base-uncased   | 65.47 MiB  | +563%            |
+      | Xenova/all-MiniLM-L6-v2          | 22.81 MiB  | +196%            |
+      | Xenova/paraphrase-MiniLM-L3-v2   | 17.54 MiB  | +151%            |
+
+      **Recommendation: `Xenova/paraphrase-MiniLM-L3-v2`** as the
+      Phase 18 default. ~17.5 MiB int8 is the smallest viable real
+      semantic embedder on the Xenova org (smaller HF candidates
+      `Xenova/bge-micro-v2` and `Xenova/gte-tiny` both return 401 —
+      not redistributed under the Xenova umbrella). The +151%
+      precache delta sets the next budget contract: "OCR + classifier
+      ≤ 30 MiB combined precache (1.5× current Tesseract baseline)."
+      Phase 18's hybrid `analyze()` path trains a thin linear
+      classification head on top of these embeddings, so the model
+      stays a pure embedder and the head ships as ~50 KiB of weights
+      bundled with the rules engine. Re-run the script before
+      locking the budget; HuggingFace file sizes drift across
+      releases.
 - [ ] **Hybrid `analyze()` path: regex/proximity first, LLM as
       tie-breaker** — extend `app/src/rules/analyze.ts` so paragraphs
       whose strongest matcher hit is below a confidence threshold
