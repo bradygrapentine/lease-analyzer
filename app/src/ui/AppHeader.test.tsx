@@ -20,29 +20,29 @@ function renderHeader(props: Partial<React.ComponentProps<typeof AppHeader>> = {
 }
 
 describe('AppHeader', () => {
-  it('renders title, upload control, sample-lease button, and view-mode toggle', () => {
+  it('renders title, upload control, sample-lease button, and view-mode tablist', () => {
     renderHeader();
     expect(screen.getByRole('heading', { name: /leaseguard/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/upload lease/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try a sample lease/i })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: /view mode/i })).toBeInTheDocument();
+    // Wave 29-E — view-mode shell is now a tablist.
+    expect(screen.getByRole('tablist', { name: /view mode/i })).toBeInTheDocument();
   });
 
-  it('marks the active view-mode button with aria-pressed=true', () => {
+  it('marks the active view-mode tab with aria-selected=true', () => {
     renderHeader({ view: 'portfolio' });
-    expect(screen.getByRole('button', { name: /portfolio/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    expect(screen.getByRole('button', { name: /current lease/i })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
+    const portfolio = screen.getByRole('tab', { name: /portfolio/i });
+    const current = screen.getByRole('tab', { name: /current lease/i });
+    expect(portfolio).toHaveAttribute('aria-selected', 'true');
+    expect(portfolio).toHaveAttribute('aria-controls', 'viewmode-panel-portfolio');
+    // aria-pressed is dropped when role="tab" is set (axe aria-allowed-attr).
+    expect(portfolio).not.toHaveAttribute('aria-pressed');
+    expect(current).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('hides the redline view-mode button until showRedlineToggle is true', () => {
+  it('hides the redline view-mode tab until showRedlineToggle is true', () => {
     const { rerender } = renderHeader({ showRedlineToggle: false });
-    expect(screen.queryByRole('button', { name: /redline/i })).toBeNull();
+    expect(screen.queryByRole('tab', { name: /redline/i })).toBeNull();
     rerender(
       <I18nProvider>
         <AppHeader
@@ -54,13 +54,13 @@ describe('AppHeader', () => {
         />
       </I18nProvider>,
     );
-    expect(screen.getByRole('button', { name: /redline/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /redline/i })).toBeInTheDocument();
   });
 
-  it('fires onViewChange when a view-mode button is clicked', async () => {
+  it('fires onViewChange when a view-mode tab is clicked', async () => {
     const onViewChange = vi.fn();
     renderHeader({ showRedlineToggle: true, onViewChange });
-    await userEvent.click(screen.getByRole('button', { name: /portfolio/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /portfolio/i }));
     expect(onViewChange).toHaveBeenCalledWith('portfolio');
   });
 

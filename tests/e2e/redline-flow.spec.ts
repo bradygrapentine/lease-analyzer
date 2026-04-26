@@ -25,7 +25,7 @@ test.describe('Redline view', () => {
     });
 
     // Switch to Redline.
-    await page.getByRole('button', { name: /^Redline$/ }).click();
+    await page.getByRole('tab', { name: /^Redline$/ }).click();
 
     // The redline section is aria-label="redline"; each paragraph row
     // exposes an "edit paragraph N" button.

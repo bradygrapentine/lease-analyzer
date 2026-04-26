@@ -38,14 +38,17 @@ const SEVERITY_LABEL: Record<OverrideSeverity, string> = {
   error: 'Error',
 };
 
-// Tinted background + dark fg (--color-fg) so contrast clears WCAG AA
-// (4.5:1 for body text). Severity hue lives in the bg + a left border
-// rather than the text color, since the warm severity tokens don't
-// pass against cream as foregrounds at body sizes.
+// Wave 29-E — switched from ad-hoc `color-mix` triples (Wave 28-D) to
+// the shared `--color-severity-bg-*` / `--color-severity-border-*`
+// token pairs declared in index.css. Tinted background + dark fg
+// (--color-fg) keeps contrast at WCAG AA (4.5:1 body); severity hue
+// lives in the bg + low-alpha border rather than the text color, since
+// the warm severity tokens don't pass against cream as foregrounds at
+// body sizes.
 const SEVERITY_BADGE_CLASS: Record<OverrideSeverity, string> = {
-  info: 'bg-[color-mix(in_srgb,var(--color-severity-info)_22%,var(--color-paper-raised))] text-fg border border-severity-info/40',
-  warn: 'bg-[color-mix(in_srgb,var(--color-severity-medium)_22%,var(--color-paper-raised))] text-fg border border-severity-medium/40',
-  error: 'bg-[color-mix(in_srgb,var(--color-severity-high)_22%,var(--color-paper-raised))] text-fg border border-severity-high/40',
+  info: 'bg-[var(--color-severity-bg-info)] text-fg border border-[var(--color-severity-border-info)]',
+  warn: 'bg-[var(--color-severity-bg-warn)] text-fg border border-[var(--color-severity-border-warn)]',
+  error: 'bg-[var(--color-severity-bg-error)] text-fg border border-[var(--color-severity-border-error)]',
 };
 
 const CLEAR_VALUE = '__clear__';

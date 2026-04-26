@@ -474,7 +474,7 @@ describe('App panel wire-ups', () => {
   it('Portfolio view toggle shows PortfolioPanel and returns via lease click', async () => {
     render(<App />);
     await uploadLease('Alpha.pdf');
-    await userEvent.click(screen.getByRole('button', { name: /^portfolio$/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /^portfolio$/i }));
     // Analyzed results are hidden in portfolio view.
     expect(screen.queryByRole('region', { name: /lease facts/i })).not.toBeInTheDocument();
     const portfolioRegion = await screen.findByRole('region', { name: /^portfolio$/i });
@@ -550,7 +550,7 @@ describe('App panel wire-ups', () => {
 
     render(<App />);
     await uploadLease('Redline.pdf');
-    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /^redline$/i }));
     // Edit the first paragraph.
     const editButtons = await screen.findAllByRole('button', {
       name: /^edit paragraph 1$/i,
@@ -580,7 +580,7 @@ describe('App panel wire-ups', () => {
   it('VersionHistoryPanel creates a version snapshot in the redline view', async () => {
     render(<App />);
     await uploadLease('Versioned.pdf');
-    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /^redline$/i }));
     // Seed an edit so the snapshot is non-empty.
     const editButtons = await screen.findAllByRole('button', {
       name: /^edit paragraph 1$/i,
@@ -626,7 +626,7 @@ describe('App panel wire-ups', () => {
 
     render(<App />);
     await uploadLease('SideLetter.pdf');
-    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /^redline$/i }));
     // Seed an edit to give the side-letter clauses to cite.
     const editButtons = await screen.findAllByRole('button', {
       name: /^edit paragraph 1$/i,
@@ -707,7 +707,7 @@ describe('App panel wire-ups', () => {
 
     render(<App />);
     await uploadLease('VersionCrud.pdf');
-    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /^redline$/i }));
     // Seed one edit + one saved version ("v1").
     const editButtons = await screen.findAllByRole('button', {
       name: /^edit paragraph 1$/i,
@@ -746,7 +746,7 @@ describe('App panel wire-ups', () => {
   it('SideLetterPanel renders an in-panel preview iframe when Generate preview is clicked', async () => {
     render(<App />);
     await uploadLease('SideLetterPreview.pdf');
-    await userEvent.click(screen.getByRole('button', { name: /^redline$/i }));
+    await userEvent.click(screen.getByRole('tab', { name: /^redline$/i }));
     await userEvent.click(screen.getByRole('button', { name: /generate side letter preview/i }));
     const iframe = await screen.findByTitle(/side letter preview/i);
     expect(iframe).toBeInTheDocument();

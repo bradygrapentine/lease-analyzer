@@ -30,11 +30,11 @@ test.describe('LeaseGuard happy path', () => {
     await expect(page.getByRole('article', { name: /selected finding/i })).toBeVisible();
 
     // Portfolio toggle → portfolio section renders.
-    await page.getByRole('button', { name: /^portfolio$/i }).click();
+    await page.getByRole('tab', { name: /^portfolio$/i }).click();
     await expect(page.getByRole('region', { name: /portfolio/i }).first()).toBeVisible();
 
     // Back to current view so the audit log is rendered alongside.
-    await page.getByRole('button', { name: /^current lease$/i }).click();
+    await page.getByRole('tab', { name: /^current lease$/i }).click();
 
     // Audit log: section always exists; assert ≥ 1 entry from the analyze + save
     // events the sample-lease flow already produced. The panel renders a

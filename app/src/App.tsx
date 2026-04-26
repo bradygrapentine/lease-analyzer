@@ -339,51 +339,70 @@ function AppContent(): JSX.Element {
         onViewChange={(next) => setView(next)}
       />
 
-      {view === 'current' && status.kind === 'loading' && (
-        <p role="status" aria-live="polite">
-          Analyzing {status.fileName}…
-        </p>
-      )}
-      {view === 'current' && status.kind === 'error' && (
-        <p role="alert">Could not analyze this file: {status.message}</p>
-      )}
+      <div
+        role="tabpanel"
+        id="viewmode-panel-portfolio"
+        aria-labelledby="viewmode-tab-portfolio"
+        hidden={view !== 'portfolio'}
+      >
+        {view === 'portfolio' && (
+          <>
+            <PortfolioPanel
+              leases={library}
+              findingsByLease={portfolioFindings}
+              onOpenLease={(id) => {
+                setView('current');
+                void onOpenLibrary(id);
+              }}
+            />
+            <StandardSuitePanel
+              standards={standardSuite}
+              onDelete={(id) => {
+                void (async (): Promise<void> => {
+                  await deleteStandard(id);
+                  await refreshStandardSuite();
+                  void refreshAuditLog();
+                })();
+              }}
+            />
+          </>
+        )}
+      </div>
 
-      {view === 'portfolio' && (
-        <>
-          <PortfolioPanel
-            leases={library}
-            findingsByLease={portfolioFindings}
-            onOpenLease={(id) => {
-              setView('current');
-              void onOpenLibrary(id);
-            }}
+      <div
+        role="tabpanel"
+        id="viewmode-panel-redline"
+        aria-labelledby="viewmode-tab-redline"
+        hidden={view !== 'redline'}
+      >
+        {view === 'redline' && status.kind === 'analyzed' && (
+          <AppRedlinePane
+            doc={status.result.doc}
+            leaseName={status.fileName}
+            redline={redline}
+            versionHistory={versionHistory}
+            sideLetter={sideLetter}
+            sectionForParagraph={sectionForParagraph}
+            safeAudit={safeAudit}
           />
-          <StandardSuitePanel
-            standards={standardSuite}
-            onDelete={(id) => {
-              void (async (): Promise<void> => {
-                await deleteStandard(id);
-                await refreshStandardSuite();
-                void refreshAuditLog();
-              })();
-            }}
-          />
-        </>
-      )}
+        )}
+      </div>
 
-      {view === 'redline' && status.kind === 'analyzed' && (
-        <AppRedlinePane
-          doc={status.result.doc}
-          leaseName={status.fileName}
-          redline={redline}
-          versionHistory={versionHistory}
-          sideLetter={sideLetter}
-          sectionForParagraph={sectionForParagraph}
-          safeAudit={safeAudit}
-        />
-      )}
-
-      {view === 'current' && status.kind === 'analyzed' && (
+      <div
+        role="tabpanel"
+        id="viewmode-panel-current"
+        aria-labelledby="viewmode-tab-current"
+        hidden={view !== 'current'}
+      >
+        {view === 'current' && status.kind === 'loading' && (
+          <p role="status" aria-live="polite">
+            Analyzing {status.fileName}…
+          </p>
+        )}
+        {view === 'current' && status.kind === 'error' && (
+          <p role="alert">Could not analyze this file: {status.message}</p>
+        )}
+        {view === 'current' && status.kind === 'analyzed' && (
         <AppCurrentPane
           status={status}
           selected={selected}
@@ -428,7 +447,8 @@ function AppContent(): JSX.Element {
           }}
           setView={setView}
         />
-      )}
+        )}
+      </div>
 
       <AppLibraryAndPacksPane
         library={library}
