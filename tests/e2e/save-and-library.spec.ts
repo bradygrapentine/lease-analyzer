@@ -18,13 +18,23 @@ test.describe('LeaseGuard library flow', () => {
     await expect(findingButtons.first()).toBeVisible({ timeout: 15_000 });
 
     // usePipeline auto-saves analyzed leases. The library row's "open" button
-    // surfaces with the file name aria-label, e.g. "open sample.pdf".
-    const openSample = page.getByRole('button', { name: /open sample\.pdf/i });
+    // surfaces with the file name aria-label, e.g. "Open Sample lease.pdf".
+    // (The sample-lease handler in useAppCallbacks names the synthesized
+    // file "Sample lease.pdf", not "sample.pdf" — the spec drifted from
+    // the source.)
+    const openSample = page.getByRole('button', { name: /open sample lease\.pdf/i });
     await expect(openSample).toBeVisible({ timeout: 10_000 });
 
     // Reopen the saved record. Findings panel stays populated (the saved
-    // record carries findings, not just bytes).
+    // record carries findings, not just bytes). The "Open" button lives
+    // at the bottom of the page, so after the click we're scrolled past
+    // the FindingsPanel — which is virtualized (Phase 13's
+    // VirtualFindingItem swaps offscreen rows for placeholders). Assert
+    // on the severity-group heading instead, which is always rendered
+    // and includes the finding count.
     await openSample.click();
-    await expect(findingButtons.first()).toBeVisible({ timeout: 10_000 });
+    // The h2 wraps a button whose aria-label is "toggle high" — match by
+    // visible text instead, which carries the rendered count "High (N)".
+    await expect(findings.getByText(/^High \(\d+\)$/)).toBeVisible({ timeout: 10_000 });
   });
 });
