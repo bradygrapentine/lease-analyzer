@@ -17,3 +17,4 @@ worktrees/
 # tesseract eng.traineddata convention).
 app/public/classifier/*
 !app/public/classifier/.gitkeep
+.superpowers/
