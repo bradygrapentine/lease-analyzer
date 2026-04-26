@@ -90,10 +90,10 @@ tickets.
 
 ### Tech debt — keep the codebase honest
 
-- Decompose `App.tsx` (~1540 lines) into per-panel containers around
-  the `usePipeline` hook.
-- Fix reanalyze-staleness so `activeRules` is captured at render time,
-  not re-read when the callback fires.
+- Continue `App.tsx` decomposition (~958 lines after Wave 17-A; ten
+  hooks already extracted under `app/src/App/use*.ts`; remaining
+  drop to the ~600-line target needs derived-state hook extraction
+  before further sub-component splits land cleanly).
 
 See [`BACKLOG.md`](./BACKLOG.md#cross-cutting-tech-debt) for the full
 list.
