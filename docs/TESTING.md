@@ -171,6 +171,31 @@ smoke test (chrome-devtools MCP) when the behavior is any of:
 One browser walk per release is plenty; the smoke test's job is to
 catch jsdom-shaped blind spots, not replace the unit suite.
 
+## End-to-end (Playwright)
+
+Specs live in `tests/e2e/`; `playwright.config.ts` at the repo root
+boots the production preview (`app/dist/`) on port 4173. CI runs
+the matrix across chromium / firefox / webkit on every PR.
+
+The Phase 18 real-model golden case (`tests/e2e/hybrid-golden.spec.ts`)
+is gated behind `RUN_REAL_MODEL=1` so it stays off PR CI. To run
+locally:
+
+```bash
+cd app
+npm run build:classifier-assets   # one-time, drops weights into public/classifier
+npm run build
+cd ..
+RUN_REAL_MODEL=1 npx playwright test --project=chromium tests/e2e/hybrid-golden.spec.ts
+```
+
+**Known gap (Wave 26 fix):** the spec currently fails even with
+assets present, because `loadClassifier.ts` doesn't configure
+`@xenova/transformers`'s local-model path — the runtime falls back
+to fetching from huggingface.co and the upload path silently
+degrades to deterministic-only. The spec is shipped now to document
+the contract; the loader fix unsticks it without spec edits.
+
 ## Run commands
 
 ```bash
