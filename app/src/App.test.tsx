@@ -1,6 +1,11 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+vi.mock('./ui/HybridFeedbackButton', () => ({
+  HybridFeedbackButton: () => null,
+}));
+
 vi.mock('./ocr/runOcr', () => ({
   runOcr: vi.fn(
     async (
