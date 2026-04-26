@@ -517,6 +517,18 @@ and the precache-cost tradeoff need empirical measurement first. See
       classifier together stay under <X MB precache" where X is set
       by what we measure. Done = model picked, weight pinned, budget
       gate green on a representative build.
+      **Measured 2026-04-25** (`app/scripts/measure-llm-budget.mjs`,
+      candidate `Xenova/distilbert-base-uncased`, int8 ONNX): model
+      weights 64.57 MiB, tokenizer 694.7 KiB, vocab 226.1 KiB, three
+      configs ~1 KiB combined; total +6 precache entries / +67045 KiB
+      (~65.47 MiB). Against the existing 17-entry / 11901 KiB
+      baseline that is a +563% precache delta — DistilBERT-quantized
+      alone is ~5.6x the entire current shell+OCR precache. Implication
+      for the budget gate: a ceiling like "OCR + classifier ≤ 80 MiB
+      precache" is achievable with this model, but anything tighter
+      (≤ 25 MiB combined) requires a smaller candidate (MiniLM-L6 ≈
+      22 MiB int8, fastText, or a hand-distilled head). Re-run the
+      script before locking the budget.
 - [ ] **Hybrid `analyze()` path: regex/proximity first, LLM as
       tie-breaker** — extend `app/src/rules/analyze.ts` so paragraphs
       whose strongest matcher hit is below a confidence threshold
