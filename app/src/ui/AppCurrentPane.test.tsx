@@ -1,0 +1,185 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { AppCurrentPane } from './AppCurrentPane';
+import { I18nProvider } from '../i18n/I18nProvider';
+import type { LeaseDocument } from '../parser/types';
+import type { Finding } from '../rules/types';
+
+function makeDoc(): LeaseDocument {
+  return {
+    pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+    paragraphs: [{ text: 'Tenant shall pay rent.', page: 1 }],
+    sections: [],
+    raw: 'Tenant shall pay rent.',
+  };
+}
+
+function makeStatus() {
+  return {
+    kind: 'analyzed' as const,
+    fileName: 'lease.pdf',
+    bytes: null,
+    leaseId: 'L1',
+    result: {
+      doc: makeDoc(),
+      findings: [
+        {
+          ruleId: 'r1',
+          severity: 'medium',
+          category: 'general',
+          title: 'Test finding',
+          explanation: 'Why it matters',
+          citation: null,
+          page: 1,
+          paragraphIndex: 0,
+          snippet: 'Tenant shall pay rent.',
+          span: { start: 0, end: 8 },
+          confidence: 0.9,
+          negated: false,
+          rulePackVersion: '1.0.0',
+        },
+      ] as Finding[],
+    },
+  };
+}
+
+function defaults(over: Partial<React.ComponentProps<typeof AppCurrentPane>> = {}) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fakeRedline: any = {
+    redlineEdits: [],
+    editParagraph: vi.fn(),
+    deleteParagraphEdit: vi.fn(),
+    buildHtml: vi.fn(() => ''),
+    replaceAll: vi.fn(),
+    refresh: vi.fn(),
+    applySuggestion: vi.fn(async () => undefined),
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fakeCounters: any = {
+    counterOffers: [],
+    save: vi.fn(),
+    remove: vi.fn(),
+    refresh: vi.fn(),
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fakeAnnotations: any = {
+    annotations: [],
+    save: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    refresh: vi.fn(),
+  };
+  const props: React.ComponentProps<typeof AppCurrentPane> = {
+    status: makeStatus(),
+    selected: null,
+    selectedPage: null,
+    setSelected: vi.fn(),
+    setSelectedPage: vi.fn(),
+    ocrState: { kind: 'idle' },
+    ocrLanguage: 'eng',
+    setOcrLanguage: vi.fn(),
+    ocrLanguages: [],
+    hasSigningKey: false,
+    glossaryEntries: [],
+    templates: [],
+    plainEnglishByRuleId: {},
+    suggestedTextByRuleId: {},
+    suggestedEditByRuleId: {},
+    redline: fakeRedline,
+    counters: fakeCounters,
+    annotationsApi: fakeAnnotations,
+    analyzedLeaseId: 'L1',
+    onExportJson: vi.fn(),
+    onExportSignedJson: vi.fn(),
+    onBuildIcs: vi.fn(),
+    onAttemptOcr: vi.fn(),
+    onPromoteToStandard: vi.fn(),
+    setView: vi.fn(),
+    ...over,
+  };
+  return render(
+    <I18nProvider>
+      <AppCurrentPane {...props} />
+    </I18nProvider>,
+  );
+}
+
+describe('AppCurrentPane', () => {
+  it('renders the analyzed-view scaffold (findings panel + workflow panel)', () => {
+    defaults();
+    expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument();
+    // WorkflowPanel mounts an .ics button.
+    expect(screen.getByRole('button', { name: /\.ics/i })).toBeInTheDocument();
+  });
+
+  it('renders the signed-export button only when hasSigningKey is true', () => {
+    const { rerender } = defaults({ hasSigningKey: false });
+    expect(screen.queryByRole('button', { name: /signed/i })).toBeNull();
+    rerender(
+      <I18nProvider>
+        <AppCurrentPane
+          {...{
+            status: makeStatus(),
+            selected: null,
+            selectedPage: null,
+            setSelected: vi.fn(),
+            setSelectedPage: vi.fn(),
+            ocrState: { kind: 'idle' },
+            ocrLanguage: 'eng',
+            setOcrLanguage: vi.fn(),
+            ocrLanguages: [],
+            hasSigningKey: true,
+            glossaryEntries: [],
+            templates: [],
+            plainEnglishByRuleId: {},
+            suggestedTextByRuleId: {},
+            suggestedEditByRuleId: {},
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            redline: { redlineEdits: [], applySuggestion: vi.fn() } as any,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            counters: { counterOffers: [], save: vi.fn(), remove: vi.fn() } as any,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            annotationsApi: {
+              annotations: [],
+              save: vi.fn(),
+              update: vi.fn(),
+              remove: vi.fn(),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any,
+            analyzedLeaseId: 'L1',
+            onExportJson: vi.fn(),
+            onExportSignedJson: vi.fn(),
+            onBuildIcs: vi.fn(),
+            onAttemptOcr: vi.fn(),
+            onPromoteToStandard: vi.fn(),
+            setView: vi.fn(),
+          }}
+        />
+      </I18nProvider>,
+    );
+    expect(screen.getByRole('button', { name: /signed/i })).toBeInTheDocument();
+  });
+
+  it('fires onExportJson when the JSON-export button is clicked', async () => {
+    const onExportJson = vi.fn();
+    defaults({ onExportJson });
+    const btn = screen.getAllByRole('button').find((b) => /json/i.test(b.textContent ?? ''));
+    expect(btn).toBeDefined();
+    await userEvent.click(btn!);
+    expect(onExportJson).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the OCR banner when the doc looks scanned', () => {
+    const status = makeStatus();
+    // Empty paragraphs / items make needsOcr fire.
+    status.result.doc = {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [],
+      sections: [],
+      raw: '',
+    };
+    defaults({ status });
+    expect(screen.getByText(/looks scanned/i)).toBeInTheDocument();
+  });
+});

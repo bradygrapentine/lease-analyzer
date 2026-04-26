@@ -13,24 +13,15 @@ import {
   buildIcsBytes,
   clearAllFlow,
   downloadBlobBytes,
-  downloadHandoffZip,
   exportEncryptedArchiveFlow,
-  exportFindingsAsHtml,
   exportFindingsAsJson,
   readFileBytes,
 } from './App/appHelpers';
-import { FindingsPanel } from './ui/FindingsPanel';
 import { loadGlossary, type GlossaryEntry } from './glossary/loadGlossary';
 import { LibraryPanel } from './ui/LibraryPanel';
-import { PdfViewer } from './ui/PdfViewer';
 import { ComparePanel } from './ui/ComparePanel';
 import { LibraryCompareForm } from './ui/LibraryCompareForm';
 import { TemplatesPanel } from './ui/TemplatesPanel';
-import { TemplateMatchesPanel } from './ui/TemplateMatchesPanel';
-import { LeaseFactsPanel } from './ui/LeaseFactsPanel';
-import { extractLeaseFacts } from './facts/extractFacts';
-import { WorkflowPanel } from './ui/WorkflowPanel';
-import { buildSummary, copyToClipboard } from './workflow/copySummary';
 import { PackManagerPanel } from './ui/PackManagerPanel';
 import { loadCuratedManifest, type CuratedPackEntry } from './rules/curatedPacks';
 import { validatePackFile } from './rules/packSchema';
@@ -55,18 +46,13 @@ import {
 } from './audit/auditLog';
 import { buildAuditLogJson, downloadAuditLogBlob } from './audit/auditExport';
 import { SigningKeyPanel } from './ui/SigningKeyPanel';
-import { AnnotationsPanel } from './ui/AnnotationsPanel';
-import { CounterOfferPanel } from './ui/CounterOfferPanel';
 import { PortfolioPanel } from './ui/PortfolioPanel';
 import { paragraphShingles } from './portfolio/shingles';
 import { CustomRuleBuilderPanel } from './ui/CustomRuleBuilderPanel';
 import { AppRedlinePane } from './ui/AppRedlinePane';
-import { needsOcr } from './compare/needsOcr';
 import { discoverOcrLanguages, type OcrLanguage } from './ocr/availableLanguages';
-import { OcrLanguagePickerPanel } from './ui/OcrLanguagePickerPanel';
 import type { Finding } from './rules/types';
 import type { ClauseTemplate } from './templates/types';
-import { matchTemplates } from './templates/matchTemplates';
 import { saveTemplate, listTemplates, updateTemplate, deleteTemplate } from './storage/templates';
 import {
   getOnboardingDismissedAt,
@@ -82,9 +68,9 @@ import {
 } from './storage/storage';
 import { OnboardingTour } from './ui/OnboardingTour';
 import { I18nProvider } from './i18n/I18nProvider';
-import { useI18n } from './i18n/I18nContext';
 import { AppHeader } from './ui/AppHeader';
 import { AppFooterControls } from './ui/AppFooterControls';
+import { AppCurrentPane } from './ui/AppCurrentPane';
 import { useAppCallbacks } from './App/useAppCallbacks';
 import { StandardSuitePanel } from './ui/StandardSuitePanel';
 import {
@@ -122,7 +108,6 @@ export function App(): JSX.Element {
 }
 
 function AppContent(): JSX.Element {
-  const { t } = useI18n();
   const [selected, setSelected] = useState<Finding | null>(null);
   const [library, setLibrary] = useState<LeaseMetadata[]>([]);
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
@@ -409,167 +394,50 @@ function AppContent(): JSX.Element {
       )}
 
       {view === 'current' && status.kind === 'analyzed' && (
-        <div className="results">
-          <div className="results-actions">
-            <button type="button" onClick={onExportJson}>
-              {t('findings.export.json')}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (status.kind !== 'analyzed') return;
-                exportFindingsAsHtml({
-                  fileName: status.fileName,
-                  doc: status.result.doc,
-                  findings: status.result.findings,
-                });
-              }}
-            >
-              {t('findings.export.html')}
-            </button>
-            {signingKey.publicKey !== null && (
-              <button type="button" onClick={() => void onExportSignedJson()}>
-                {t('findings.export.signed')}
-              </button>
-            )}
-          </div>
-          {(() => {
-            const ocr = needsOcr(status.result.doc);
-            if (!ocr.likelyScanned) return null;
-            return (
-              <div role="status" className="ocr-banner">
-                <p>
-                  This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page). Text
-                  extraction may be incomplete.
-                </p>
-                {status.bytes && ocrState.kind !== 'running' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelected(null);
-                      void pipeline.ocr(ocrLanguage);
-                    }}
-                  >
-                    Attempt OCR
-                  </button>
-                )}
-                <OcrLanguagePickerPanel
-                  available={ocrLanguages}
-                  selected={ocrLanguage}
-                  onChange={setOcrLanguage}
-                />
-                {ocrState.kind === 'running' && (
-                  <p aria-live="polite" className="ocr-progress">
-                    Running OCR: {ocrState.stage} ({Math.round(ocrState.pct * 100)}%)
-                  </p>
-                )}
-                {ocrState.kind === 'error' && <p role="alert">OCR failed: {ocrState.message}</p>}
-              </div>
-            );
-          })()}
-          <div className="split">
-            <FindingsPanel
-              findings={status.result.findings}
-              onSelect={(f) => {
-                setSelected(f);
-                setSelectedPage(f.page);
-              }}
-              definitions={extractLeaseFacts(status.result.doc).definitions}
-              glossary={glossaryEntries}
-              plainEnglishByRuleId={plainEnglishByRuleId}
-              suggestedTextByRuleId={suggestedTextByRuleId}
-              onApplySuggestion={(f, pIdx, text) => {
-                if (status.kind !== 'analyzed' || !status.leaseId) return;
-                void redline
-                  .applySuggestion({
-                    finding: f,
-                    paragraphIndex: pIdx,
-                    suggestedText: text,
-                    doc: status.result.doc,
-                  })
-                  .then(() => setView('redline'));
-              }}
-              onPromoteToStandard={(leaseId, paragraphIndex) => {
-                if (status.kind !== 'analyzed') return;
-                void (async (): Promise<void> => {
-                  const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
-                  const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
-                  await promoteToStandard({
-                    name,
-                    sourceLeaseId: leaseId,
-                    sourceParagraphIndex: paragraphIndex,
-                    normalizedText: text,
-                  });
-                  await refreshStandardSuite();
-                  void refreshAuditLog();
-                })();
-              }}
-            />
-            <PdfViewer
-              bytes={status.bytes}
-              pageCount={status.result.doc.pages.length}
-              selectedPage={selectedPage}
-              pages={status.result.doc.pages}
-              highlight={
-                selected
-                  ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null)
-                  : null
-              }
-            />
-          </div>
-          {selected && (
-            <article aria-label="selected finding">
-              <h3>{selected.title}</h3>
-              <p>{selected.explanation}</p>
-              <blockquote>{selected.snippet}</blockquote>
-              <small>Page {selected.page}</small>
-            </article>
-          )}
-          <AnnotationsPanel
-            leaseId={analyzedLeaseId ?? ''}
-            paragraphIndex={selected ? selected.paragraphIndex : null}
-            annotations={annotationsApi.annotations}
-            onSave={(text) => {
-              if (!analyzedLeaseId || selected === null) return;
-              void annotationsApi.save({
-                leaseId: analyzedLeaseId,
-                paragraphIndex: selected.paragraphIndex,
-                text,
+        <AppCurrentPane
+          status={status}
+          selected={selected}
+          selectedPage={selectedPage}
+          setSelected={setSelected}
+          setSelectedPage={setSelectedPage}
+          ocrState={ocrState}
+          ocrLanguage={ocrLanguage}
+          setOcrLanguage={setOcrLanguage}
+          ocrLanguages={ocrLanguages}
+          hasSigningKey={signingKey.publicKey !== null}
+          glossaryEntries={glossaryEntries}
+          templates={templates}
+          plainEnglishByRuleId={plainEnglishByRuleId}
+          suggestedTextByRuleId={suggestedTextByRuleId}
+          suggestedEditByRuleId={suggestedEditByRuleId}
+          redline={redline}
+          counters={counters}
+          annotationsApi={annotationsApi}
+          analyzedLeaseId={analyzedLeaseId}
+          onExportJson={onExportJson}
+          onExportSignedJson={() => void onExportSignedJson()}
+          onBuildIcs={onBuildIcs}
+          onAttemptOcr={() => {
+            setSelected(null);
+            void pipeline.ocr(ocrLanguage);
+          }}
+          onPromoteToStandard={(leaseId, paragraphIndex) => {
+            if (status.kind !== 'analyzed') return;
+            void (async (): Promise<void> => {
+              const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
+              const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
+              await promoteToStandard({
+                name,
+                sourceLeaseId: leaseId,
+                sourceParagraphIndex: paragraphIndex,
+                normalizedText: text,
               });
-            }}
-            onUpdate={(id, text) => void annotationsApi.update(id, text)}
-            onDelete={(id) => void annotationsApi.remove(id)}
-          />
-          <CounterOfferPanel
-            finding={selected}
-            counters={counters.counterOffers}
-            onSave={(ruleId, name, text) => void counters.save(ruleId, name, text)}
-            onDelete={(id) => void counters.remove(id)}
-            suggestedEdit={selected ? suggestedEditByRuleId[selected.ruleId] : undefined}
-          />
-          <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
-          <LeaseFactsPanel facts={extractLeaseFacts(status.result.doc)} />
-          <WorkflowPanel
-            leaseName={status.fileName}
-            findings={status.result.findings}
-            onBuildIcs={onBuildIcs}
-            onCopySummary={async () => {
-              if (status.kind !== 'analyzed') return;
-              await copyToClipboard(
-                buildSummary({ leaseName: status.fileName, findings: status.result.findings }),
-              );
-            }}
-            onDownloadHandoff={() => {
-              if (status.kind !== 'analyzed') return;
-              downloadHandoffZip({
-                fileName: status.fileName,
-                doc: status.result.doc,
-                findings: status.result.findings,
-                bytes: status.bytes,
-              });
-            }}
-          />
-        </div>
+              await refreshStandardSuite();
+              void refreshAuditLog();
+            })();
+          }}
+          setView={setView}
+        />
       )}
 
       <LibraryPanel
