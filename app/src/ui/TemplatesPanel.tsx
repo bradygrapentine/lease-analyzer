@@ -15,6 +15,7 @@ import type { ClauseTemplate } from '../templates/types';
 import { Section } from './system/Section';
 import { Button } from './system/Button';
 import { Field } from './system/Field';
+import { EmptyState } from './system/EmptyState';
 
 interface TemplatesPanelProps {
   templates: ClauseTemplate[];
@@ -57,7 +58,10 @@ export function TemplatesPanel({
     <Section label="clause templates" className="space-y-4 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Clause templates</h2>
       {templates.length === 0 ? (
-        <p className="text-body text-fg-muted">No clause templates saved yet.</p>
+        <EmptyState
+          title="No clause templates saved yet."
+          description="Add a template below to reuse standard clauses across leases."
+        />
       ) : (
         <ul className="space-y-2">
           {templates.map((t) => (

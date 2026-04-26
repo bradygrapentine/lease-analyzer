@@ -401,8 +401,9 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                     detail panel. <Badge> is a non-interactive <span>. */}
                 <button
                   type="button"
-                  className="finding-llm-badge inline-flex items-center gap-1 text-small text-fg-muted border border-rule rounded-sm px-2 py-0.5 hover:bg-paper-sunken transition-colors"
+                  className="finding-llm-badge inline-flex items-center gap-1 text-small text-fg-muted border border-rule rounded-sm px-2 py-0.5 hover:bg-[var(--state-hover)] active:bg-[var(--state-active)] transition-colors focus-visible:focus-ring"
                   aria-expanded={isHybridDetailOpen}
+                  aria-pressed={isHybridDetailOpen}
                   aria-label={`Identified by on-device classifier (similarity ${Math.round(
                     finding.evidence.similarity * 100,
                   )}%)`}

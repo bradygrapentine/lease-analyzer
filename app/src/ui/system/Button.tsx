@@ -18,13 +18,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const VARIANT: Record<Variant, string> = {
   default:
     'bg-ink text-paper hover:bg-ink/90 active:bg-ink/80 ' +
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink ' +
+    'focus-visible:focus-ring',
   ghost:
-    'bg-transparent text-fg-body hover:bg-paper-sunken ' +
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink',
+    'bg-transparent text-fg-body hover:bg-[var(--state-hover)] active:bg-[var(--state-active)] ' +
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink ' +
+    'focus-visible:focus-ring',
   subtle:
-    'bg-paper-sunken text-fg-body border border-rule hover:bg-paper-raised ' +
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink',
+    'bg-paper-sunken text-fg-body border border-rule hover:bg-[var(--state-hover)] active:bg-[var(--state-active)] ' +
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink ' +
+    'focus-visible:focus-ring',
 };
 const SIZE: Record<Size, string> = {
   sm: 'h-7 px-2 text-small rounded-sm',

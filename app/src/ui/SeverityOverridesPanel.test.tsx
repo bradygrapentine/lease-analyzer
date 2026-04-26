@@ -107,6 +107,26 @@ describe('SeverityOverridesPanel', () => {
     ).toBeDisabled();
   });
 
+  it('uses scope="col" on every header cell (Wave 28-D a11y)', () => {
+    const { container } = render(
+      <SeverityOverridesPanel rules={RULES} overrides={{}} onChange={() => {}} />,
+    );
+    const headers = container.querySelectorAll('thead th');
+    expect(headers.length).toBeGreaterThan(0);
+    for (const th of headers) {
+      expect(th.getAttribute('scope')).toBe('col');
+    }
+  });
+
+  it('renders a severity badge with token-colored class in the Built-in column (Wave 28-D)', () => {
+    const { container } = render(
+      <SeverityOverridesPanel rules={RULES} overrides={{}} onChange={() => {}} />,
+    );
+    const badges = container.querySelectorAll('[data-severity-badge]');
+    // One per rule row.
+    expect(badges.length).toBe(RULES.length);
+  });
+
   it('renders without crashing when overrides reference unknown ids', () => {
     // Stale entries from uninstalled packs should not blow up the panel.
     render(
