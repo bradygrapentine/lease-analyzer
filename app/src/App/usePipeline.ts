@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { type AnalysisResult } from '../ui/analyzeFile';
 import { runOcr } from '../ocr/runOcr';
 import { analyze } from '../rules/analyze';
+import { runHybridAnalyze, type EmbedFunction } from '../rules/hybridAnalyze';
+import { isPhase18Enabled } from '../llm/featureFlag';
 import { RULE_PACK_V1 } from '../rules/packV1';
 import type { Rule } from '../rules/types';
 import { getLease, getStandardId, saveLease, type LeaseRecord } from '../storage/storage';
@@ -109,10 +111,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
         // hand the worker (or inline pipeline) a dedicated copy and keep
         // the original for the viewer. The worker-backed client also
         // transfers the copy's buffer; the viewer's copy is untouched.
-        const result: AnalysisResult = await client.parseAndAnalyze(
-          copyBytes(bytes),
-          activeRules,
-        );
+        const result: AnalysisResult = await client.parseAndAnalyze(copyBytes(bytes), activeRules);
         const newId = await saveLease({
           name: fileName,
           doc: result.doc,
@@ -149,29 +148,44 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     [onLibraryChange, activeRules, client],
   );
 
-  const ocr = useCallback(async (language?: string): Promise<void> => {
-    if (status.kind !== 'analyzed' || !status.bytes) return;
-    setOcrState({ kind: 'running', pct: 0, stage: 'starting' });
-    try {
-      // pdf.js transfers the ArrayBuffer during parse, so hand runOcr a copy
-      // and keep the original for the viewer.
-      const doc = await runOcr(copyBytes(status.bytes), {
-        onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
-        ...(language ? { language } : {}),
-      });
-      const findings = analyze(doc, activeRules);
-      setStatus({
-        kind: 'analyzed',
-        fileName: status.fileName,
-        result: { doc, findings },
-        bytes: status.bytes,
-        leaseId: status.leaseId,
-      });
-      setOcrState({ kind: 'idle' });
-    } catch (err) {
-      setOcrState({ kind: 'error', message: friendlyError(err) });
-    }
-  }, [status, activeRules]);
+  const ocr = useCallback(
+    async (language?: string): Promise<void> => {
+      if (status.kind !== 'analyzed' || !status.bytes) return;
+      setOcrState({ kind: 'running', pct: 0, stage: 'starting' });
+      try {
+        // pdf.js transfers the ArrayBuffer during parse, so hand runOcr a copy
+        // and keep the original for the viewer.
+        const doc = await runOcr(copyBytes(status.bytes), {
+          onProgress: (p) => setOcrState({ kind: 'running', pct: p.pct, stage: p.stage }),
+          ...(language ? { language } : {}),
+        });
+        // Phase 18 hybrid path: deterministic engine first; the optional
+        // classifier pass only adds findings when the flag is on AND an
+        // embedFn is supplied. Wave 21 ships the seam — no production
+        // caller fetches the real model yet, so embedFn stays null and
+        // the wrapper degrades to plain analyze() at runtime. Wave 22+
+        // wires loadClassifier into this site.
+        const hybridEmbedFn: EmbedFunction | null = null;
+        const findings = await runHybridAnalyze({
+          doc,
+          rules: activeRules,
+          enabled: isPhase18Enabled(),
+          embedFn: hybridEmbedFn,
+        });
+        setStatus({
+          kind: 'analyzed',
+          fileName: status.fileName,
+          result: { doc, findings },
+          bytes: status.bytes,
+          leaseId: status.leaseId,
+        });
+        setOcrState({ kind: 'idle' });
+      } catch (err) {
+        setOcrState({ kind: 'error', message: friendlyError(err) });
+      }
+    },
+    [status, activeRules],
+  );
 
   const reanalyze = useCallback((): void => {
     setStatus((prev) => {
@@ -206,12 +220,9 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     setStatus({ kind: 'error', message });
   }, []);
 
-  const setComparison = useCallback(
-    (pair: { a: LeaseRecord; b: LeaseRecord } | null): void => {
-      setComparisonState(pair);
-    },
-    [],
-  );
+  const setComparison = useCallback((pair: { a: LeaseRecord; b: LeaseRecord } | null): void => {
+    setComparisonState(pair);
+  }, []);
 
   return {
     status,
