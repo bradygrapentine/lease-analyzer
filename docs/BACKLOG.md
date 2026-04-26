@@ -107,7 +107,12 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] SVG app icon + favicon link
 - [x] Side-by-side CSS layout (stacks below 960px)
 - [ ] Lighthouse a11y + PWA scores ≥ 95 in CI
-- [~] Tauri desktop wrapper scaffold committed (`app/src-tauri/`); needs Rust toolchain locally to build. CI pending.
+- [x] Tauri desktop wrapper scaffold committed (`app/src-tauri/`); CI
+      builds on Linux (`.deb`), macOS (`.app` + `.dmg`), and Windows
+      (`.msi`) per `.github/workflows/tauri.yml`. Artifacts upload per
+      OS on every PR. Decision: closed — the CI matrix is the gate;
+      code-signing / notarization tracked separately in the risk
+      register (2026-04-25).
 - [ ] Onboarding tour (sample lease button exists; full walkthrough pending)
 
 ## Phase 7 — Observability & hygiene
@@ -527,6 +532,12 @@ Things worth a deliberate decision before they surprise us.
       for v1; defer Argon2id to a v2 archive format with explicit
       revisit on **2026-10-01**. Threat model + trigger conditions
       documented in `docs/SECURITY.md` §1 (2026-04-25).
+- [ ] **Tauri code-signing + notarization** — CI builds unsigned
+      `.app`/`.dmg`/`.msi` on every PR (Wave 14-A). Distribution-grade
+      signing needs an Apple Developer ID + a Microsoft EV
+      code-signing cert; deferred until real distribution channels
+      exist. Re-open when we're ready to ship installers outside the
+      PWA (2026-04-25).
 - [ ] **Release & versioning policy** — no version bumps yet; decide
       when rule-pack changes bump `RULE_PACK_VERSION` vs the package
       version. Tie to the signed-export format.
