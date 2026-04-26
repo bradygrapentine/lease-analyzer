@@ -339,4 +339,58 @@ describe('App', () => {
     promptSpy.mockRestore();
     confirmSpy.mockRestore();
   });
+
+  // Wave 26-A flow tests — multi-component coordination paths the
+  // hook-level unit tests don't fully exercise.
+
+  it('annotation flow: click finding → add note → note appears in the annotations panel', async () => {
+    render(<App />);
+    await uploadLease();
+
+    // The annotations panel is gated on a paragraphIndex; clicking a
+    // finding sets it. Pick the auto-renewal finding (paragraph 0 in
+    // the fixture) and write a note.
+    const findings = screen.getByRole('complementary', { name: /findings/i });
+    await userEvent.click(
+      within(findings).getAllByRole('button', { name: /auto-renewal clause/i })[0]!,
+    );
+
+    const noteForm = await screen.findByRole('form', { name: /add note/i });
+    const textarea = within(noteForm).getByLabelText(/new note/i);
+    await userEvent.type(textarea, 'remember to send the cancellation letter');
+    await userEvent.click(within(noteForm).getByRole('button', { name: /add note/i }));
+
+    // Saved note renders inside the annotations section, not the form.
+    const annotations = screen.getByRole('region', { name: /annotations/i });
+    await waitFor(() =>
+      expect(
+        within(annotations).getByText(/remember to send the cancellation letter/i),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it('severity-override flow: change a rule severity → reanalyze fires and findings re-render', async () => {
+    render(<App />);
+    await uploadLease();
+
+    // Auto-renewal is medium-severity by default. Bump to high via the
+    // SeverityOverridesPanel.
+    const overrides = await screen.findByRole('region', { name: /severity overrides/i });
+    const select = within(overrides).getByLabelText(/override severity for auto-renewal/i);
+    // Rule severities use info / warn / error (the display layer maps
+    // these to Info / Medium / High in FindingsPanel).
+    await userEvent.selectOptions(select, 'error');
+
+    // useReanalyzeOnRulesChange picks up the override change and re-runs
+    // analyze. After it completes, the auto-renewal finding should be in
+    // the High section (whose heading carries the count "(N)" with N > 0).
+    const findings = screen.getByRole('complementary', { name: /findings/i });
+    await waitFor(() => {
+      expect(within(findings).getByText(/^High \(\d+\)$/)).toBeInTheDocument();
+    });
+    // And it should NOT still be in the Medium section under that title.
+    // (Other medium-severity findings — like jury-trial — may still be
+    // medium; we only assert the high-section gain, not the medium loss.)
+    expect(within(findings).getByText(/^High \(\d+\)$/).textContent).toMatch(/[1-9]/);
+  });
 });

@@ -60,4 +60,21 @@ describe('handleWorkerRequest', () => {
     expect(resp.ok).toBe(true);
     if (resp.ok) expect(resp.findings.length).toBe(0);
   });
+
+  // Wave 26-A: exhaustiveness-guard coverage. Casting bypasses the
+  // `WorkerRequest` discriminated union to fire the `unknown kind`
+  // branch — in practice this triggers only when a future caller
+  // adds a new request kind without updating the handler.
+  it('returns ok:false with an "unknown kind" error on an unrecognized request kind', async () => {
+    const req = {
+      id: 99,
+      kind: 'definitely-not-a-real-kind',
+    } as unknown as ParseAnalyzeRequest;
+    const resp = await handleWorkerRequest(req);
+    expect(resp.id).toBe(99);
+    expect(resp.ok).toBe(false);
+    if (!resp.ok) {
+      expect(resp.error).toMatch(/unknown kind/i);
+    }
+  });
 });

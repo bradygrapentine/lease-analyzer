@@ -90,8 +90,15 @@ which is also directly covered.
 
 Defined in `app/vite.config.ts` under `test.coverage.thresholds`.
 Current floors: **stmt 95 / branch 89 / func 91 / line 95**. Actuals
-as of 2026-04-26 (post-Wave-24-C): 97.27 / 89.61 / 93.71 / 97.27.
-Floors leave ~2 points of headroom on stmt/line, ~2.7 on func, ~0.6
+as of 2026-04-26 (post-Wave-26-A): 97.24 / 89.62 / 93.58 / 97.24.
+Wave 26-A's coverage push closed targeted gaps in `extractPages.ts`
+(branches 43.75 → 60), `handleRequest.ts` (50 → 71.4), and
+`App.tsx` (84.6 → 85), but the new component flow tests in
+`App.test.tsx` exposed previously-unreached App.tsx branches that
+roughly offset the gains in aggregate (89.64 → 89.62). The 89→90
+floor bump SKIPPED per the plan's ≥ 90.5% contingency.
+
+Floors leave ~2 points of headroom on stmt/line, ~2.6 on func, ~0.6
 on branch — branch is the tight one because the two structural
 ceilings on the codebase keep it sticky:
 
