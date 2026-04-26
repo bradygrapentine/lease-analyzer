@@ -122,7 +122,7 @@ export function PortfolioPanel({
           </Button>
         </p>
       )}
-      <div className="portfolio-scroll" style={{ overflowX: 'auto' }}>
+      <div className="portfolio-scroll overflow-x-auto">
         <table aria-label="portfolio" className="text-small text-fg-body border-collapse">
           <thead>
             <tr className="border-b border-rule">

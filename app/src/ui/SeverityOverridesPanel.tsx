@@ -110,6 +110,7 @@ export function SeverityOverridesPanel({
                       <span className="sr-only">
                         Override severity for {r.title}
                       </span>
+                      {/* Both aria-label and the wrapping <label> intentionally present — test depends on aria-label text differing from the visual title. */}
                       <select
                         aria-label={`override severity for ${r.id}`}
                         value={value}

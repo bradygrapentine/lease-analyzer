@@ -82,7 +82,7 @@ export function LibraryPanel({
                 </Button>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="subtle"
                   size="sm"
                   onClick={() => onDelete(l.id)}
                   aria-label={`Delete ${l.name}`}

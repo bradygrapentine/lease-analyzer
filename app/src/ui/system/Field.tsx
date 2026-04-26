@@ -34,7 +34,7 @@ export function Field({
         )}
         <select
           aria-describedby={descId}
-          className="border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
+          className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
           {...(selectRest as SelectHTMLAttributes<HTMLSelectElement>)}
         >
           {children}
@@ -54,7 +54,7 @@ export function Field({
         )}
         <textarea
           aria-describedby={descId}
-          className="border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
+          className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
           {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
         />
       </label>
@@ -71,7 +71,7 @@ export function Field({
       )}
       <input
         aria-describedby={descId}
-        className="border border-rule rounded bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
+        className="border border-rule rounded-sm bg-paper-raised px-2 py-1 text-body text-fg focus:outline focus:outline-2 focus:outline-ink"
         {...(rest as InputHTMLAttributes<HTMLInputElement>)}
       />
     </label>
