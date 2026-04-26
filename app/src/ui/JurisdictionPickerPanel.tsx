@@ -9,6 +9,7 @@
 import type { ChangeEvent } from 'react';
 import { Section } from './system/Section';
 import { Button } from './system/Button';
+import { EmptyState } from './system/EmptyState';
 
 interface JurisdictionPickerPanelProps {
   /** Jurisdiction codes available to pick from (e.g. `"US-CA"`). */
@@ -47,9 +48,10 @@ export function JurisdictionPickerPanel({
     return (
       <Section label="jurisdictions" className="space-y-2 px-4 py-4">
         <h2 className="text-heading uppercase text-fg-muted">Jurisdictions</h2>
-        <p className="text-body text-fg-muted">
-          <em>No jurisdictions available.</em>
-        </p>
+        <EmptyState
+          title="No jurisdictions available."
+          description="All rules will run regardless of regional tags."
+        />
       </Section>
     );
   }

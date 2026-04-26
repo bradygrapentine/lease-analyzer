@@ -10,6 +10,7 @@
 import type { LeaseMetadata } from '../storage/storage';
 import { Section } from './system/Section';
 import { Button } from './system/Button';
+import { EmptyState } from './system/EmptyState';
 
 interface LibraryPanelProps {
   leases: LeaseMetadata[];
@@ -32,7 +33,10 @@ export function LibraryPanel({
     return (
       <Section label="library" className="space-y-2 px-4 py-4">
         <h2 className="text-heading uppercase text-fg-muted">My Leases</h2>
-        <p className="text-body text-fg-muted">No saved leases yet.</p>
+        <EmptyState
+          title="No saved leases yet."
+          description="Upload a lease PDF to add it to your library."
+        />
       </Section>
     );
   }

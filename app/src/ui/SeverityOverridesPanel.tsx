@@ -38,6 +38,16 @@ const SEVERITY_LABEL: Record<OverrideSeverity, string> = {
   error: 'Error',
 };
 
+// Tinted background + dark fg (--color-fg) so contrast clears WCAG AA
+// (4.5:1 for body text). Severity hue lives in the bg + a left border
+// rather than the text color, since the warm severity tokens don't
+// pass against cream as foregrounds at body sizes.
+const SEVERITY_BADGE_CLASS: Record<OverrideSeverity, string> = {
+  info: 'bg-[color-mix(in_srgb,var(--color-severity-info)_22%,var(--color-paper-raised))] text-fg border border-severity-info/40',
+  warn: 'bg-[color-mix(in_srgb,var(--color-severity-medium)_22%,var(--color-paper-raised))] text-fg border border-severity-medium/40',
+  error: 'bg-[color-mix(in_srgb,var(--color-severity-high)_22%,var(--color-paper-raised))] text-fg border border-severity-high/40',
+};
+
 const CLEAR_VALUE = '__clear__';
 
 function isOverrideSeverity(v: string): v is OverrideSeverity {
@@ -78,15 +88,15 @@ export function SeverityOverridesPanel({
   return (
     <Section label="severity overrides" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Severity overrides</h2>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[24rem] relative">
         <table className="w-full text-small text-fg-body border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-10 bg-paper-raised">
             <tr className="border-b border-rule">
-              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Rule</th>
-              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Built-in</th>
-              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Override</th>
-              {showScopeToggle ? <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Scope</th> : null}
-              <th scope="col" className="text-left py-1 text-fg-muted font-sans">
+              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans bg-paper-raised">Rule</th>
+              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans bg-paper-raised">Built-in</th>
+              <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans bg-paper-raised">Override</th>
+              {showScopeToggle ? <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans bg-paper-raised">Scope</th> : null}
+              <th scope="col" className="text-left py-1 text-fg-muted font-sans bg-paper-raised">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -97,14 +107,21 @@ export function SeverityOverridesPanel({
               const hasOverride = current !== undefined;
               const value: string = current ?? CLEAR_VALUE;
               return (
-                <tr key={r.id} className="even:bg-paper-sunken border-b border-rule-subtle">
+                <tr key={r.id} className="even:bg-paper-sunken hover:bg-[var(--state-hover)] border-b border-rule-subtle transition-colors">
                   <td className="py-2 pr-3 align-top">
                     <strong className="text-body text-fg-body font-sans">{r.title}</strong>
                     <div>
                       <small className="font-mono text-mono text-fg-body">{r.id}</small>
                     </div>
                   </td>
-                  <td className="py-2 pr-3 align-top">{SEVERITY_LABEL[r.severity]}</td>
+                  <td className="py-2 pr-3 align-top">
+                    <span
+                      data-severity-badge={r.severity}
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-small font-sans ${SEVERITY_BADGE_CLASS[r.severity]}`}
+                    >
+                      {SEVERITY_LABEL[r.severity]}
+                    </span>
+                  </td>
                   <td className="py-2 pr-3 align-top">
                     <label className="flex flex-col gap-1">
                       <span className="sr-only">

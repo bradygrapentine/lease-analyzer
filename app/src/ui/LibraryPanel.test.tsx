@@ -35,8 +35,8 @@ describe('LibraryPanel', () => {
     expect(screen.getByText('Two.pdf')).toBeInTheDocument();
   });
 
-  it('shows an empty-state message when list is empty', () => {
-    render(
+  it('shows an empty-state message when list is empty (Wave 28-D EmptyState)', () => {
+    const { container } = render(
       <LibraryPanel
         leases={[]}
         standardId={null}
@@ -47,6 +47,9 @@ describe('LibraryPanel', () => {
       />,
     );
     expect(screen.getByText(/no saved leases/i)).toBeInTheDocument();
+    // Wave 28-D: the empty branch now uses the EmptyState primitive,
+    // which renders a description slot via [data-empty-description].
+    expect(container.querySelector('[data-empty-description]')).not.toBeNull();
   });
 
   it('fires onOpen with the lease id', async () => {
