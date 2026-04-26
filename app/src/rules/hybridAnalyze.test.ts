@@ -234,6 +234,32 @@ describe('runHybridAnalyze', () => {
     expect(payload?.modelId).toBe('unknown');
   });
 
+  it('cosine returns 0 for zero-length vectors (no extra finding emitted)', async () => {
+    const zeroEmbedder: EmbedFunction = async (texts) => texts.map(() => new Float32Array(0));
+    const findings = await runHybridAnalyze({
+      doc: doc(['Renewal text here.']),
+      rules: [rule()],
+      enabled: true,
+      embedFn: zeroEmbedder,
+      threshold: 0.0001,
+    });
+    // Empty vectors → similarity 0 < threshold → no extra finding.
+    expect(findings).toHaveLength(0);
+  });
+
+  it('cosine returns 0 for all-zero vectors (no extra finding emitted)', async () => {
+    const zeroEmbedder: EmbedFunction = async (texts) =>
+      texts.map(() => new Float32Array([0, 0, 0]));
+    const findings = await runHybridAnalyze({
+      doc: doc(['Renewal text here.']),
+      rules: [rule()],
+      enabled: true,
+      embedFn: zeroEmbedder,
+      threshold: 0.0001,
+    });
+    expect(findings).toHaveLength(0);
+  });
+
   it('skips rules whose title has no 4+-char tokens (cheap pre-filter is empty)', async () => {
     const embedFn = vi.fn(makeStubEmbedder());
     const shortTitle = rule({ title: 'A B C' });

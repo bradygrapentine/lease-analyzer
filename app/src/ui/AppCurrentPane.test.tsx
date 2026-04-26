@@ -182,4 +182,56 @@ describe('AppCurrentPane', () => {
     defaults({ status });
     expect(screen.getByText(/looks scanned/i)).toBeInTheDocument();
   });
+
+  it('renders the selected-finding article when a finding is selected', () => {
+    const finding = {
+      ruleId: 'r1',
+      severity: 'medium',
+      category: 'general',
+      title: 'Picked finding',
+      explanation: 'Why it matters here',
+      citation: null,
+      page: 1,
+      paragraphIndex: 0,
+      snippet: 'Tenant shall pay rent.',
+      span: { start: 0, end: 8 },
+      confidence: 0.9,
+      negated: false,
+      rulePackVersion: '1.0.0',
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    defaults({ selected: finding as any });
+    expect(screen.getByRole('article', { name: /selected finding/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /picked finding/i })).toBeInTheDocument();
+  });
+
+  it('renders the OCR running progress when ocrState.kind is "running"', () => {
+    const status = makeStatus();
+    status.result.doc = {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [],
+      sections: [],
+      raw: '',
+    };
+    defaults({
+      status,
+      ocrState: { kind: 'running', pct: 0.42, stage: 'recognizing' },
+    });
+    expect(screen.getByText(/Running OCR.*recognizing.*42%/i)).toBeInTheDocument();
+  });
+
+  it('renders the OCR error alert when ocrState.kind is "error"', () => {
+    const status = makeStatus();
+    status.result.doc = {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [],
+      sections: [],
+      raw: '',
+    };
+    defaults({
+      status,
+      ocrState: { kind: 'error', message: 'no traineddata' },
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(/OCR failed: no traineddata/);
+  });
 });
