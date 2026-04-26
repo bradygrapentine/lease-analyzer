@@ -151,14 +151,44 @@ async function processZip(
   }
 
   for (const entry of entries) {
-    // Top-level only: skip anything that lives inside a directory and skip
-    // the directory entries themselves. The plan defers nested layouts.
+    // Silently skip Mac/Windows tooling noise and bare directory entries.
+    // These show up in real-world zips ("__MACOSX/._foo.pdf",
+    // ".DS_Store", "subdir/") and would otherwise produce confusing
+    // per-entry errors.
+    if (isNoiseEntry(entry.name)) continue;
+
+    // Top-level only: nested folders are out of scope. Bare directory
+    // entries were already filtered above; this catches "sub/file.pdf".
     if (entry.name.includes('/') || entry.name.endsWith('\\')) continue;
     if (!entry.name.toLowerCase().endsWith('.pdf')) continue;
 
     const reportedName = `${zipFile.name}/${entry.name}`;
+
+    // Surface per-entry rejections (encrypted, unsupported method)
+    // without aborting the batch. The flag lives on the entry so
+    // `decodeZipEntry` doesn't need to re-derive it.
+    if (entry.rejection) {
+      summary.errors += 1;
+      onEach({
+        fileName: reportedName,
+        hash: '',
+        status: 'error',
+        error: entry.rejection,
+      });
+      continue;
+    }
+
     await processOnePdf(reportedName, null, entry, onEach, deps, summary);
   }
+}
+
+function isNoiseEntry(name: string): boolean {
+  if (name.endsWith('/')) return true; // bare directory entry
+  if (name.startsWith('__MACOSX/')) return true;
+  // .DS_Store can appear at any depth.
+  const tail = name.split('/').pop() ?? name;
+  if (tail === '.DS_Store') return true;
+  return false;
 }
 
 async function processOnePdf(
@@ -228,12 +258,19 @@ interface ZipEntry {
   compressedSize: number;
   uncompressedSize: number;
   localHeaderOffset: number;
+  crc32: number;
   source: Uint8Array;
+  /** When set, the entry was rejected at parse time (encrypted /
+   *  unsupported method) and should surface as a per-entry error
+   *  instead of being decoded. */
+  rejection?: string;
 }
 
 const SIG_LFH_R = 0x04034b50;
 const SIG_CDH_R = 0x02014b50;
 const SIG_EOCD_R = 0x06054b50;
+const SIG_ZIP64_EOCD_LOCATOR = 0x07064b50;
+const ZIP64_MARKER = 0xffffffff;
 
 function parseZipEntries(bytes: Uint8Array): ZipEntry[] {
   if (bytes.length < 22) throw new Error('zip too small');
@@ -253,6 +290,13 @@ function parseZipEntries(bytes: Uint8Array): ZipEntry[] {
   }
   if (eocdOffset < 0) throw new Error('zip end-of-central-directory not found');
 
+  // ZIP64: detect the locator that sits 20 bytes before the EOCD and
+  // reject explicitly. We intentionally do not try to parse ZIP64 — the
+  // user-facing message tells them how to recover.
+  if (eocdOffset >= 20 && dv.getUint32(eocdOffset - 20, true) === SIG_ZIP64_EOCD_LOCATOR) {
+    throw new Error('ZIP64 archives are not supported. File too large; split and re-zip.');
+  }
+
   const totalEntries = dv.getUint16(eocdOffset + 10, true);
   const cdSize = dv.getUint32(eocdOffset + 12, true);
   const cdOffset = dv.getUint32(eocdOffset + 16, true);
@@ -266,6 +310,7 @@ function parseZipEntries(bytes: Uint8Array): ZipEntry[] {
     }
     const flags = dv.getUint16(cursor + 8, true);
     const method = dv.getUint16(cursor + 10, true);
+    const crc32Val = dv.getUint32(cursor + 16, true);
     const compressedSize = dv.getUint32(cursor + 20, true);
     const uncompressedSize = dv.getUint32(cursor + 24, true);
     const nameLen = dv.getUint16(cursor + 28, true);
@@ -275,8 +320,22 @@ function parseZipEntries(bytes: Uint8Array): ZipEntry[] {
     const nameBytes = bytes.subarray(cursor + 46, cursor + 46 + nameLen);
     const name = new TextDecoder('utf-8').decode(nameBytes);
 
+    // ZIP64 per-entry markers in any size field also signal a ZIP64
+    // archive. Reject the whole archive — partial decode would be
+    // misleading.
+    if (
+      compressedSize === ZIP64_MARKER ||
+      uncompressedSize === ZIP64_MARKER ||
+      localHeaderOffset === ZIP64_MARKER
+    ) {
+      throw new Error('ZIP64 archives are not supported. File too large; split and re-zip.');
+    }
+
+    let rejection: string | undefined;
     if ((flags & 0x0001) !== 0) {
-      throw new Error(`zip entry "${name}" is encrypted`);
+      rejection = `encrypted-entry: zip entry "${name}" is encrypted`;
+    } else if (method !== 0 && method !== 8) {
+      rejection = `unsupported-compression: zip entry "${name}" uses method ${method} (only STORE and DEFLATE are supported)`;
     }
 
     entries.push({
@@ -285,7 +344,9 @@ function parseZipEntries(bytes: Uint8Array): ZipEntry[] {
       compressedSize,
       uncompressedSize,
       localHeaderOffset,
+      crc32: crc32Val,
       source: bytes,
+      rejection,
     });
     cursor += 46 + nameLen + extraLen + commentLen;
   }
@@ -304,17 +365,56 @@ async function decodeZipEntry(entry: ZipEntry): Promise<Uint8Array> {
   const dataStart = lfh + 30 + nameLen + extraLen;
   const compressed = bytes.subarray(dataStart, dataStart + entry.compressedSize);
 
+  let decoded: Uint8Array;
   if (entry.method === 0) {
     // STORE: payload is the file as-is. Copy out so the slice is
     // independent of the source zip buffer (parser layer transfers it).
-    return compressed.slice();
-  }
-  if (entry.method === 8) {
+    decoded = compressed.slice();
+  } else if (entry.method === 8) {
     // DEFLATE: use built-in DecompressionStream. `deflate-raw` matches
     // the no-zlib-header framing zip stores.
-    return await inflateRaw(compressed);
+    decoded = await inflateRaw(compressed);
+  } else {
+    // Should never reach here — `parseZipEntries` rejects unsupported
+    // methods before we attempt to decode.
+    throw new Error(
+      `unsupported-compression: zip entry "${entry.name}" uses method ${entry.method}`,
+    );
   }
-  throw new Error(`zip entry "${entry.name}" uses unsupported method ${entry.method}`);
+
+  const actual = crc32(decoded);
+  if (actual !== entry.crc32) {
+    throw new Error(
+      `crc-mismatch: zip entry "${entry.name}" CRC32 ${actual.toString(16)} != expected ${entry.crc32.toString(16)}`,
+    );
+  }
+  return decoded;
+}
+
+// CRC-32/ISO-HDLC, poly 0xEDB88320 — IEEE 802.3. Table built once,
+// inline so the reader keeps zero runtime deps.
+let CRC_TABLE: Uint32Array | null = null;
+function crcTable(): Uint32Array {
+  if (CRC_TABLE) return CRC_TABLE;
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    t[i] = c >>> 0;
+  }
+  CRC_TABLE = t;
+  return t;
+}
+
+function crc32(bytes: Uint8Array): number {
+  const t = crcTable();
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) {
+    c = t[(c ^ bytes[i]!) & 0xff]! ^ (c >>> 8);
+  }
+  return (c ^ 0xffffffff) >>> 0;
 }
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {

@@ -308,6 +308,9 @@ table for the authoritative figures):
   for DEFLATE entries), nothing is extracted to disk, and no entry
   triggers a network request — the dedup store, audit log, and analyze
   pipeline run over local data only, identical to the per-file path.
+  Reader supports STORE + DEFLATE only; ZIP64, encrypted entries, and
+  other compression methods surface per-entry errors without aborting
+  the batch.
 
 ## i18n (Wave 11 / Phase 14)
 
