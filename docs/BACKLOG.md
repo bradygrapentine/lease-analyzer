@@ -74,7 +74,12 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] Loading / empty / parse-error states
 - [x] PDF viewer canvas per page via pdf.js
 - [x] Span-level highlight overlay (paragraph bbox + absolute div over canvas)
-- [ ] Full a11y audit (basic labels in place)
+- [x] Full a11y audit gate — `app/src/ui/FindingsPanel.a11y.test.tsx`
+      runs `vitest-axe` on the most aria-heavy panel; `tests/e2e/a11y.spec.ts`
+      runs `@axe-core/playwright` against the analyzed-lease view with
+      `wcag2a` + `wcag2aa` tags and fails on any serious/critical
+      violation. Manual screen-reader walkthrough remains a deferred
+      follow-up — see `docs/TESTING.md` "a11y gate" (2026-04-25).
 
 ## Phase 4 — Local Storage
 - [x] IndexedDB wrapper (idb), versioned schema (v1 leases → v2 settings → v3 clauseTemplates); cumulative `if (oldVersion < N)` migration gates
@@ -106,7 +111,10 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
 - [x] Privacy disclosure `<details>` block + not-legal-advice disclaimer
 - [x] SVG app icon + favicon link
 - [x] Side-by-side CSS layout (stacks below 960px)
-- [ ] Lighthouse a11y + PWA scores ≥ 95 in CI
+- [x] Lighthouse a11y + PWA scores ≥ 95 in CI — enforced via
+      `app/lighthouserc.json` (`categories:accessibility ≥ 0.95`,
+      `installable-manifest`, `apple-touch-icon`); `npm run lhci`
+      runs in `.github/workflows/ci.yml` (2026-04-25).
 - [x] Tauri desktop wrapper scaffold committed (`app/src-tauri/`); CI
       builds on Linux (`.deb`), macOS (`.app` + `.dmg`), and Windows
       (`.msi`) per `.github/workflows/tauri.yml`. Artifacts upload per

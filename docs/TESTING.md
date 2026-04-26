@@ -99,6 +99,23 @@ Excludes: test/bench/stories files, barrels (`index.ts`), `main.tsx`,
 `parser/env.d.ts`, `parser/testFixtures.ts`, and
 `worker/leaseWorker.ts` (not reachable from jsdom).
 
+### a11y gate (separate axis)
+
+a11y is enforced separately from coverage. Two redundant gates:
+
+- **Unit:** `app/src/ui/FindingsPanel.a11y.test.tsx` runs `vitest-axe`
+  against the most aria-heavy panel in three states (empty, single
+  severity, full pack). Helper lives in `app/src/test/axe.ts`.
+- **e2e:** `tests/e2e/a11y.spec.ts` runs `@axe-core/playwright`
+  against the analyzed-lease view loaded via the sample-lease button.
+  Filters to `wcag2a` + `wcag2aa` tags; fails the build on any
+  `serious` or `critical` impact violation.
+
+Both must be green. They're a separate axis from coverage thresholds —
+coverage is "did the test exercise the code", a11y is "does the rendered
+output meet WCAG". A coverage regression and an a11y regression can
+land independently.
+
 ### Per-file timeout exemption
 
 `src/App.panels.test.tsx` is the only file that opts out of the global
