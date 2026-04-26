@@ -93,6 +93,62 @@ describe('FindingsPanel', () => {
     expect(screen.queryByLabelText(/identified by on-device classifier/i)).not.toBeInTheDocument();
   });
 
+  // Wave 25-B: clicking the hybrid badge expands an inline detail panel
+  // that surfaces the modelId, similarity %, and threshold context. The
+  // disclosure pattern mirrors the existing "What this means" affordance
+  // (aria-expanded on the trigger; sibling content gates on it).
+  it('hybrid badge: clicking expands an inline detail panel with modelId + similarity', async () => {
+    render(
+      <FindingsPanel
+        findings={[
+          f({
+            ruleId: 'h',
+            title: 'Hybrid hit',
+            confidence: 0.5,
+            evidence: { modelId: 'Xenova/paraphrase-MiniLM-L3-v2', similarity: 0.83 },
+          }),
+        ]}
+        onSelect={() => {}}
+      />,
+    );
+    const badge = screen.getByRole('button', {
+      name: /identified by on-device classifier \(similarity 83%\)/i,
+    });
+    expect(badge).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Xenova/paraphrase-MiniLM-L3-v2')).not.toBeInTheDocument();
+
+    await userEvent.click(badge);
+
+    expect(badge).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Xenova/paraphrase-MiniLM-L3-v2')).toBeInTheDocument();
+    expect(screen.getByText('83%')).toBeInTheDocument();
+    expect(screen.getByText(/above the 70% similarity floor/i)).toBeInTheDocument();
+  });
+
+  it('hybrid badge: clicking again collapses the detail panel', async () => {
+    render(
+      <FindingsPanel
+        findings={[
+          f({
+            ruleId: 'h',
+            title: 'Hybrid hit',
+            confidence: 0.5,
+            evidence: { modelId: 'Xenova/test-model', similarity: 0.71 },
+          }),
+        ]}
+        onSelect={() => {}}
+      />,
+    );
+    const badge = screen.getByRole('button', {
+      name: /identified by on-device classifier/i,
+    });
+    await userEvent.click(badge);
+    expect(badge).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(badge);
+    expect(badge).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Xenova/test-model')).not.toBeInTheDocument();
+  });
+
   it('filters findings by search query across title and explanation', async () => {
     const findings = [
       f({ ruleId: 'a', title: 'Arbitration clause', explanation: 'Disputes go to arbitrator.' }),

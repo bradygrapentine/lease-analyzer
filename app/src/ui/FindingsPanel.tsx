@@ -205,6 +205,10 @@ export function FindingsPanel({
                         plain={plain}
                         isExplainerOpen={isOpen}
                         toggleExplainer={() => toggleInSet(openExplainers, key, setOpenExplainers)}
+                        isHybridDetailOpen={openExplainers.has(`${key}:hybrid`)}
+                        toggleHybridDetail={() =>
+                          toggleInSet(openExplainers, `${key}:hybrid`, setOpenExplainers)
+                        }
                         suggestedText={suggested}
                         onSelect={onSelect}
                         onApplySuggestion={onApplySuggestion}
@@ -269,6 +273,8 @@ interface VirtualFindingItemProps {
   plain: string | undefined;
   isExplainerOpen: boolean;
   toggleExplainer: () => void;
+  isHybridDetailOpen: boolean;
+  toggleHybridDetail: () => void;
   suggestedText: string | undefined;
   onSelect: (finding: Finding) => void;
   onApplySuggestion:
@@ -288,6 +294,8 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
     plain,
     isExplainerOpen,
     toggleExplainer,
+    isHybridDetailOpen,
+    toggleHybridDetail,
     suggestedText,
     onSelect,
     onApplySuggestion,
@@ -341,20 +349,6 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                 deviates from verified pack
               </span>
             )}
-            {finding.evidence && (
-              <span
-                className="finding-llm-badge"
-                title={`On-device classifier (similarity ${Math.round(
-                  finding.evidence.similarity * 100,
-                )}%)`}
-                aria-label={`Identified by on-device classifier (similarity ${Math.round(
-                  finding.evidence.similarity * 100,
-                )}%)`}
-              >
-                {' '}
-                ~
-              </span>
-            )}
             <div>{finding.explanation}</div>
             {(definitions && definitions.length > 0) || (glossary && glossary.length > 0) ? (
               <small className="finding-snippet">
@@ -363,6 +357,34 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
             ) : null}
             <small>Page {finding.page}</small>
           </button>
+          {finding.evidence ? (
+            <div className="finding-llm-detail">
+              <button
+                type="button"
+                className="finding-llm-badge"
+                aria-expanded={isHybridDetailOpen}
+                aria-label={`Identified by on-device classifier (similarity ${Math.round(
+                  finding.evidence.similarity * 100,
+                )}%)`}
+                title={`On-device classifier (similarity ${Math.round(
+                  finding.evidence.similarity * 100,
+                )}%)`}
+                onClick={toggleHybridDetail}
+              >
+                ~
+              </button>
+              {isHybridDetailOpen ? (
+                <dl className="finding-llm-evidence">
+                  <dt>Model</dt>
+                  <dd>{finding.evidence.modelId}</dd>
+                  <dt>Similarity</dt>
+                  <dd>{Math.round(finding.evidence.similarity * 100)}%</dd>
+                  <dt>Threshold</dt>
+                  <dd>Above the 70% similarity floor</dd>
+                </dl>
+              ) : null}
+            </div>
+          ) : null}
           {plain ? (
             <div className="finding-plain-english">
               <button
