@@ -59,26 +59,26 @@ breakdown.
 
 Each phase links to its backlog section.
 
-| Phase | Theme | Status |
-| --- | --- | --- |
-| 0 | Foundations | Done |
-| 1 | PDF Parser (MVP core) | Done |
-| 2 | Rules Engine | Done |
-| 3 | UI | Done |
-| 4 | Local Storage | Done |
-| 5 | Compare & OCR | Done |
-| 6 | Polish & Distribution | Done |
-| 7 | Observability & hygiene | Done |
-| 8 | Structured lease understanding | Done |
-| 9 | Negotiation support | Done |
-| 10 | Rule ecosystem | Done |
-| 11 | Workflow & integrations | Done |
-| 12 | Trust & verification | Done |
-| 13 | Performance & scale | Done |
-| 14 | Content depth | Done — Wave 11 shipped static glossary, i18n scaffold (en + es stub), OCR language picker |
-| 15 | Collaboration escape hatches | Done — Wave 9 shipped review links, counter-sign, delta packets, CLI verifier |
-| 16 | Multi-lease intelligence | Done — Wave 10 shipped portfolio rule rollups, clause similarity (IDB v5), "my standard" suite, portfolio-scope severity overrides |
-| 17 | Trust infrastructure | Done — Wave 8 shipped marketplace, deviation warnings, repro CLI, key rotation |
+| Phase | Theme                          | Status                                                                                                                             |
+| ----- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | Foundations                    | Done                                                                                                                               |
+| 1     | PDF Parser (MVP core)          | Done                                                                                                                               |
+| 2     | Rules Engine                   | Done                                                                                                                               |
+| 3     | UI                             | Done                                                                                                                               |
+| 4     | Local Storage                  | Done                                                                                                                               |
+| 5     | Compare & OCR                  | Done                                                                                                                               |
+| 6     | Polish & Distribution          | Done                                                                                                                               |
+| 7     | Observability & hygiene        | Done                                                                                                                               |
+| 8     | Structured lease understanding | Done                                                                                                                               |
+| 9     | Negotiation support            | Done                                                                                                                               |
+| 10    | Rule ecosystem                 | Done                                                                                                                               |
+| 11    | Workflow & integrations        | Done                                                                                                                               |
+| 12    | Trust & verification           | Done                                                                                                                               |
+| 13    | Performance & scale            | Done                                                                                                                               |
+| 14    | Content depth                  | Done — Wave 11 shipped static glossary, i18n scaffold (en + es stub), OCR language picker                                          |
+| 15    | Collaboration escape hatches   | Done — Wave 9 shipped review links, counter-sign, delta packets, CLI verifier                                                      |
+| 16    | Multi-lease intelligence       | Done — Wave 10 shipped portfolio rule rollups, clause similarity (IDB v5), "my standard" suite, portfolio-scope severity overrides |
+| 17    | Trust infrastructure           | Done — Wave 8 shipped marketplace, deviation warnings, repro CLI, key rotation                                                     |
 
 ---
 
@@ -190,6 +190,44 @@ turned those primitives into an ecosystem a third party can audit. See
   chain stays intact across rotations (retired keys remain
   verification-only).
 
+### Phase 18 — Hybrid rules + on-device LLM clause classification
+
+**Status:** candidate; nothing committed. Model footprint and CSP
+impact need empirical measurement before any code lands.
+
+The rules engine catches paraphrased risks unevenly. Regex pins
+auto-renewal language with `\bauto[- ]?renew\b` confidently, but
+keyword-proximity matchers still miss commercial leases that say
+"this Agreement shall continue in force from term to term until
+terminated" — same hazard, different surface phrasing. The Wave 11
+golden-test runs surfaced this as a recurring blind spot. Rather
+than chasing every paraphrase with another regex, Phase 18 pairs the
+rules engine with an on-device classifier that runs in the same
+local-first contract: a small model loaded via WASM / WebGPU,
+precached by the existing service worker, no network egress.
+
+The Tesseract precedent (Phase 5: ~8 MB WASM runtime + 10 MB
+language data, lazy-loaded, opt-in) is the template — same
+constraints (CSP `default-src 'self'`, same-origin asset serving,
+Workbox precache, "first run after manual data drop"). The
+classifier targets paragraph-level risk classification, not full
+clause generation; the rules engine remains authoritative for
+deterministic finding ids and audit-log attestation, with the LLM
+as a tie-breaker on low-confidence regex/proximity matches.
+
+Candidate features (Wave 16-C drafted up to 8 stories under this
+phase in `docs/BACKLOG.md`; nothing on the "Ready" track yet):
+
+- Bundle-size budget for the model (cap on precache delta).
+- Hybrid `analyze()` path: regex/proximity first; LLM only when
+  confidence < threshold (token-budget guard).
+- Per-finding evidence attestation (`Finding.evidence: { tokens,
+modelId }`) recorded in the audit log.
+- Offline-correctness contract: model precached alongside the rest.
+- WebGPU → WASM → "LLM unavailable" graceful fallback chain.
+- Privacy disclosure update.
+- Paraphrased-clause golden-test fixture exercising the full path.
+
 ---
 
 ## Out of scope (still)
@@ -201,6 +239,6 @@ turned those primitives into an ecosystem a third party can audit. See
 - Runtime LLM inference over the network. Build-time generation of
   static content by the maintainer is fine (Phase 14); a live API
   call is not.
-- Jurisdiction-specific legal *advice*. Jurisdiction-tagged rules
+- Jurisdiction-specific legal _advice_. Jurisdiction-tagged rules
   (Phase 10) surface clauses, not conclusions.
 - Anything that requires a backend service to work.
