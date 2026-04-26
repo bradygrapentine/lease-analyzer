@@ -26,7 +26,7 @@ export function PortfolioRollupsPanel({
     return (
       <Section label="rule rollups" className="space-y-2 px-4 py-3">
         <h3 className="text-heading uppercase text-fg-muted">Rule rollups</h3>
-        <p className="text-body text-fg-faint">No portfolio findings yet.</p>
+        <p className="text-body text-fg-muted">No portfolio findings yet.</p>
       </Section>
     );
   }

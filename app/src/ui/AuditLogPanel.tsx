@@ -62,7 +62,7 @@ export function AuditLogPanel({
       )}
 
       {entries.length === 0 ? (
-        <p className="text-body text-fg-faint">
+        <p className="text-body text-fg-muted">
           <em>No audit entries yet.</em>
         </p>
       ) : (
@@ -83,7 +83,7 @@ export function AuditLogPanel({
                   <td className="py-1 pr-3">{e.timestamp}</td>
                   <td className="py-1 pr-3">{e.kind}</td>
                   <td className="py-1">
-                    <code className="font-mono text-mono text-fg-muted">{summarizePayload(e.payload)}</code>
+                    <code className="font-mono text-mono text-fg-body">{summarizePayload(e.payload)}</code>
                   </td>
                 </tr>
               ))}

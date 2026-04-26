@@ -57,7 +57,7 @@ export function TemplatesPanel({
     <Section label="clause templates" className="space-y-4 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Clause templates</h2>
       {templates.length === 0 ? (
-        <p className="text-body text-fg-faint">No clause templates saved yet.</p>
+        <p className="text-body text-fg-muted">No clause templates saved yet.</p>
       ) : (
         <ul className="space-y-2">
           {templates.map((t) => (

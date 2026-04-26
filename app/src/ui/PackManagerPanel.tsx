@@ -147,7 +147,7 @@ export function PackManagerPanel({
           );
         })}
         {installed.length === 0 && (
-          <li className="text-body text-fg-faint">
+          <li className="text-body text-fg-muted">
             <em>No additional packs installed.</em>
           </li>
         )}

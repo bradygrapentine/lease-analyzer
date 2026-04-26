@@ -34,7 +34,7 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
     return (
       <Section label="lease facts">
         <h3 className="text-heading uppercase text-fg-muted mb-3">Lease facts</h3>
-        <p className="text-body text-fg-faint">No structured facts detected in this lease.</p>
+        <p className="text-body text-fg-muted">No structured facts detected in this lease.</p>
       </Section>
     );
   }

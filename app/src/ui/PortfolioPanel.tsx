@@ -101,7 +101,7 @@ export function PortfolioPanel({
     return (
       <Section label="portfolio" className="space-y-2 px-4 py-4">
         <h2 className="text-heading uppercase text-fg-muted">Portfolio</h2>
-        <p className="text-body text-fg-faint">No leases in portfolio yet.</p>
+        <p className="text-body text-fg-muted">No leases in portfolio yet.</p>
       </Section>
     );
   }
@@ -161,7 +161,7 @@ export function PortfolioPanel({
                     const sev = bestBySeverity.get(c.ruleId);
                     return (
                       <td key={c.ruleId} className="py-2 pr-3 align-top">
-                        {sev ? <SeverityBadge severity={sev} /> : <span className="text-fg-faint">—</span>}
+                        {sev ? <SeverityBadge severity={sev} /> : <span className="text-fg-muted">—</span>}
                       </td>
                     );
                   })}

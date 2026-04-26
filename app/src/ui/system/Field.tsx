@@ -28,7 +28,7 @@ export function Field({
       <label className={`flex flex-col gap-1 text-body font-sans text-fg-body ${className}`}>
         <span className="text-small text-fg-muted">{label}</span>
         {description && (
-          <span id={descId} className="text-small text-fg-faint">
+          <span id={descId} className="text-small text-fg-muted">
             {description}
           </span>
         )}
@@ -48,7 +48,7 @@ export function Field({
       <label className={`flex flex-col gap-1 text-body font-sans text-fg-body ${className}`}>
         <span className="text-small text-fg-muted">{label}</span>
         {description && (
-          <span id={descId} className="text-small text-fg-faint">
+          <span id={descId} className="text-small text-fg-muted">
             {description}
           </span>
         )}
@@ -65,7 +65,7 @@ export function Field({
     <label className={`flex flex-col gap-1 text-body font-sans text-fg-body ${className}`}>
       <span className="text-small text-fg-muted">{label}</span>
       {description && (
-        <span id={descId} className="text-small text-fg-faint">
+        <span id={descId} className="text-small text-fg-muted">
           {description}
         </span>
       )}

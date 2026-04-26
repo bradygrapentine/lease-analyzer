@@ -54,7 +54,7 @@ export function SigningKeyPanel({
           <code className="font-mono text-mono text-fg-muted">{truncate(state.publicKey ?? '')}</code>
         </p>
       ) : (
-        <p className="text-body text-fg-faint">No signing key.</p>
+        <p className="text-body text-fg-muted">No signing key.</p>
       )}
       <div className="flex flex-wrap gap-2">
         {!hasKey && (

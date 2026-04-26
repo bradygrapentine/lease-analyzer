@@ -47,7 +47,7 @@ export function JurisdictionPickerPanel({
     return (
       <Section label="jurisdictions" className="space-y-2 px-4 py-4">
         <h2 className="text-heading uppercase text-fg-muted">Jurisdictions</h2>
-        <p className="text-body text-fg-faint">
+        <p className="text-body text-fg-muted">
           <em>No jurisdictions available.</em>
         </p>
       </Section>

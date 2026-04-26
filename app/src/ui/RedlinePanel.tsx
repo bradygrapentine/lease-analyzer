@@ -81,7 +81,7 @@ export function RedlinePanel({
     return (
       <Section label="redline" className="space-y-2 px-4 py-4">
         <h2 className="text-heading uppercase text-fg-muted">Redline</h2>
-        <p className="text-body text-fg-faint">Upload a lease to start editing.</p>
+        <p className="text-body text-fg-muted">Upload a lease to start editing.</p>
       </Section>
     );
   }

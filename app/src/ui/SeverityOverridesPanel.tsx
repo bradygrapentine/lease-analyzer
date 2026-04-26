@@ -57,7 +57,7 @@ export function SeverityOverridesPanel({
     return (
       <Section label="severity overrides" className="space-y-2 px-4 py-4">
         <h2 className="text-heading uppercase text-fg-muted">Severity overrides</h2>
-        <p className="text-body text-fg-faint">
+        <p className="text-body text-fg-muted">
           <em>No rules available to override.</em>
         </p>
       </Section>
@@ -101,7 +101,7 @@ export function SeverityOverridesPanel({
                   <td className="py-2 pr-3 align-top">
                     <strong className="text-body text-fg-body font-sans">{r.title}</strong>
                     <div>
-                      <small className="font-mono text-mono text-fg-muted">{r.id}</small>
+                      <small className="font-mono text-mono text-fg-body">{r.id}</small>
                     </div>
                   </td>
                   <td className="py-2 pr-3 align-top">{SEVERITY_LABEL[r.severity]}</td>

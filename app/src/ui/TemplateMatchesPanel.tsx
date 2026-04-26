@@ -24,7 +24,7 @@ export function TemplateMatchesPanel({
     return (
       <Section label="template matches">
         <h3 className="text-heading uppercase text-fg-muted mb-3">Template matches</h3>
-        <p className="text-body text-fg-faint">No clause templates to compare against.</p>
+        <p className="text-body text-fg-muted">No clause templates to compare against.</p>
       </Section>
     );
   }

@@ -114,7 +114,7 @@ export function FindingsPanel({
   if (findings.length === 0) {
     return (
       <aside aria-label="findings" className="p-4">
-        <p className="text-body text-fg-faint">No findings yet. Upload a lease to analyze.</p>
+        <p className="text-body text-fg-muted">No findings yet. Upload a lease to analyze.</p>
       </aside>
     );
   }

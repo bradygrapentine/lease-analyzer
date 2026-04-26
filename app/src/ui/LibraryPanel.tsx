@@ -32,7 +32,7 @@ export function LibraryPanel({
     return (
       <Section label="library" className="space-y-2 px-4 py-4">
         <h2 className="text-heading uppercase text-fg-muted">My Leases</h2>
-        <p className="text-body text-fg-faint">No saved leases yet.</p>
+        <p className="text-body text-fg-muted">No saved leases yet.</p>
       </Section>
     );
   }
