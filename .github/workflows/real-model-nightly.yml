@@ -1,0 +1,80 @@
+name: real-model-nightly
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  real-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+
+      - name: Install root dev deps (Playwright runner)
+        run: npm ci
+
+      - name: Install app deps
+        working-directory: app
+        run: npm ci
+
+      - name: Install chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build classifier assets
+        working-directory: app
+        run: npm run build:classifier-assets
+
+      - name: Build app
+        working-directory: app
+        run: npm run build
+
+      - name: Run real-model spec
+        env:
+          RUN_REAL_MODEL: '1'
+        run: npx playwright test --project=chromium tests/e2e/hybrid-golden.spec.ts
+
+      - name: Open or update issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          label=nightly-real-model-broken
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          existing=$(gh issue list --state open --label "$label" --json number --jq '.[0].number // empty')
+          body="Run failed at $(date -u +%FT%TZ). Run: $run_url"
+          if [ -z "$existing" ]; then
+            gh issue create \
+              --title "Nightly real-model spec broken" \
+              --label "$label" \
+              --body "$body"
+          else
+            gh issue comment "$existing" --body "$body"
+          fi
+
+      - name: Close issue on success
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          label=nightly-real-model-broken
+          existing=$(gh issue list --state open --label "$label" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "Recovered at $(date -u +%FT%TZ). Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            gh issue close "$existing"
+          fi
