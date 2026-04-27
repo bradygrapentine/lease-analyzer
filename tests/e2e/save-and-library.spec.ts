@@ -18,8 +18,10 @@ test.describe('LeaseGuard library flow', () => {
     await expect(findingButtons.first()).toBeVisible({ timeout: 15_000 });
 
     // Wave 30-B: bottom-pane accordions default closed. Expand "Library"
-    // before reaching for the saved-lease row.
-    await page.getByRole('button', { name: /^Library$/i }).click();
+    // before reaching for the saved-lease row. The button's accessible
+    // name includes a count badge ("Library 1") once leases exist, so
+    // match by prefix not exact.
+    await page.getByRole('button', { name: /^Library\b/i }).click();
 
     // usePipeline auto-saves analyzed leases. The library row's "open" button
     // surfaces with the file name aria-label, e.g. "Open Sample lease.pdf".
