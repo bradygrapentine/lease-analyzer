@@ -8,6 +8,8 @@ import { useInViewport } from './useInViewport';
 import { Button } from './system/Button';
 import { Card } from './system/Card';
 import type { HybridFeedbackPayload } from './HybridFeedbackButton';
+import type { AuditEntry } from '../audit/auditLog';
+import { findClassifyEntry } from '../audit/findClassifyEntry';
 
 const HybridFeedbackButton = lazy(() =>
   import('./HybridFeedbackButton').then((m) => ({ default: m.HybridFeedbackButton })),
@@ -96,6 +98,13 @@ interface FindingsPanelProps {
    * write.
    */
   onHybridFeedback?: (payload: HybridFeedbackPayload) => void | Promise<void>;
+  /**
+   * Wave 32-C — optional audit chain. When provided, the hybrid-finding
+   * disclosure includes the matching `kind:'llm-classify'` entry's
+   * `entryHash` (truncated to 8 chars) for auditability. Read-only; no
+   * IDB writes are performed here.
+   */
+  auditEntries?: AuditEntry[];
 }
 
 export function FindingsPanel({
@@ -109,6 +118,7 @@ export function FindingsPanel({
   onPromoteToStandard,
   leaseId,
   onHybridFeedback,
+  auditEntries,
 }: FindingsPanelProps): JSX.Element {
   const [query, setQuery] = useState('');
   const [hiddenSeverities, setHiddenSeverities] = useState<Set<Severity>>(new Set());
@@ -260,6 +270,7 @@ export function FindingsPanel({
                         onPromoteToStandard={onPromoteToStandard}
                         leaseId={leaseId}
                         onHybridFeedback={onHybridFeedback}
+                        auditEntries={auditEntries}
                         pendingFocusRef={pendingFocusRef}
                       />
                     );
@@ -329,6 +340,8 @@ interface VirtualFindingItemProps {
   onPromoteToStandard: ((leaseId: string, paragraphIndex: number) => void) | undefined;
   leaseId: string | undefined;
   onHybridFeedback: ((payload: HybridFeedbackPayload) => void | Promise<void>) | undefined;
+  /** Wave 32-C — audit chain threaded from FindingsPanel for llm-classify entry lookup. */
+  auditEntries: AuditEntry[] | undefined;
   pendingFocusRef: { current: string | null };
 }
 
@@ -349,8 +362,17 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
     onPromoteToStandard,
     leaseId,
     onHybridFeedback,
+    auditEntries,
     pendingFocusRef,
   } = props;
+
+  // Wave 32-C: find matching llm-classify entry for this finding.
+  // findClassifyEntry is pure; chain reference is stable across renders
+  // since auditEntries comes from the parent's prop (stable array reference).
+  const classifyEntry =
+    finding.evidence && auditEntries
+      ? findClassifyEntry(auditEntries, finding.ruleId, finding.paragraphIndex)
+      : null;
   const liRef = useRef<HTMLLIElement | null>(null);
   const fullRef = useRef<HTMLDivElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
@@ -451,6 +473,17 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                     <dd className="ml-2">{Math.round(finding.evidence.similarity * 100)}%</dd>
                     <dt className="text-fg-muted">Threshold</dt>
                     <dd className="ml-2">Above the 70% similarity floor</dd>
+                    {classifyEntry && (
+                      <>
+                        <dt className="text-fg-muted">audit entry</dt>
+                        <dd
+                          className="font-mono text-small text-fg-muted ml-2"
+                          title={classifyEntry.entryHash}
+                        >
+                          {classifyEntry.entryHash.slice(0, 8)}
+                        </dd>
+                      </>
+                    )}
                   </dl>
                 ) : null}
               </div>
