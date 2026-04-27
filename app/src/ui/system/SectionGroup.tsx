@@ -1,24 +1,38 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Card } from './Card';
+import { readAccordionState, writeAccordionState } from './accordionStorage';
 
 export interface SectionGroupProps {
-  /** Heading shown in the group header. */
+  /**
+   * Initial open state when no persisted preference exists. Wave 30
+   * Part B reversed the Wave 28 §1.2 default to `false` (collapsed) —
+   * a stored `localStorage` preference always wins over this.
+   */
   title: string;
   /** Optional badge after the title (e.g., "8 leases", "3 pending"). */
   count?: number | string;
-  /** Whether the group is open by default. State is in-memory only. */
+  /**
+   * Whether the group is open by default when no `localStorage`
+   * preference is set. Defaults to `false` per Wave 30 Part B.
+   */
   defaultOpen?: boolean;
   /** Visual density. "comfortable" (default) or "compact". */
   density?: 'comfortable' | 'compact';
-  /** Stable id used for the disclosure region's aria controls. */
+  /**
+   * Stable id used for the disclosure region's aria controls AND for
+   * the `lg.accordion.<id>.open` localStorage key.
+   */
   id: string;
   children: ReactNode;
 }
 
 /**
  * Collapsible group container with a header, optional count badge, and
- * disclosure affordance. State is in-memory only (per Wave 28 §1.2).
+ * disclosure affordance. Per-section open/closed state is persisted in
+ * `localStorage` (key `lg.accordion.<id>.open`); presence of the key
+ * wins over `defaultOpen` (Wave 30 §1.4). On servers / SSR / jsdom
+ * without storage, behavior falls back to the in-memory default.
  */
 export function SectionGroup({
   title,
@@ -28,11 +42,23 @@ export function SectionGroup({
   id,
   children,
 }: SectionGroupProps): JSX.Element {
-  const [open, setOpen] = useState(defaultOpen);
+  // Initialize from storage when available so the first paint already
+  // reflects the user's last choice; SPA, no SSR, so no post-mount
+  // reconciliation needed.
+  const [open, setOpen] = useState<boolean>(() => readAccordionState(id) ?? defaultOpen);
+
   const panelId = `${id}-panel`;
   const headerId = `${id}-header`;
   const headerPad = density === 'compact' ? 'px-3 py-2' : 'px-4 py-3';
   const bodyPad = density === 'compact' ? 'px-3 pb-3' : 'px-4 pb-4';
+
+  const handleToggle = (): void => {
+    setOpen((v) => {
+      const next = !v;
+      writeAccordionState(id, next);
+      return next;
+    });
+  };
 
   return (
     <Card data-density={density} className="overflow-hidden">
@@ -42,7 +68,7 @@ export function SectionGroup({
           type="button"
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((v) => !v)}
+          onClick={handleToggle}
           className={`flex w-full items-center justify-between gap-3 text-heading uppercase font-sans text-fg-muted hover:bg-[var(--state-hover)] active:bg-[var(--state-active)] focus-visible:focus-ring ${headerPad}`}
         >
           <span className="flex items-center gap-2">
