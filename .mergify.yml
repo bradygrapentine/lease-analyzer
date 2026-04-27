@@ -24,18 +24,20 @@ queue_rules:
     merge_method: squash
 
 pull_request_rules:
-  - name: enqueue PRs with auto-merge armed
-    # Triggered by `gh pr merge --auto --squash`. Branch protection sets
-    # `strict: true` ("Require branches to be up to date") on `main`, so
-    # any open PR goes BEHIND every time main moves. GitHub's native
-    # auto-merge does not update branches; the Mergify queue does. This
-    # rule routes auto-merge-armed PRs into the `default` queue, which
-    # rebases each one in sequence before merging — closes the gap that
-    # was forcing manual rebases on every queued PR. Wave 30-C set up
-    # the queue rules but never wired the queue action; this fixes it.
+  - name: enqueue PRs labelled automerge
+    # Trigger: add the `automerge` label to a PR (UI or
+    # `gh pr edit <num> --add-label automerge`). Mergify routes it
+    # into the `default` queue, which rebases each PR in sequence
+    # before merging — necessary because branch protection on `main`
+    # has `strict: true` ("Require branches to be up to date") and
+    # GitHub's native auto-merge does not update branches.
+    #
+    # `auto_merge_enabled` was tried first (PR #138) but isn't a valid
+    # Mergify condition in this version. Label-based triggering is
+    # universally supported and explicit about user intent.
     conditions:
       - base=main
-      - auto_merge_enabled
+      - label=automerge
       - -draft
     actions:
       queue:
