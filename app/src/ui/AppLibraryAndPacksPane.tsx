@@ -28,6 +28,8 @@ import { LibraryCompareForm } from './LibraryCompareForm';
 import { TemplatesPanel } from './TemplatesPanel';
 import { PackManagerPanel } from './PackManagerPanel';
 import { CustomRuleBuilderPanel } from './CustomRuleBuilderPanel';
+import { HybridPrecisionPanel } from './HybridPrecisionPanel';
+import { computeHybridStats } from '../audit/hybridStats';
 import { JurisdictionPickerPanel } from './JurisdictionPickerPanel';
 import { SeverityOverridesPanel } from './SeverityOverridesPanel';
 import { PackDiffPanel } from './PackDiffPanel';
@@ -130,6 +132,14 @@ export function AppLibraryAndPacksPane({
                 existingRuleIds={packs.existingRuleIds}
                 onSave={(rule) => void packs.saveCustomRule(rule)}
               />
+            </div>
+          </details>
+          <details className="px-4 py-3" data-testid="hybrid-precision-disclosure">
+            <summary className="text-heading uppercase text-fg-muted cursor-pointer select-none">
+              Hybrid precision
+            </summary>
+            <div className="pt-2">
+              <HybridPrecisionPanel stats={computeHybridStats(auditEntries)} />
             </div>
           </details>
           {comparison && (
