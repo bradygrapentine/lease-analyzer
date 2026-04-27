@@ -79,12 +79,18 @@ export default defineConfig({
         // Raised 2026-04-26 (Wave 24-C) after surgical removal of
         // unreachable defensive guards in `hybridAnalyze.ts` (loop-
         // bounded indexed accesses no longer pay v8's `?? 0` / `?? ''`
-        // branch tax). Actuals sit at 97.27 / 89.61 / 93.71 / 97.27;
-        // the +1 branch bump (88 → 89) is the honest ceiling absent
+        // branch tax). Actuals sat at 97.27 / 89.61 / 93.71 / 97.27;
+        // the +1 branch bump (88 → 89) was the honest ceiling absent
         // either (a) decomposing App.tsx further or (b) another guard
         // sweep on remaining `noUncheckedIndexedAccess` artifacts.
+        //
+        // Raised 2026-04-27 (Wave 31-C) after targeted tests on
+        // useColorScheme, loadGlossary, and useReviewMode uncovered
+        // meaningful error-path and fallback branches. Actuals landed
+        // at 97.52 / 90.21 / 94.26 / 97.52; branches cleared the 90.2
+        // threshold so the floor steps up 89 → 90.
         statements: 95,
-        branches: 89,
+        branches: 90,
         functions: 91,
         lines: 95,
       },
