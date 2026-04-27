@@ -32,9 +32,8 @@ pull_request_rules:
     # has `strict: true` ("Require branches to be up to date") and
     # GitHub's native auto-merge does not update branches.
     #
-    # `auto_merge_enabled` was tried first but isn't a valid Mergify
-    # condition in this version (validation rejects at root →
-    # pull_request_rules → conditions). Label-based triggering is
+    # `auto_merge_enabled` was tried first (PR #138) but isn't a valid
+    # Mergify condition in this version. Label-based triggering is
     # universally supported and explicit about user intent.
     conditions:
       - base=main
