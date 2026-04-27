@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card } from './Card';
 import { readAccordionState, writeAccordionState } from './accordionStorage';
 
@@ -43,27 +43,9 @@ export function SectionGroup({
   children,
 }: SectionGroupProps): JSX.Element {
   // Initialize from storage when available so the first paint already
-  // reflects the user's last choice. SSR returns `undefined` and we
-  // fall back to `defaultOpen`; the post-mount effect reconciles in
-  // case the SSR snapshot differed from the client preference.
-  const [open, setOpen] = useState<boolean>(() => {
-    const stored = readAccordionState(id);
-    return stored ?? defaultOpen;
-  });
-
-  // Reconcile after mount in case SSR rendered the default-open value
-  // but the client has a stored preference. Re-running when `id`
-  // changes keeps the component honest if it's reused for a different
-  // section.
-  useEffect(() => {
-    const stored = readAccordionState(id);
-    if (stored !== undefined && stored !== open) {
-      setOpen(stored);
-    }
-    // We deliberately do NOT depend on `open` — this only reconciles
-    // the SSR/initial mismatch, not subsequent user toggles.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  // reflects the user's last choice; SPA, no SSR, so no post-mount
+  // reconciliation needed.
+  const [open, setOpen] = useState<boolean>(() => readAccordionState(id) ?? defaultOpen);
 
   const panelId = `${id}-panel`;
   const headerId = `${id}-header`;

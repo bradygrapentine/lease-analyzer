@@ -40,6 +40,10 @@ test.describe('Annotation persistence', () => {
     // Reload — the in-memory React state goes away; IDB persists.
     await page.reload();
 
+    // Wave 30-B: bottom-pane accordions default closed. Expand "Library"
+    // before reaching for the saved-lease row.
+    await page.getByRole('button', { name: /^Library$/i }).click();
+
     // The library row's "Open" button surfaces the saved lease.
     const openSample = page.getByRole('button', { name: /open sample lease\.pdf/i });
     await expect(openSample).toBeVisible({ timeout: 10_000 });
