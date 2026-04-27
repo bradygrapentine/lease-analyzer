@@ -39,4 +39,19 @@ describe('useReviewMode', () => {
     });
     expect(result.current.mode.active).toBe(false);
   });
+
+  it('returns a safe inactive fallback when used outside the provider', () => {
+    // Exercises the provider-absent branch — panels that call useReviewMode
+    // without a wrapping ReviewModeProvider must get mode.active===false
+    // rather than throwing, so isolated panel tests don't need the provider.
+    const { result } = renderHook(() => useReviewMode());
+    expect(result.current.mode.active).toBe(false);
+    // enter/exit are no-ops outside the provider — calling them must not throw.
+    expect(() => {
+      act(() => {
+        result.current.enter({ archiveId: 'x', expiresAt: '2099-01-01T00:00:00Z' });
+        result.current.exit();
+      });
+    }).not.toThrow();
+  });
 });

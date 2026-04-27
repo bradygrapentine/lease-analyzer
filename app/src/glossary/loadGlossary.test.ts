@@ -144,4 +144,76 @@ describe('loadGlossary', () => {
     const g = await loadGlossary();
     expect(g.entries).toEqual([]);
   });
+
+  it('returns empty glossary when the top-level payload is not an object (e.g. array)', async () => {
+    // Exercises the !isRecord(raw) branch — a non-null non-object response
+    // (like a bare array) must not crash the validator.
+    stubFetch(async () => new Response(JSON.stringify([1, 2, 3]), { status: 200 }));
+    const g = await loadGlossary();
+    expect(g.entries).toEqual([]);
+  });
+
+  it('returns empty glossary when the schema version number is wrong', async () => {
+    // Exercises the raw.version !== 1 branch — a future schema bump should
+    // be silently ignored rather than crashing the consumer.
+    stubFetch(
+      async () =>
+        new Response(
+          JSON.stringify({ schema: 'leaseguard.glossary.v1', version: 2, entries: [] }),
+          { status: 200 },
+        ),
+    );
+    const g = await loadGlossary();
+    expect(g.entries).toEqual([]);
+  });
+
+  it('returns empty glossary when entries is not an array', async () => {
+    // Exercises the !Array.isArray(raw.entries) branch — a payload where
+    // entries is an object or null must not partially populate the glossary.
+    stubFetch(
+      async () =>
+        new Response(
+          JSON.stringify({ schema: 'leaseguard.glossary.v1', version: 1, entries: {} }),
+          { status: 200 },
+        ),
+    );
+    const g = await loadGlossary();
+    expect(g.entries).toEqual([]);
+  });
+
+  it('returns empty glossary when an entry is a non-object (e.g. string)', async () => {
+    // Exercises the !isRecord(e) per-entry guard — ensures a corrupted
+    // entry (bare string) does not bypass structural validation.
+    stubFetch(
+      async () =>
+        new Response(
+          JSON.stringify({
+            schema: 'leaseguard.glossary.v1',
+            version: 1,
+            entries: ['not-an-object'],
+          }),
+          { status: 200 },
+        ),
+    );
+    const g = await loadGlossary();
+    expect(g.entries).toEqual([]);
+  });
+
+  it('returns empty glossary when sources is present but not an array', async () => {
+    // Exercises the !Array.isArray(e.sources) branch — a sources field that
+    // is a plain string (not an array) must invalidate the whole glossary.
+    stubFetch(
+      async () =>
+        new Response(
+          JSON.stringify({
+            schema: 'leaseguard.glossary.v1',
+            version: 1,
+            entries: [{ term: 'A', definition: 'd', sources: 'not-array' }],
+          }),
+          { status: 200 },
+        ),
+    );
+    const g = await loadGlossary();
+    expect(g.entries).toEqual([]);
+  });
 });
