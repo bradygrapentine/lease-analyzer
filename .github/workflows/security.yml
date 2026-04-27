@@ -24,11 +24,16 @@ jobs:
             app/package-lock.json
       - name: Install root deps
         run: npm ci
-      - name: Audit root (high+ only)
-        run: npm audit --audit-level=high
+      - name: Audit root (high+ only, prod deps only)
+        run: npm audit --omit=dev --audit-level=high
       - name: Install app deps
         working-directory: app
         run: npm ci
-      - name: Audit app (high+ only)
+      # Wave 33-A — app-side audit goes through scripts/audit-prod.mjs,
+      # which scopes to prod deps and filters advisories explicitly listed
+      # in ALLOW_ADVISORIES. Each allowlisted advisory MUST have a
+      # corresponding §accept-risk note in docs/SECURITY.md. Anything else
+      # at high+ severity fails the gate.
+      - name: Audit app (high+ only, prod deps, accept-risk filter)
         working-directory: app
-        run: npm audit --audit-level=high
+        run: npm run audit:prod
