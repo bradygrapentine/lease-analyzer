@@ -65,3 +65,23 @@ export function computeHybridStats(entries: AuditEntry[]): HybridRuleStats[] {
   rows.sort((a, b) => (a.ruleId < b.ruleId ? -1 : a.ruleId > b.ruleId ? 1 : 0));
   return rows;
 }
+
+// ---------------------------------------------------------------------------
+// Demotion-candidate helpers (Wave 31-A)
+// ---------------------------------------------------------------------------
+
+/** Minimum number of fires before a rule is considered for demotion. */
+export const DEMOTION_MIN_FIRES = 10;
+
+/** Precision ceiling (exclusive) below which a rule is a demotion candidate. */
+export const DEMOTION_MAX_PRECISION = 0.70;
+
+/**
+ * Returns `true` when a rule has fired enough times to be statistically
+ * meaningful AND has poor precision — signalling that the `hybridAnchors`
+ * predicate is too loose. See Wave 31-A plan for action steps.
+ */
+export function isDemotionCandidate(stats: HybridRuleStats): boolean {
+  if (stats.precision === null) return false;
+  return stats.fires >= DEMOTION_MIN_FIRES && stats.precision < DEMOTION_MAX_PRECISION;
+}
