@@ -18,15 +18,9 @@ import { join, relative, resolve, sep } from 'node:path';
 const FORBIDDEN =
   /\b(bg|text|border|ring|outline|fill|stroke|from|to|via)-(amber|stone|zinc|slate|neutral|gray|red|orange|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(-\d+)?(\/\d+)?\b/;
 
-// Hybrid-finding disclosure surface — owned by Wave 32 Part C; this
-// regression intentionally skips those files so Part C's wave can edit
-// them without tripping. Tighten via a follow-up once C lands and any
-// remaining hard-coded classes there are cleaned up.
-const ALLOW_LIST_PATHS: ReadonlyArray<string> = [
-  'src/ui/HybridFeedbackButton.tsx',
-  'src/ui/HybridPrecisionPanel.tsx',
-  'src/ui/FindingsPanel.tsx',
-];
+// Wave 33-C verified all three previously-allow-listed files are clean
+// (zero hard-coded palette classes). Allow-list emptied.
+const ALLOW_LIST_PATHS: ReadonlyArray<string> = [];
 
 function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
