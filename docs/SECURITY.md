@@ -367,6 +367,25 @@ the breaking-change "fix" the auditor proposes. Each entry below
 includes the advisory, what we use the affected code for, why the
 fix is worse than the risk, and the trigger that flips the decision.
 
+### Dev vs. prod scope (Wave 33-A)
+
+The CI gate is **`cd app && npm run audit:prod`** (see
+`.github/workflows/security.yml`), which wraps `npm audit --json
+--omit=dev --audit-level=high` and filters the documented accept-risk
+advisory URLs in `app/scripts/audit-prod.mjs` `ALLOW_ADVISORIES`. Two
+contracts:
+
+- **Scope is prod deps only.** `--omit=dev` excludes Storybook,
+  ESLint, vitest tooling — none of which ship in `dist/`. Their
+  vulnerabilities don't reach end users and aren't gated.
+- **Allowlist is the audit trail.** Every URL in `ALLOW_ADVISORIES`
+  must have a §7.x note here with rationale + trigger. Adding to the
+  allowlist without updating this doc is a process violation.
+
+Run the unfiltered audit locally (`cd app && npm audit`) to see
+everything (including dev-only chains in §7.2 / §7.3) when doing a
+deeper review.
+
 Re-run `cd app && npm audit` quarterly (and on every Wave-N start)
 to verify nothing new has crept in.
 
@@ -391,6 +410,17 @@ class we use. Effectively a Phase 18 rollback.
 **Decision (2026-04-26, Wave 26-B):** accept. Re-evaluate when
 `@xenova/transformers` ships an upstream release with `protobufjs
 >= 7.5.5`. Recheck quarterly.
+
+**Update (Wave 33-A, 2026-04-27):** investigation confirmed
+`@xenova/transformers@2.17.2` is the end of that line — the package
+moved to `@huggingface/transformers@4.x` (different package, v2→v4
+breaking-change migration). Migration is its own future Phase 19
+wave with explicit brainstorm; not folded into hygiene work. Until
+that lands, `audit:prod` filters
+[GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg)
+via `app/scripts/audit-prod.mjs` `ALLOW_ADVISORIES`. Any *new*
+high+ advisory that doesn't trace back to that ID still fails the
+gate.
 
 ### 7.2 `esbuild <=0.24.2` — dev-server cross-origin reads
 
