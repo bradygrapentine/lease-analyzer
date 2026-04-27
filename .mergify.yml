@@ -1,4 +1,4 @@
-# Mergify configuration — Wave 30-C
+# Mergify configuration — Wave 30-C; queue action wired post-Wave-31.
 #
 # Defensive: GitHub branch protection on `main` is the authoritative
 # gate (required_status_checks + enforce_admins=true). This file makes
@@ -24,6 +24,23 @@ queue_rules:
     merge_method: squash
 
 pull_request_rules:
+  - name: enqueue PRs with auto-merge armed
+    # Triggered by `gh pr merge --auto --squash`. Branch protection sets
+    # `strict: true` ("Require branches to be up to date") on `main`, so
+    # any open PR goes BEHIND every time main moves. GitHub's native
+    # auto-merge does not update branches; the Mergify queue does. This
+    # rule routes auto-merge-armed PRs into the `default` queue, which
+    # rebases each one in sequence before merging — closes the gap that
+    # was forcing manual rebases on every queued PR. Wave 30-C set up
+    # the queue rules but never wired the queue action; this fixes it.
+    conditions:
+      - base=main
+      - auto_merge_enabled
+      - -draft
+    actions:
+      queue:
+        name: default
+
   - name: refuse merge while any required check is failing
     conditions:
       - base=main
