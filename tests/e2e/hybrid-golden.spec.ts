@@ -97,6 +97,11 @@ test.describe('Phase 18 real-model golden', () => {
     const findings = page.getByRole('complementary', { name: /findings/i });
     await expect(findings).toBeVisible();
 
+    // Audit log lives inside the bottom-pane "Governance" disclosure,
+    // which Wave 30-B made default-closed. Expand it before reaching for
+    // the Refresh button.
+    await page.getByRole('button', { name: /^Governance\b/i }).click();
+
     // First proof the classifier actually ran: an `llm-classify` audit
     // entry. Audit log isn't virtualized so this is the stable signal
     // for "the classifier emitted findings". Model boot + embedding can
