@@ -88,7 +88,9 @@ State at Wave 34 start: `origin/main = 640f35e`, no open PRs, working tree clean
 **Branch:** `wave34-B-subagent-perms`
 **Worktree:** `worktrees/wave34-B-subagent-perms`
 **Mode:** Direct (Opus, in this session). No subagent dispatch for this part.
-**Cap:** 0 src, 0 test, ≤2 config/docs files.
+**Cap:** 0 src, 0 test, 1 tracked doc file (`docs/CLAUDE.md`).
+
+> **Post-brainstorm correction (2026-04-27):** `.claude/` is gitignored project-wide. The `settings.local.json` rewrite below applies as a **local-only** edit on the orchestrator's main checkout — it does not ship in any PR. The wave34-B PR ships only the **convention paragraph** in `docs/CLAUDE.md` (a tracked file) plus the spec and plan docs themselves. New machines need to recreate the wildcard set on first dispatch; the convention section in `docs/CLAUDE.md` documents the canonical shape.
 
 ### Task B1: Create the worktree and branch
 
