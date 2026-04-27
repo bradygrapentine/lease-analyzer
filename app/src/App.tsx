@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { usePipeline } from './App/usePipeline';
 import { usePackManager } from './App/usePackManager';
 import { useAnnotations } from './App/useAnnotations';
@@ -37,7 +37,14 @@ import {
 import { buildAuditLogJson, downloadAuditLogBlob } from './audit/auditExport';
 import { PortfolioPanel } from './ui/PortfolioPanel';
 import { paragraphShingles } from './portfolio/shingles';
-import { AppRedlinePane } from './ui/AppRedlinePane';
+// Wave 33-B — AppRedlinePane and its three child panels (RedlinePanel,
+// VersionHistoryPanel, SideLetterPanel) only render when the user switches
+// to the redline view tab. Lazy-loading lets the shell skip ~the entire
+// redline subsystem on first paint. Pattern matches HybridFeedbackButton
+// (Wave 29-C) and HybridPrecisionDisclosure (Wave 30-A).
+const AppRedlinePane = lazy(() =>
+  import('./ui/AppRedlinePane').then((m) => ({ default: m.AppRedlinePane })),
+);
 import { discoverOcrLanguages, type OcrLanguage } from './ocr/availableLanguages';
 import type { Finding } from './rules/types';
 import type { ClauseTemplate } from './templates/types';
@@ -376,15 +383,17 @@ function AppContent(): JSX.Element {
         hidden={view !== 'redline'}
       >
         {view === 'redline' && status.kind === 'analyzed' && (
-          <AppRedlinePane
-            doc={status.result.doc}
-            leaseName={status.fileName}
-            redline={redline}
-            versionHistory={versionHistory}
-            sideLetter={sideLetter}
-            sectionForParagraph={sectionForParagraph}
-            safeAudit={safeAudit}
-          />
+          <Suspense fallback={null}>
+            <AppRedlinePane
+              doc={status.result.doc}
+              leaseName={status.fileName}
+              redline={redline}
+              versionHistory={versionHistory}
+              sideLetter={sideLetter}
+              sectionForParagraph={sectionForParagraph}
+              safeAudit={safeAudit}
+            />
+          </Suspense>
         )}
       </div>
 
