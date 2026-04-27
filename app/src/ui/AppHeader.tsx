@@ -1,4 +1,5 @@
 import { LocalePickerPanel } from './LocalePickerPanel';
+import { ThemeToggle } from './ThemeToggle';
 import { useI18n } from '../i18n/I18nContext';
 import { Button } from './system/Button';
 
@@ -42,6 +43,7 @@ export function AppHeader({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <LocalePickerPanel />
+        <ThemeToggle />
         <details className="privacy text-small text-fg-muted">
           <summary className="cursor-pointer">{t('header.privacy.summary')}</summary>
           <ul className="mt-1 ml-4 space-y-0.5 list-disc text-fg-muted">
