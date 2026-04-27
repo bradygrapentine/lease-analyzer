@@ -7,14 +7,24 @@ const STORAGE_KEY = 'lg.theme';
 
 function readStoredTheme(): Theme {
   if (typeof window === 'undefined') return 'system';
-  const v = window.localStorage.getItem(STORAGE_KEY);
-  return v === 'light' || v === 'dark' ? v : 'system';
+  try {
+    const v = window.localStorage.getItem(STORAGE_KEY);
+    return v === 'light' || v === 'dark' ? v : 'system';
+  } catch {
+    // localStorage may be disabled (private browsing) or stubbed
+    // (test runtime); treat any access failure as "no preference".
+    return 'system';
+  }
 }
 
 function resolve(theme: Theme): ResolvedScheme {
   if (theme !== 'system') return theme;
-  if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'light';
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
 }
 
 export interface UseColorSchemeReturn {
@@ -35,7 +45,13 @@ export function useColorScheme(): UseColorSchemeReturn {
     root.setAttribute('data-theme', next);
 
     if (theme !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (typeof window.matchMedia !== 'function') return;
+    let mq: MediaQueryList;
+    try {
+      mq = window.matchMedia('(prefers-color-scheme: dark)');
+    } catch {
+      return;
+    }
     const onChange = () => {
       const r: ResolvedScheme = mq.matches ? 'dark' : 'light';
       setResolved(r);
@@ -47,8 +63,12 @@ export function useColorScheme(): UseColorSchemeReturn {
 
   const setTheme = useCallback((next: Theme) => {
     if (typeof window !== 'undefined') {
-      if (next === 'system') window.localStorage.removeItem(STORAGE_KEY);
-      else window.localStorage.setItem(STORAGE_KEY, next);
+      try {
+        if (next === 'system') window.localStorage.removeItem(STORAGE_KEY);
+        else window.localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        // Storage may be unavailable; the in-memory state still updates.
+      }
     }
     setThemeState(next);
   }, []);
