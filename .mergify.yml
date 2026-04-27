@@ -1,0 +1,41 @@
+# Mergify configuration — Wave 30-C
+#
+# Defensive: GitHub branch protection on `main` is the authoritative
+# gate (required_status_checks + enforce_admins=true). This file makes
+# Mergify's queue check converge on the same set of required contexts
+# so a queued PR cannot be merged via Mergify while any required check
+# is red. See docs/wave30-ci-postmortem.md for the W28 root cause.
+
+queue_rules:
+  - name: default
+    queue_conditions:
+      - base=main
+      - check-success=verify
+      - check-success=smoke (chromium)
+      - check-success=smoke (firefox)
+      - check-success=smoke (webkit)
+      - check-success=Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
+    merge_conditions:
+      - check-success=verify
+      - check-success=smoke (chromium)
+      - check-success=smoke (firefox)
+      - check-success=smoke (webkit)
+      - check-success=Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
+    merge_method: squash
+
+pull_request_rules:
+  - name: refuse merge while any required check is failing
+    conditions:
+      - base=main
+      - or:
+          - check-failure=verify
+          - check-failure=smoke (chromium)
+          - check-failure=smoke (firefox)
+          - check-failure=smoke (webkit)
+          - check-failure=Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
+    actions:
+      comment:
+        message: |
+          Mergify will not merge this PR — at least one required check
+          is failing. Branch protection (`enforce_admins=true`) also
+          blocks admin merges. See `docs/wave30-ci-postmortem.md`.
