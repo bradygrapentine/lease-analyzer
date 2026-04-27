@@ -28,6 +28,11 @@ import { LibraryCompareForm } from './LibraryCompareForm';
 import { TemplatesPanel } from './TemplatesPanel';
 import { PackManagerPanel } from './PackManagerPanel';
 import { CustomRuleBuilderPanel } from './CustomRuleBuilderPanel';
+import { lazy, Suspense } from 'react';
+
+const HybridPrecisionDisclosure = lazy(() =>
+  import('./HybridPrecisionDisclosure').then((m) => ({ default: m.HybridPrecisionDisclosure })),
+);
 import { JurisdictionPickerPanel } from './JurisdictionPickerPanel';
 import { SeverityOverridesPanel } from './SeverityOverridesPanel';
 import { PackDiffPanel } from './PackDiffPanel';
@@ -132,6 +137,9 @@ export function AppLibraryAndPacksPane({
               />
             </div>
           </details>
+          <Suspense fallback={null}>
+            <HybridPrecisionDisclosure auditEntries={auditEntries} />
+          </Suspense>
           {comparison && (
             <ComparePanel
               aName={comparison.a.name}
