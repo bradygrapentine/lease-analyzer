@@ -37,7 +37,12 @@ import { JurisdictionPickerPanel } from './JurisdictionPickerPanel';
 import { SeverityOverridesPanel } from './SeverityOverridesPanel';
 import { PackDiffPanel } from './PackDiffPanel';
 import { BulkImportPanel } from './BulkImportPanel';
-import { AuditLogPanel } from './AuditLogPanel';
+// Wave 33-B — AuditLogPanel renders inside the `governance` SectionGroup
+// which is `defaultOpen: false`. Lazy-load to keep the audit-log code
+// path (and its dependencies) out of the eager shell.
+const AuditLogPanel = lazy(() =>
+  import('./AuditLogPanel').then((m) => ({ default: m.AuditLogPanel })),
+);
 import { SigningKeyPanel } from './SigningKeyPanel';
 import { ComparePanel } from './ComparePanel';
 import { Section } from './system/Section';
@@ -232,13 +237,15 @@ export function AppLibraryAndPacksPane({
             overrides={severityOverridesPanelMap}
             onChange={severityOverridesPanelOnChange}
           />
-          <AuditLogPanel
-            entries={auditEntries}
-            verification={auditVerification}
-            onRefresh={onRefreshAuditLog}
-            onVerify={onVerifyAuditChain}
-            onDownload={() => onDownloadAuditLog(auditEntries, auditVerification)}
-          />
+          <Suspense fallback={null}>
+            <AuditLogPanel
+              entries={auditEntries}
+              verification={auditVerification}
+              onRefresh={onRefreshAuditLog}
+              onVerify={onVerifyAuditChain}
+              onDownload={() => onDownloadAuditLog(auditEntries, auditVerification)}
+            />
+          </Suspense>
           <SigningKeyPanel
             state={{ publicKey: signingKey.publicKey }}
             onCreateKey={(pp) => void signingKey.createKey(pp)}

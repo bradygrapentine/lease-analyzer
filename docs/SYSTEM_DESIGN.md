@@ -290,6 +290,19 @@ table for the authoritative figures):
   picker is hidden and OCR runs in `eng` by default; when it lists a
   single entry the UI renders a static label rather than a dropdown.
 
+### App shell vs. lazy chunks
+
+Components that are visible the moment the app boots (header,
+view-mode tabs, the empty-state of the findings list) live in the
+eager `index-*.js` shell. Components that only render on user
+interaction (clicking a disclosure, opening a panel, switching to a
+non-default view) MUST be converted to `React.lazy` boundaries. The
+shell budget cap (`app/scripts/check-bundle-budget.mjs`) is *not* a
+number to nudge — it's a contract that says "if you need more,
+lazy-load instead." Existing examples: `HybridFeedbackButton`
+(Wave 29-C), `HybridPrecisionDisclosure` (Wave 30-A), `AppRedlinePane`
++ `AuditLogPanel` (Wave 33-B).
+
 ## Privacy contract
 
 - Strict CSP in `index.html`: `default-src 'self'; script-src 'self';
