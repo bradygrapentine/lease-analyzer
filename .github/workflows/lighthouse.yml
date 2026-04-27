@@ -22,8 +22,6 @@ jobs:
         run: npm ci
       - name: Build production bundle
         run: npm run build
-      - name: Install Lighthouse CI
-        run: npm install --no-save @lhci/cli@0.14.x
       - name: Run Lighthouse CI
         run: npx --no-install lhci autorun --config=./lighthouserc.json
         env:

@@ -7,6 +7,7 @@ coverage
 *.tsbuildinfo
 .DS_Store
 storybook-static
+.lighthouseci
 
 # Wave 27 — Source Serif 4 fonts dropped manually via
 # `npm run build:design-fonts`; never committed.
