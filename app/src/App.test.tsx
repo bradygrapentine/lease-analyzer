@@ -6,6 +6,10 @@ vi.mock('./ui/HybridFeedbackButton', () => ({
   HybridFeedbackButton: () => null,
 }));
 
+vi.mock('./ui/HybridPrecisionDisclosure', () => ({
+  HybridPrecisionDisclosure: () => null,
+}));
+
 vi.mock('./ocr/runOcr', () => ({
   runOcr: vi.fn(
     async (

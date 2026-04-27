@@ -6,20 +6,24 @@
 // `computeHybridStats` helper in `audit/hybridStats.ts` does the math.
 
 import { useState } from 'react';
-import type { HybridRuleStats } from '../audit/hybridStats';
+import type { AuditEntry } from '../audit/auditLog';
+import { computeHybridStats, type HybridRuleStats } from '../audit/hybridStats';
 import { Section } from './system/Section';
 import { EmptyState } from './system/EmptyState';
 
 export interface HybridPrecisionPanelProps {
-  stats: HybridRuleStats[];
+  stats?: HybridRuleStats[];
+  auditEntries?: AuditEntry[];
 }
 
 type SortKey = 'precision-asc' | 'fires-desc';
 
 export function HybridPrecisionPanel({
-  stats,
+  stats: statsProp,
+  auditEntries,
 }: HybridPrecisionPanelProps): JSX.Element {
   const [sortKey, setSortKey] = useState<SortKey>('precision-asc');
+  const stats = statsProp ?? (auditEntries ? computeHybridStats(auditEntries) : []);
 
   if (stats.length === 0) {
     return (
