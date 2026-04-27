@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeHybridStats } from './hybridStats';
+import { computeHybridStats, isDemotionCandidate, DEMOTION_MIN_FIRES, DEMOTION_MAX_PRECISION } from './hybridStats';
 import type { AuditEntry } from './auditLog';
 
 function entry(
@@ -116,5 +116,27 @@ describe('computeHybridStats', () => {
       'mu',
       'zeta',
     ]);
+  });
+});
+
+describe('isDemotionCandidate', () => {
+  it('returns false below the fires floor', () => {
+    expect(isDemotionCandidate({ ruleId: 'r', fires: 9, notRelevant: 9, precision: 0 })).toBe(false);
+  });
+  it('returns true at the fires floor with bad precision', () => {
+    expect(isDemotionCandidate({ ruleId: 'r', fires: 10, notRelevant: 4, precision: 0.6 })).toBe(true);
+  });
+  it('returns false above the floor with good precision', () => {
+    expect(isDemotionCandidate({ ruleId: 'r', fires: 20, notRelevant: 2, precision: 0.9 })).toBe(false);
+  });
+  it('treats the precision boundary as exclusive (< not <=)', () => {
+    expect(isDemotionCandidate({ ruleId: 'r', fires: 10, notRelevant: 3, precision: 0.7 })).toBe(false);
+  });
+  it('returns false when precision is null (no fires)', () => {
+    expect(isDemotionCandidate({ ruleId: 'r', fires: 0, notRelevant: 1, precision: null })).toBe(false);
+  });
+  it('exports the documented threshold values', () => {
+    expect(DEMOTION_MIN_FIRES).toBe(10);
+    expect(DEMOTION_MAX_PRECISION).toBe(0.70);
   });
 });
