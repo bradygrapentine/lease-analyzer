@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FindingsPanel } from './FindingsPanel';
 import type { Finding } from '../rules/types';
+import type { AuditEntry } from '../audit/auditLog';
 import { _resetAuditDbForTests } from '../audit/auditLog';
 
 // Wave 29-C — verify the hybrid-feedback button is wired into FindingsPanel
@@ -66,6 +67,53 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
       />,
     );
     expect(screen.queryByRole('button', { name: /not relevant/i })).toBeNull();
+  });
+
+  // Wave 32-C: audit entry id disclosure tests
+  it('renders the audit-entry entryHash (8 chars) when a matching llm-classify entry exists', async () => {
+    const classifyEntry: AuditEntry = {
+      seq: 1,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      kind: 'llm-classify',
+      payload: { ruleId: 'auto-renew', paragraphIndex: 3, modelId: 'classifier-x', similarity: 0.82 },
+      prevHash: '',
+      entryHash: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+    };
+    render(
+      <FindingsPanel
+        findings={[hybrid]}
+        onSelect={() => {}}
+        auditEntries={[classifyEntry]}
+      />,
+    );
+    // Open the hybrid detail disclosure
+    const badge = await screen.findByRole('button', { name: /identified by on-device classifier/i });
+    await userEvent.click(badge);
+    // Should show first 8 chars of entryHash
+    const dd = await screen.findByText('abcdef12');
+    expect(dd).toBeInTheDocument();
+    expect(dd).toHaveAttribute('title', 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890');
+  });
+
+  it('does not render the audit-entry section when no matching entry exists', async () => {
+    const unrelatedEntry: AuditEntry = {
+      seq: 1,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      kind: 'llm-classify',
+      payload: { ruleId: 'other-rule', paragraphIndex: 99 },
+      prevHash: '',
+      entryHash: 'deadbeef1234567890deadbeef1234567890deadbeef1234567890deadbeef12',
+    };
+    render(
+      <FindingsPanel
+        findings={[hybrid]}
+        onSelect={() => {}}
+        auditEntries={[unrelatedEntry]}
+      />,
+    );
+    const badge = await screen.findByRole('button', { name: /identified by on-device classifier/i });
+    await userEvent.click(badge);
+    expect(screen.queryByText(/audit entry/i)).toBeNull();
   });
 
   it('calls onHybridFeedback once; second click is a no-op', async () => {
