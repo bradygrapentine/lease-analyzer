@@ -171,6 +171,24 @@ New UI panels live in `src/ui/` and follow a four-file convention:
    provenance — no new audit `kind`, no IDB writes, read-only over
    `Finding.evidence`. Deterministic findings render no badge.
 
+## Subagent Bash permissions
+
+`.claude/` is gitignored, so the project-local
+`.claude/settings.local.json` allow-list is per-machine. Subagents
+launched via the Agent tool inherit that allow-list **but do not
+inherit the orchestrator's `bypassPermissions` defaultMode** (bypass
+is unsafe to propagate by design). Keep the allow-list pattern-based
+(`Bash(npm *)`, `Bash(git *)`, `Bash(gh *)`, etc.) — never
+exact-string. Exact entries like `Bash(echo "started hardening")`
+match exactly one prior invocation and force every subsequent
+subagent into inline takeover.
+
+When a dispatched subagent prompts for a Bash permission, the fix is
+to widen `.claude/settings.local.json` with a new wildcard, not to
+grant a one-off exact-string entry. New machines need to recreate
+the wildcard set on first dispatch — see Wave 34-B for the canonical
+shape.
+
 ## Testing patterns
 
 - Co-locate tests: `foo.ts` + `foo.test.ts`.
