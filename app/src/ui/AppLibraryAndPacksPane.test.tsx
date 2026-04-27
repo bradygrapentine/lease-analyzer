@@ -1,8 +1,40 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppLibraryAndPacksPane } from './AppLibraryAndPacksPane';
 import { I18nProvider } from '../i18n/I18nProvider';
+
+// Wave 30 Part B: SectionGroup defaults closed and reads localStorage.
+// jsdom's localStorage in this project lacks working get/set (see
+// `I18nProvider.test.tsx` for the same fixup); install a memory shim and
+// pre-seed it so tests that still poke at inner panel content see the
+// sections expanded.
+function installMemoryLocalStorage(): void {
+  const store = new Map<string, string>();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      get length() {
+        return store.size;
+      },
+      clear: () => store.clear(),
+      getItem: (k: string) => (store.has(k) ? (store.get(k) as string) : null),
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      removeItem: (k: string) => {
+        store.delete(k);
+      },
+      setItem: (k: string, v: string) => {
+        store.set(k, String(v));
+      },
+    } satisfies Storage,
+  });
+}
+
+function expandAllSectionsViaStorage(): void {
+  window.localStorage.setItem('lg.accordion.bottom-pane-this-lease.open', '1');
+  window.localStorage.setItem('lg.accordion.bottom-pane-library.open', '1');
+  window.localStorage.setItem('lg.accordion.bottom-pane-governance.open', '1');
+}
 
 function defaults(over: Partial<React.ComponentProps<typeof AppLibraryAndPacksPane>> = {}) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,6 +94,11 @@ function defaults(over: Partial<React.ComponentProps<typeof AppLibraryAndPacksPa
 }
 
 describe('AppLibraryAndPacksPane', () => {
+  beforeEach(() => {
+    installMemoryLocalStorage();
+    expandAllSectionsViaStorage();
+  });
+
   it('renders the library / templates / pack-manager / audit-log panels', () => {
     defaults();
     expect(screen.getByRole('heading', { name: /my leases/i })).toBeInTheDocument();

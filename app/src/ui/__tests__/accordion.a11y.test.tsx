@@ -1,10 +1,14 @@
 // Wave 28 Part F — axe-core sweep across the bottom-pane accordion.
+// Wave 30 Part B — flipped fixtures for default-closed sections; the
+// expanded-state sweep now opens all three groups before asserting,
+// while the collapsed-state sweep relies on the new default. Storage
+// is cleared per-test to keep the localStorage-backed defaults
+// deterministic in jsdom.
 //
 // Per plan §5 Part F.3 / F.4: every SectionGroup disclosure must satisfy
 // aria-expanded / aria-controls pairing in BOTH expanded and collapsed
-// states. Round-2 deviation: all three groups ship default-OPEN, so we
-// also need to verify the collapsed state by toggling.
-import { describe, it, expect, vi } from 'vitest';
+// states.
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { ComponentProps } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -69,10 +73,38 @@ function renderPane(over: Partial<ComponentProps<typeof AppLibraryAndPacksPane>>
   );
 }
 
-describe('Accordion axe-core sweep (Wave 28 Part F)', () => {
+describe('Accordion axe-core sweep (Wave 28 Part F / Wave 30 Part B)', () => {
+  beforeEach(() => {
+    // Wave 30 B: SectionGroup reads localStorage on mount. jsdom's stub
+    // lacks working get/set in this project (see `I18nProvider.test.tsx`),
+    // so install a working in-memory shim and start each case from the
+    // fresh-install default (no key set → all collapsed).
+    const store = new Map<string, string>();
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        get length() {
+          return store.size;
+        },
+        clear: () => store.clear(),
+        getItem: (k: string) => (store.has(k) ? (store.get(k) as string) : null),
+        key: (i: number) => Array.from(store.keys())[i] ?? null,
+        removeItem: (k: string) => {
+          store.delete(k);
+        },
+        setItem: (k: string, v: string) => {
+          store.set(k, String(v));
+        },
+      } satisfies Storage,
+    });
+  });
+
   it('all three SectionGroups expanded — zero axe violations', async () => {
     const { container } = renderPane();
-    // sanity — confirm all open
+    // Wave 30 B: open the three groups (default-closed) before sweeping.
+    await userEvent.click(screen.getByRole('button', { name: /this lease/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^library$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /governance/i }));
     expect(screen.getByRole('button', { name: /this lease/i })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -80,10 +112,12 @@ describe('Accordion axe-core sweep (Wave 28 Part F)', () => {
     await expectAxeClean(container);
   });
 
-  it('library + governance collapsed — zero axe violations (covers Round-2 deferred default-closed state)', async () => {
+  it('all three SectionGroups collapsed (fresh-install default) — zero axe violations', async () => {
     const { container } = renderPane();
-    await userEvent.click(screen.getByRole('button', { name: /^library$/i }));
-    await userEvent.click(screen.getByRole('button', { name: /governance/i }));
+    expect(screen.getByRole('button', { name: /this lease/i })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
     expect(screen.getByRole('button', { name: /^library$/i })).toHaveAttribute(
       'aria-expanded',
       'false',

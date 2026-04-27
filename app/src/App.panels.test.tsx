@@ -136,7 +136,36 @@ afterEach(() => {
   cleanup();
 });
 
+// Wave 30 Part B: SectionGroup defaults closed and reads localStorage.
+// Pre-seed a working memory shim with all bottom-pane sections open so
+// these tests (which reach into LibraryPanel / SeverityOverrides /
+// AuditLog / SigningKey / etc.) keep finding their content.
+function installAccordionStorageOpen(): void {
+  const store = new Map<string, string>();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      get length() {
+        return store.size;
+      },
+      clear: () => store.clear(),
+      getItem: (k: string) => (store.has(k) ? (store.get(k) as string) : null),
+      key: (i: number) => Array.from(store.keys())[i] ?? null,
+      removeItem: (k: string) => {
+        store.delete(k);
+      },
+      setItem: (k: string, v: string) => {
+        store.set(k, String(v));
+      },
+    } satisfies Storage,
+  });
+  window.localStorage.setItem('lg.accordion.bottom-pane-this-lease.open', '1');
+  window.localStorage.setItem('lg.accordion.bottom-pane-library.open', '1');
+  window.localStorage.setItem('lg.accordion.bottom-pane-governance.open', '1');
+}
+
 beforeEach(async () => {
+  installAccordionStorageOpen();
   // Let any pending IDB calls on the previous test's App settle before
   // we yank the underlying handles out from under them.
   await new Promise<void>((r) => setTimeout(r, 0));
