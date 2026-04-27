@@ -1,5 +1,12 @@
 @import 'tailwindcss';
 
+/* Wave 31-B — opt-in dark variant tied to the [data-theme="dark"]
+   selector that `useColorScheme` writes onto <html>. Lets future
+   `dark:` Tailwind utilities react to the toggle (none used today;
+   the dark theme is delivered purely by the [data-theme="dark"]
+   token-override block below). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* Self-hosted Source Serif 4 — local font-face declarations.
    Files dropped under app/public/fonts/ in step A.4. */
 @font-face {
@@ -96,6 +103,58 @@
   --ring-offset: #faf6ee;
   --state-hover: rgba(184, 134, 44, 0.08);
   --state-active: rgba(184, 134, 44, 0.16);
+}
+
+/* Wave 31-B — dark token variants. Light values stay in @theme above
+   as the default; dark values override every semantic --color-* token
+   via the [data-theme="dark"] selector that `useColorScheme` writes
+   onto <html>. Severity-bg variants auto-shift because color-mix()
+   re-evaluates against the overridden --color-paper-raised at use
+   time. Contrast validated to WCAG AA in the wave31-B PR description. */
+[data-theme="dark"] {
+  /* Surfaces — warm dark complement of the cream paper palette */
+  --color-paper: #15110d;
+  --color-paper-raised: #1f1a14;
+  --color-paper-sunken: #0c0907;
+
+  /* Text — cream on warm dark, AA across all roles */
+  --color-fg: #f5edd9;
+  --color-fg-body: #d4c9ad;
+  --color-fg-muted: #9a9075;
+  --color-fg-faint: #6c6452;
+
+  /* Rules / lines — kept low-contrast, decorative only */
+  --color-rule: #3d362a;
+  --color-rule-subtle: #29241c;
+
+  /* Single accent — lifted steel blue */
+  --color-ink: #7ba9c4;
+
+  /* Severity (functional color, never the sole signal) — brightened
+     for legibility on dark surfaces. severity-bg / severity-border
+     tokens defined in @theme auto-derive via color-mix. */
+  --color-severity-high: #d96954;
+  --color-severity-medium: #d6a04a;
+  --color-severity-low: #87a587;
+  --color-severity-info: #8c9caa;
+
+  /* Status */
+  --color-positive: #6ea36e;
+  --color-negative: #c44535;
+
+  /* Interactive state — re-tuned mustard against deep warm paper */
+  --ring: #d6a04a;
+  --ring-offset: #15110d;
+  --state-hover: rgba(214, 160, 74, 0.10);
+  --state-active: rgba(214, 160, 74, 0.20);
+
+  /* PDF highlight — slightly stronger so it reads on dark paper */
+  --color-highlight: rgba(255, 235, 59, 0.42);
+  --color-highlight-border: rgba(255, 193, 7, 0.95);
+
+  /* Single shadow — softened in dark; the paper sits on a near-black
+     so a heavy shadow reads as a halo. */
+  --shadow-paper: 0 1px 0 rgba(0, 0, 0, 0.45);
 }
 
 /* Focus-ring utility — applied via `focus-visible:focus-ring` on
