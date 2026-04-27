@@ -97,7 +97,7 @@ export function SideLetterPanel({
             title="side letter preview"
             srcDoc={previewHtml}
             sandbox=""
-            style={{ width: '100%', height: '32rem', border: '1px solid #ddd' }}
+            style={{ width: '100%', height: '32rem', border: '1px solid var(--color-rule)' }}
           />
         </div>
       )}
