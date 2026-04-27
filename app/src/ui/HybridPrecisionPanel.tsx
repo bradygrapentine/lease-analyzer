@@ -7,7 +7,11 @@
 
 import { useState } from 'react';
 import type { AuditEntry } from '../audit/auditLog';
-import { computeHybridStats, type HybridRuleStats } from '../audit/hybridStats';
+import {
+  computeHybridStats,
+  isDemotionCandidate,
+  type HybridRuleStats,
+} from '../audit/hybridStats';
 import { Section } from './system/Section';
 import { EmptyState } from './system/EmptyState';
 
@@ -53,6 +57,8 @@ export function HybridPrecisionPanel({
     return ap - bp;
   });
 
+  const demotionCandidates = stats.filter(isDemotionCandidate);
+
   return (
     <Section label="hybrid precision" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">
@@ -62,6 +68,28 @@ export function HybridPrecisionPanel({
         Per-rule precision over hybrid (LLM-assisted) findings.
         Precision = 1 − (not-relevant ÷ fires).
       </p>
+
+      {demotionCandidates.length === 0 ? (
+        <p className="text-small text-fg-muted">
+          No rules currently meet demotion thresholds (≥10 fires AND &lt;70% precision). The panel will populate as users mark hybrid findings not-relevant.
+        </p>
+      ) : (
+        <div className="space-y-1">
+          <h3 className="text-small text-fg-muted font-sans">
+            Demotion candidates ({demotionCandidates.length})
+          </h3>
+          <ul className="text-small text-fg-body space-y-0.5">
+            {demotionCandidates.map((row) => (
+              <li key={row.ruleId} className="font-mono text-mono">
+                {row.ruleId} — {row.fires} fires, {((row.precision as number) * 100).toFixed(1)}%
+              </li>
+            ))}
+          </ul>
+          <p className="text-small text-fg-muted">
+            To demote: remove `hybridAnchors` from this rule in `app/src/rules/packV1.ts`.
+          </p>
+        </div>
+      )}
 
       <div role="group" aria-label="hybrid precision controls" className="flex flex-wrap gap-2">
         <label className="text-small text-fg-muted">

@@ -11,6 +11,18 @@ const populated: HybridRuleStats[] = [
   { ruleId: 'orphan', fires: 0, notRelevant: 1, precision: null },
 ];
 
+// Stats where no row meets demotion thresholds (all fires < 10 or precision >= 0.70)
+const noCandidates: HybridRuleStats[] = [
+  { ruleId: 'auto-renewal', fires: 12, notRelevant: 2, precision: 1 - 2 / 12 }, // 83% precision — good
+  { ruleId: 'late-fee-cap', fires: 9, notRelevant: 6, precision: 1 - 6 / 9 },   // only 9 fires — below floor
+];
+
+// Stats where one row is a demotion candidate (fires >= 10 AND precision < 0.70)
+const withCandidate: HybridRuleStats[] = [
+  { ruleId: 'auto-renewal', fires: 12, notRelevant: 2, precision: 1 - 2 / 12 }, // 83% precision — good
+  { ruleId: 'rule.indemnity', fires: 14, notRelevant: 5, precision: 0.643 },     // candidate
+];
+
 describe('HybridPrecisionPanel', () => {
   it('renders an empty state when stats is empty', () => {
     render(<HybridPrecisionPanel stats={[]} />);
@@ -53,6 +65,19 @@ describe('HybridPrecisionPanel', () => {
       'hybrid-precision-row-security-deposit', // 100%
       'hybrid-precision-row-orphan', // null → last
     ]);
+  });
+
+  it('renders the empty-state copy when no rules meet demotion thresholds', () => {
+    render(<HybridPrecisionPanel stats={noCandidates} />);
+    expect(screen.getByText(/No rules currently meet demotion thresholds/i)).toBeInTheDocument();
+    expect(screen.getByText(/≥10 fires AND <70% precision/)).toBeInTheDocument();
+  });
+
+  it('lists demotion candidates with rule id, fires, and precision', () => {
+    render(<HybridPrecisionPanel stats={withCandidate} />);
+    expect(screen.getByText(/Demotion candidates \(1\)/)).toBeInTheDocument();
+    expect(screen.getByText(/rule\.indemnity — 14 fires, 64\.3%/)).toBeInTheDocument();
+    expect(screen.getByText(/remove `hybridAnchors`/)).toBeInTheDocument();
   });
 
   it('switches to fires-desc ordering on user request', async () => {
