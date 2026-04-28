@@ -22,13 +22,19 @@ export default defineConfig({
         // int8-quantized MiniLM-L3 weights (~17.5 MiB); the previous 5 MiB
         // cap excluded them.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm,mjs,onnx,txt,json}'],
-        // ONNX Runtime WASM (~9.5 MiB) is intentionally NOT precached:
-        // adding it would push the precache past its 30 MiB budget and
-        // racing the precache write with transformers' direct fetch
-        // throws ERR_CACHE_WRITE_FAILURE in fresh profiles. It's still
-        // served same-origin (CSP requires it) — just on-demand, not
-        // up-front.
-        globIgnores: ['classifier/onnx-runtime/**'],
+        // ONNX Runtime WASM is intentionally NOT precached: it would
+        // push the precache past its 30 MiB budget, and racing the
+        // precache write with transformers' direct fetch throws
+        // ERR_CACHE_WRITE_FAILURE in fresh profiles. It's still served
+        // same-origin (CSP requires it) — just on-demand, not up-front.
+        // - `classifier/onnx-runtime/**` covers v2's WASM staged by
+        //   `npm run build:classifier-assets`.
+        // - `assets/ort-wasm-*` (Wave 36 Part A) covers v4's WASM
+        //   auto-emitted by Vite from the `@huggingface/transformers`
+        //   static imports. v4 ships only threaded variants (Wave 36
+        //   Part 0 spike); the `asyncify` variant is what Vite picks
+        //   for non-SAB envs.
+        globIgnores: ['classifier/onnx-runtime/**', 'assets/ort-wasm-*'],
         maximumFileSizeToCacheInBytes: 18 * 1024 * 1024,
         navigateFallback: 'index.html',
       },
