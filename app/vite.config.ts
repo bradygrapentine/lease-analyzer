@@ -29,12 +29,20 @@ export default defineConfig({
         // same-origin (CSP requires it) — just on-demand, not up-front.
         // - `classifier/onnx-runtime/**` covers v2's WASM staged by
         //   `npm run build:classifier-assets`.
-        // - `assets/ort-wasm-*` (Wave 36 Part A) covers v4's WASM
-        //   auto-emitted by Vite from the `@huggingface/transformers`
-        //   static imports. v4 ships only threaded variants (Wave 36
-        //   Part 0 spike); the `asyncify` variant is what Vite picks
-        //   for non-SAB envs.
-        globIgnores: ['classifier/onnx-runtime/**', 'assets/ort-wasm-*'],
+        // - `classifier/onnx-runtime-v4/**` covers v4's WASM (Wave 36
+        //   Part B). v4 ships four `.wasm`/`.mjs` pairs and picks one
+        //   at runtime by capability detection; we stage all four
+        //   same-origin and let it resolve `wasmPaths` against
+        //   `/classifier/onnx-runtime-v4/`. Some variants exceed
+        //   Workbox's 18 MiB per-file cap anyway (jsep ~26 MiB),
+        //   which forces the same on-demand-fetch contract as v2.
+        // - `assets/ort-wasm-*` is a defensive carry-over from the
+        //   Part A bundling attempt; harmless to keep.
+        globIgnores: [
+          'classifier/onnx-runtime/**',
+          'classifier/onnx-runtime-v4/**',
+          'assets/ort-wasm-*',
+        ],
         maximumFileSizeToCacheInBytes: 18 * 1024 * 1024,
         navigateFallback: 'index.html',
       },

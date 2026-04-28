@@ -39,12 +39,20 @@ export const DEFAULT_MODEL_ID = 'Xenova/paraphrase-MiniLM-L3-v2';
 
 let cached: Promise<EmbedFunction> | null = null;
 
-/** Wave 36 — read the runtime-selection URL flag. */
+/**
+ * Wave 36 — read the runtime-selection URL flag.
+ *
+ * Wave 36 Part B flipped the default to v4. The `?transformersV2=on`
+ * kill switch is transient — Part C removes it once the v4-default
+ * window proves stable. SSR-safe: returns v4 (the default) when
+ * `window` is undefined.
+ */
 export function readRuntimeFlag(): 'v2' | 'v4' {
-  if (typeof window === 'undefined') return 'v2';
+  if (typeof window === 'undefined') return 'v4';
   const search = window.location?.search ?? '';
   const params = new URLSearchParams(search);
-  return params.get('transformersV4') === 'on' ? 'v4' : 'v2';
+  if (params.get('transformersV2') === 'on') return 'v2';
+  return 'v4';
 }
 
 async function loadV2Pipeline(modelId: string): Promise<EmbedFunction> {
@@ -76,16 +84,26 @@ async function loadV2Pipeline(modelId: string): Promise<EmbedFunction> {
 async function loadV4Pipeline(modelId: string): Promise<EmbedFunction> {
   const transformers = await import('@huggingface/transformers');
   transformers.env.localModelPath = '/classifier/';
+  // v4 requires `allowLocalModels` to be explicitly true when
+  // `allowRemoteModels` is false; v2 defaulted to true. Without this,
+  // v4's PretrainedModel.from_pretrained throws "both local and remote
+  // models are disabled" before reaching the loader.
+  transformers.env.allowLocalModels = true;
   transformers.env.allowRemoteModels = false;
-  // v4 self-hosts ORT WASM via Vite asset emission (dist/assets/
-  // ort-wasm-*.wasm). `wasmPaths` is left unset so v4's runtime
-  // resolves the file via `import.meta.url`, which Vite rewrites to
-  // the hashed asset path at build time. Per the Part 0 spike, ORT
-  // 1.26 ships only threaded WASM variants but degrades to
-  // single-thread when `SharedArrayBuffer` is unavailable (the
-  // COOP/COEP-not-set case). `numThreads = 1` reinforces that.
+  // Self-host v4 ORT WASM same-origin under `/classifier/onnx-runtime-v4/`.
+  // Mirrors v2's `/classifier/onnx-runtime/` pattern. With `wasmPaths`
+  // unset, v4's runtime resolves the `.wasm` via `import.meta.url` from
+  // the bundled `.mjs` glue and falls back to a jsdelivr CDN fetch for
+  // sibling files — both paths are blocked by the app's CSP
+  // (`connect-src 'self'`). `build:classifier-assets` copies
+  // `ort-wasm-simd-threaded.{wasm,mjs}` from
+  // `node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/`.
+  // ORT 1.19 ships only threaded variants but degrades to single-thread
+  // when `SharedArrayBuffer` is unavailable (no COOP/COEP); `numThreads = 1`
+  // reinforces that.
   const wasmEnv = transformers.env.backends.onnx.wasm;
   if (wasmEnv) {
+    wasmEnv.wasmPaths = '/classifier/onnx-runtime-v4/';
     wasmEnv.numThreads = 1;
   }
   const pipeline = transformers.pipeline as (
