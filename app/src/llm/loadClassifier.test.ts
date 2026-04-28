@@ -1,19 +1,10 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import {
-  DEFAULT_MODEL_ID,
-  loadClassifier,
-  readRuntimeFlag,
-  _resetClassifierCacheForTests,
-} from './loadClassifier';
+import { DEFAULT_MODEL_ID, loadClassifier, _resetClassifierCacheForTests } from './loadClassifier';
 
 afterEach(() => {
   _resetClassifierCacheForTests();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  Object.defineProperty(window, 'location', {
-    configurable: true,
-    value: new URL('http://localhost/'),
-  });
 });
 
 describe('Phase 18 loadClassifier', () => {
@@ -43,39 +34,5 @@ describe('Phase 18 loadClassifier', () => {
     expect(a).toBe(b);
     a.catch(() => {});
     b.catch(() => {});
-  });
-});
-
-describe('Wave 36 readRuntimeFlag (v4-default after Part B)', () => {
-  it('returns v4 when no flag is present (default after Part B flip)', () => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: new URL('http://localhost/'),
-    });
-    expect(readRuntimeFlag()).toBe('v4');
-  });
-
-  it('returns v2 when the ?transformersV2=on kill switch is set', () => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: new URL('http://localhost/?transformersV2=on'),
-    });
-    expect(readRuntimeFlag()).toBe('v2');
-  });
-
-  it('returns v4 when transformersV2 is set to anything other than "on"', () => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: new URL('http://localhost/?transformersV2=true'),
-    });
-    expect(readRuntimeFlag()).toBe('v4');
-  });
-
-  it('coexists with other URL params (v2 kill switch wins)', () => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: new URL('http://localhost/?phase18=on&transformersV2=on&debug=1'),
-    });
-    expect(readRuntimeFlag()).toBe('v2');
   });
 });

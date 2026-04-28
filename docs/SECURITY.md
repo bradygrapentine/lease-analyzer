@@ -414,13 +414,16 @@ class we use. Effectively a Phase 18 rollback.
 **Update (Wave 33-A, 2026-04-27):** investigation confirmed
 `@xenova/transformers@2.17.2` is the end of that line — the package
 moved to `@huggingface/transformers@4.x` (different package, v2→v4
-breaking-change migration). Migration is its own future Phase 19
-wave with explicit brainstorm; not folded into hygiene work. Until
-that lands, `audit:prod` filters
+breaking-change migration). Until that landed, `audit:prod`
+filtered
 [GHSA-xq3m-2v4x-88gg](https://github.com/advisories/GHSA-xq3m-2v4x-88gg)
-via `app/scripts/audit-prod.mjs` `ALLOW_ADVISORIES`. Any *new*
-high+ advisory that doesn't trace back to that ID still fails the
-gate.
+via `app/scripts/audit-prod.mjs` `ALLOW_ADVISORIES`.
+
+**Resolved (Wave 36-C, 2026-04-28):** `@xenova/transformers` removed
+from `dependencies`; v4 (`@huggingface/transformers@4.2.0`) is the
+sole runtime. The vulnerable `protobufjs` chain no longer surfaces
+in `npm audit --omit=dev`, and `ALLOW_ADVISORIES` is now empty.
+This entry is retained for historical context.
 
 ### 7.2 `esbuild <=0.24.2` — dev-server cross-origin reads
 

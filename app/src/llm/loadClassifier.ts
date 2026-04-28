@@ -1,18 +1,11 @@
-// Wave 20 Part C / Wave 36 Part A — Phase 18 lazy-loader.
+// Wave 20 Part C / Wave 36 — Phase 18 lazy-loader.
 //
-// Wave 36 added a dual-runtime branch. The legacy `@xenova/transformers`
-// path remains the default; setting the URL flag `?transformersV4=on`
-// switches to `@huggingface/transformers@4`, the official upstream
-// successor. The branch lives at the dynamic-import boundary so the
-// inactive runtime never enters the user's bundle. Wave 36 Part C
-// removes the v2 branch after Part B's smoke walk validates the flip.
-//
-// The v4 spike (Part 0) found two API divergences from v2 that this
-// loader has to handle: (1) v4's default `dtype` is fp32, so it would
-// look for `onnx/model.onnx` — passing `dtype: 'q8'` redirects it to
-// the existing `onnx/model_quantized.onnx` weights; (2) v4 typings
-// make `env.backends.onnx.wasm` possibly undefined, requiring an
-// existence guard.
+// Runtime: `@huggingface/transformers@4`. Two API quirks this loader
+// has to handle: (1) v4's default `dtype` is fp32, so it would look
+// for `onnx/model.onnx` — passing `dtype: 'q8'` redirects it to the
+// existing `onnx/model_quantized.onnx` weights; (2) v4 typings make
+// `env.backends.onnx.wasm` possibly undefined, requiring an existence
+// guard.
 //
 // Local-only contract: the downloader (`npm run build:classifier-assets`)
 // places the model under `app/public/classifier/<modelId>/`, so the
@@ -39,48 +32,6 @@ export const DEFAULT_MODEL_ID = 'Xenova/paraphrase-MiniLM-L3-v2';
 
 let cached: Promise<EmbedFunction> | null = null;
 
-/**
- * Wave 36 — read the runtime-selection URL flag.
- *
- * Wave 36 Part B flipped the default to v4. The `?transformersV2=on`
- * kill switch is transient — Part C removes it once the v4-default
- * window proves stable. SSR-safe: returns v4 (the default) when
- * `window` is undefined.
- */
-export function readRuntimeFlag(): 'v2' | 'v4' {
-  if (typeof window === 'undefined') return 'v4';
-  const search = window.location?.search ?? '';
-  const params = new URLSearchParams(search);
-  if (params.get('transformersV2') === 'on') return 'v2';
-  return 'v4';
-}
-
-async function loadV2Pipeline(modelId: string): Promise<EmbedFunction> {
-  const transformers = await import('@xenova/transformers');
-  transformers.env.localModelPath = '/classifier/';
-  transformers.env.allowRemoteModels = false;
-  // Self-host the ONNX Runtime WASM so the classifier never reaches
-  // out to a CDN (the default `wasmPaths` is jsdelivr — blocked by
-  // the app's `connect-src 'self'` CSP). Single-thread SIMD: the
-  // threaded variants need SharedArrayBuffer (COOP/COEP), which the
-  // app doesn't enable.
-  transformers.env.backends.onnx.wasm.wasmPaths = '/classifier/onnx-runtime/';
-  transformers.env.backends.onnx.wasm.numThreads = 1;
-  const pipeline = transformers.pipeline as (task: string, model: string) => Promise<unknown>;
-  const extractor = (await pipeline('feature-extraction', modelId)) as (
-    input: string | string[],
-    opts?: { pooling?: string; normalize?: boolean },
-  ) => Promise<{ data: Float32Array }>;
-  return async (texts: string[]) => {
-    const out: Float32Array[] = [];
-    for (const t of texts) {
-      const r = await extractor(t, { pooling: 'mean', normalize: true });
-      out.push(r.data);
-    }
-    return out;
-  };
-}
-
 async function loadV4Pipeline(modelId: string): Promise<EmbedFunction> {
   const transformers = await import('@huggingface/transformers');
   transformers.env.localModelPath = '/classifier/';
@@ -91,12 +42,11 @@ async function loadV4Pipeline(modelId: string): Promise<EmbedFunction> {
   transformers.env.allowLocalModels = true;
   transformers.env.allowRemoteModels = false;
   // Self-host v4 ORT WASM same-origin under `/classifier/onnx-runtime-v4/`.
-  // Mirrors v2's `/classifier/onnx-runtime/` pattern. With `wasmPaths`
-  // unset, v4's runtime resolves the `.wasm` via `import.meta.url` from
-  // the bundled `.mjs` glue and falls back to a jsdelivr CDN fetch for
-  // sibling files — both paths are blocked by the app's CSP
-  // (`connect-src 'self'`). `build:classifier-assets` copies
-  // `ort-wasm-simd-threaded.{wasm,mjs}` from
+  // With `wasmPaths` unset, v4's runtime resolves the `.wasm` via
+  // `import.meta.url` from the bundled `.mjs` glue and falls back to a
+  // jsdelivr CDN fetch for sibling files — both paths are blocked by
+  // the app's CSP (`connect-src 'self'`). `build:classifier-assets`
+  // copies `ort-wasm-simd-threaded.{wasm,mjs}` (and variants) from
   // `node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/`.
   // ORT 1.19 ships only threaded variants but degrades to single-thread
   // when `SharedArrayBuffer` is unavailable (no COOP/COEP); `numThreads = 1`
@@ -130,15 +80,10 @@ async function loadV4Pipeline(modelId: string): Promise<EmbedFunction> {
   };
 }
 
-/**
- * Load (or return cached) the on-device classifier. Branches on the
- * Wave 36 `?transformersV4=on` URL flag at the dynamic-import boundary.
- */
+/** Load (or return cached) the on-device classifier. */
 export function loadClassifier(modelId: string = DEFAULT_MODEL_ID): Promise<EmbedFunction> {
   if (cached) return cached;
-  cached = readRuntimeFlag() === 'v4'
-    ? loadV4Pipeline(modelId)
-    : loadV2Pipeline(modelId);
+  cached = loadV4Pipeline(modelId);
   return cached;
 }
 
