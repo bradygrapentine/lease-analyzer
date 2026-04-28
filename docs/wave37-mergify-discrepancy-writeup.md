@@ -1,9 +1,11 @@
-# Wave 37 — Mergify / branch-protection discrepancy: closed by Wave 30-C
+# Wave 37 — Mergify / branch-protection discrepancy: closed by Wave 30-C, plus npm-audit promotion
 
-**Status:** No code change. Investigation confirms the discrepancy that
-allowed PRs #113-#116 to merge red was already closed by Waves 29-A and
-30-C. This document is the deliverable per the Wave 37 plan §8 risk
-("if the gap is closed, the wave's deliverable is just the writeup").
+**Status:** Investigation confirmed the original discrepancy that
+allowed PRs #113-#116 to merge red was closed by Waves 29-A and 30-C.
+This wave additionally promotes `npm-audit` to a required check
+(branch-protection `contexts` + Mergify queue/merge/refuse rules) so a
+red audit blocks merge instead of being advisory. Tauri matrix stays
+non-required (3-OS heavyweight; separate decision).
 
 ## Wave 28 snapshot (the anomaly)
 
@@ -65,14 +67,24 @@ added a `.mergify.yml` whose `queue_conditions` and `merge_conditions`
 require the same five contexts, plus a defensive `refuse merge`
 `pull_request_rules` entry.
 
-## Open policy question (out of scope for this PR)
+## Policy change in this PR: `npm-audit` is now required
 
-`npm-audit` and the Tauri matrix remain non-required. They've been
-incidentally green for every PR sampled post-Wave-30. Whether to
-promote `npm-audit` to required is a **policy** decision — it would
-gate merges on transitive-dep CVE windows, which has been deliberately
-avoided. Flagging here so a future wave can decide; not changing it
-in this PR.
+`npm-audit` has been incidentally green for every PR sampled post-Wave-30,
+so the cost of promoting it is small while the upside (a transitive-dep
+CVE blocks merge instead of slipping in unnoticed) is concrete. This PR:
+
+- Adds `check-success=npm-audit` to `.mergify.yml` `queue_conditions`
+  and `merge_conditions`, and `check-failure=npm-audit` to the
+  refuse-merge `pull_request_rules` entry.
+- Adds `npm-audit` to GitHub branch-protection
+  `required_status_checks.contexts` via `gh api -X POST
+  .../branches/main/protection/required_status_checks/contexts -f
+  'contexts[]=npm-audit'`.
+
+The Tauri build matrix (`Tauri build (ubuntu-latest|macos-latest|windows-latest)`)
+stays non-required: it's a heavyweight 3-OS matrix used for desktop-wrapper
+exploration, not core webapp delivery. Promoting it should be a separate
+deliberate decision.
 
 ## Verification
 
@@ -86,7 +98,10 @@ and three real PRs (#145, #148, #152) demonstrate it.
 
 ## What ships
 
-This writeup. No `.mergify.yml`, workflow, or branch-protection edits.
+- This writeup.
+- `.mergify.yml` — adds `npm-audit` to queue/merge/refuse conditions.
+- Branch-protection — `npm-audit` added to required `contexts` (applied
+  via `gh api`; not a file in the repo).
 
 ## References
 
