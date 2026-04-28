@@ -589,6 +589,23 @@ score: number }` field that the LLM path populates. The audit
 blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       and the dist build serves the model from same-origin.
 
+### Wave 35 follow-ups
+
+- [ ] Re-run `npm run hybrid:stats` after meaningful real-world usage
+      accumulates. Wave 35 Part A shipped the tool; Part A's first
+      run was a NO-OP (zero audit entries on the dogfooding
+      machine). Once the audit chain has ≥10 fires for at least one
+      hybrid rule, re-export and re-run. If any rule clears
+      `precision < 0.70`, open the deferred Wave 35 Part B
+      (anchor demotions in `app/src/rules/packV1.ts`).
+- [ ] Pre-existing IDB cleanup race in `App.test.tsx > "clear-all
+      aborts when confirmation is declined"` surfaces as one
+      `Vitest > Unhandled Rejection (InvalidStateError)` per full
+      test run (storage.ts:183 `clearAll`). Tests pass; the
+      rejection is post-test. Reproduces on stock `origin/main` —
+      not introduced by Wave 35. Worth root-causing in a hygiene
+      slot.
+
 ### Wave 34 dark-mode follow-ups
 
 A static walk of all 40 Storybook stories and their underlying
