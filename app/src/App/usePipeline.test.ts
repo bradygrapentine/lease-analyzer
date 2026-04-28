@@ -159,7 +159,7 @@ describe('usePipeline', () => {
 
   it('ocr() falls back gracefully when loadClassifier throws', async () => {
     // Force the flag on for this test, then expect the inner load to
-    // fail (jsdom can't run @xenova/transformers) and the pipeline to
+    // fail (jsdom can't run @huggingface/transformers) and the pipeline to
     // still complete with deterministic findings.
     Object.defineProperty(window, 'location', {
       value: new URL('http://localhost/?phase18=on'),

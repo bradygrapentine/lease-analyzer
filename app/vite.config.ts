@@ -27,20 +27,17 @@ export default defineConfig({
         // precache write with transformers' direct fetch throws
         // ERR_CACHE_WRITE_FAILURE in fresh profiles. It's still served
         // same-origin (CSP requires it) — just on-demand, not up-front.
-        // - `classifier/onnx-runtime/**` covers v2's WASM staged by
-        //   `npm run build:classifier-assets`.
-        // - `classifier/onnx-runtime-v4/**` covers v4's WASM (Wave 36
-        //   Part B). v4 ships four `.wasm`/`.mjs` pairs and picks one
-        //   at runtime by capability detection; we stage all four
-        //   same-origin and let it resolve `wasmPaths` against
-        //   `/classifier/onnx-runtime-v4/`. Some variants exceed
-        //   Workbox's 18 MiB per-file cap anyway (jsep ~26 MiB),
-        //   which forces the same on-demand-fetch contract as v2.
-        // - `assets/ort-wasm-*` is a defensive carry-over from the
-        //   Part A bundling attempt; harmless to keep.
+        // v4 ships four `.wasm`/`.mjs` pairs and picks one at runtime
+        // by capability detection; we stage all four same-origin and
+        // let it resolve `wasmPaths` against `/classifier/onnx-runtime-v4/`.
+        // Some variants exceed Workbox's 18 MiB per-file cap anyway
+        // (jsep ~26 MiB), which forces the on-demand-fetch contract.
         globIgnores: [
-          'classifier/onnx-runtime/**',
           'classifier/onnx-runtime-v4/**',
+          // Vite emits hashed copies of v4's ORT `.wasm` glue under
+          // dist/assets/ (asyncify variant ~23 MB exceeds the 18 MiB
+          // per-file cap). Keep them out of precache; they're served
+          // on-demand same-origin.
           'assets/ort-wasm-*',
         ],
         maximumFileSizeToCacheInBytes: 18 * 1024 * 1024,

@@ -15,15 +15,9 @@ import { spawnSync } from 'node:child_process';
 /** Advisory URLs for vulnerabilities the project has accepted with rationale.
  *  Each entry MUST have a corresponding §accept-risk note in docs/SECURITY.md. */
 const ALLOW_ADVISORIES = new Set([
-  // protobufjs <7.5.5 — arbitrary code execution. Transitive only,
-  // reached via @xenova/transformers → onnxruntime-web → onnx-proto →
-  // protobufjs. @xenova/transformers v2 is end-of-life upstream
-  // (no fix forthcoming on that line). Migration to the successor
-  // package @huggingface/transformers v4 is tracked as a future
-  // Phase 19 wave with its own brainstorm — out of scope for hygiene
-  // work. See docs/SECURITY.md §accept-risk for the standing
-  // rationale.
-  'https://github.com/advisories/GHSA-xq3m-2v4x-88gg',
+  // (empty — Wave 36-C dropped the GHSA-xq3m-2v4x-88gg entry that was
+  // pinned by the @xenova/transformers v2 dependency chain. v4 no
+  // longer pulls in the vulnerable protobufjs.)
 ]);
 
 function collectRootUrls(name, vulns, seen) {
