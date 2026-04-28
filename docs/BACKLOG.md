@@ -589,6 +589,34 @@ score: number }` field that the LLM path populates. The audit
 blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       and the dist build serves the model from same-origin.
 
+### Wave 34 dark-mode follow-ups
+
+A static walk of all 40 Storybook stories and their underlying
+components surfaced **zero hard-coded color regressions in app source**:
+the Wave 31-B token cascade plus Wave 32-B's palette-class regression
+test are doing their job. Wave 34-C tightened the regression test to
+also catch arbitrary-value hex (`bg-[#fff]`), inline-style hex
+(`style={{ color: '#xxx' }}`), and SVG attribute hex (`fill="#xxx"`).
+The follow-ups below are genuine UX nits that the static audit cannot
+address — visual or product-level work, not source-color cleanup.
+
+- [ ] PDF page raster is not theme-aware. `pdf.js` rasterizes the
+      document as-is, so a black-ink-on-white-paper lease renders
+      bright in dark mode. Themed pdf rendering would require either
+      a CSS filter (`invert/hue-rotate`) on the canvas or a per-page
+      post-process step. Out of scope for Wave 34; record as a Phase
+      19+ candidate.
+- [ ] Storybook visual snapshot infrastructure (Chromatic / Percy /
+      local Playwright per-story screenshots in light + dark) would
+      promote this audit from "static-grep + manual walk" to "CI-gated
+      pixel diff". Explicit out-of-scope per Wave 34 spec; track here.
+- [ ] Severity-bg contrast review. The `--color-severity-bg-*` tokens
+      use `color-mix(... 22%, --color-paper-raised)` which derives
+      automatically under dark theme; Wave 31-B claimed AA validation
+      but a fresh axe + manual contrast pass against the dark palette
+      would convert "claimed" to "verified". Pair with the deferred
+      Wave 28-F follow-up.
+
 ## Cross-cutting tech debt
 
 - [x] Extract a `usePipeline` hook — App's `handleBytes` was the
