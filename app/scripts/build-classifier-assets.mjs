@@ -41,6 +41,35 @@ const ORT_SOURCE = join(
   'dist',
   'ort-wasm-simd.wasm',
 );
+// Wave 36 Part B — v4's ORT (onnxruntime-web 1.19+) ships only
+// threaded SIMD variants. Stage them same-origin so v4's loader
+// resolves `wasmPaths = '/classifier/onnx-runtime-v4/'` against
+// our CSP `connect-src 'self'`. The `.mjs` glue is the entrypoint
+// the runtime imports; it locates the `.wasm` next to itself.
+const ORT_V4_DEST = join(APP_ROOT, 'public', 'classifier', 'onnx-runtime-v4');
+const ORT_V4_SOURCE_DIR = join(
+  APP_ROOT,
+  'node_modules',
+  '@huggingface',
+  'transformers',
+  'node_modules',
+  'onnxruntime-web',
+  'dist',
+);
+// ORT 1.19 ships four `.wasm`/`.mjs` pairs. Its loader picks one at
+// runtime based on capability detection (asyncify is the fallback when
+// neither JSPI nor SAB is available — Chromium without COOP/COEP). We
+// stage all four so whichever it picks resolves same-origin.
+const ORT_V4_FILES = [
+  'ort-wasm-simd-threaded.wasm',
+  'ort-wasm-simd-threaded.mjs',
+  'ort-wasm-simd-threaded.asyncify.wasm',
+  'ort-wasm-simd-threaded.asyncify.mjs',
+  'ort-wasm-simd-threaded.jsep.wasm',
+  'ort-wasm-simd-threaded.jsep.mjs',
+  'ort-wasm-simd-threaded.jspi.wasm',
+  'ort-wasm-simd-threaded.jspi.mjs',
+];
 
 
 const HF_BASE = `https://huggingface.co/${MODEL_REPO}/resolve/main`;
@@ -131,6 +160,26 @@ async function main() {
     await copyFile(ORT_SOURCE, ortDest);
     console.log(`  ort-wasm-simd.wasm                   ${fmt(statSync(ortDest).size)}`);
     total += statSync(ortDest).size;
+  }
+
+  // Wave 36 Part B — stage v4 ORT WASM + glue under onnx-runtime-v4/.
+  await mkdir(ORT_V4_DEST, { recursive: true });
+  for (const name of ORT_V4_FILES) {
+    const src = join(ORT_V4_SOURCE_DIR, name);
+    const dst = join(ORT_V4_DEST, name);
+    const label = `  ${name.padEnd(36, ' ')} `;
+    if (existsSync(dst) && statSync(dst).size > 0) {
+      console.log(`${label}${fmt(statSync(dst).size)} (already present)`);
+      continue;
+    }
+    if (!existsSync(src)) {
+      console.error(`${label}FAILED (${src} not found — run npm install)`);
+      failed += 1;
+      continue;
+    }
+    await copyFile(src, dst);
+    console.log(`${label}${fmt(statSync(dst).size)}`);
+    total += statSync(dst).size;
   }
 
   console.log('');

@@ -46,36 +46,36 @@ describe('Phase 18 loadClassifier', () => {
   });
 });
 
-describe('Wave 36 readRuntimeFlag', () => {
-  it('returns v2 when no flag is present', () => {
+describe('Wave 36 readRuntimeFlag (v4-default after Part B)', () => {
+  it('returns v4 when no flag is present (default after Part B flip)', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: new URL('http://localhost/'),
     });
-    expect(readRuntimeFlag()).toBe('v2');
-  });
-
-  it('returns v4 when ?transformersV4=on is set', () => {
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: new URL('http://localhost/?transformersV4=on'),
-    });
     expect(readRuntimeFlag()).toBe('v4');
   });
 
-  it('returns v2 when transformersV4 is set to anything other than "on"', () => {
+  it('returns v2 when the ?transformersV2=on kill switch is set', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: new URL('http://localhost/?transformersV4=true'),
+      value: new URL('http://localhost/?transformersV2=on'),
     });
     expect(readRuntimeFlag()).toBe('v2');
   });
 
-  it('coexists with other URL params', () => {
+  it('returns v4 when transformersV2 is set to anything other than "on"', () => {
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: new URL('http://localhost/?phase18=on&transformersV4=on&debug=1'),
+      value: new URL('http://localhost/?transformersV2=true'),
     });
     expect(readRuntimeFlag()).toBe('v4');
+  });
+
+  it('coexists with other URL params (v2 kill switch wins)', () => {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: new URL('http://localhost/?phase18=on&transformersV2=on&debug=1'),
+    });
+    expect(readRuntimeFlag()).toBe('v2');
   });
 });
