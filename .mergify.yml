@@ -15,12 +15,14 @@ queue_rules:
       - check-success=smoke (firefox)
       - check-success=smoke (webkit)
       - check-success=Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
+      - check-success=npm-audit
     merge_conditions:
       - check-success=verify
       - check-success=smoke (chromium)
       - check-success=smoke (firefox)
       - check-success=smoke (webkit)
       - check-success=Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
+      - check-success=npm-audit
     merge_method: squash
 
 pull_request_rules:
@@ -52,6 +54,7 @@ pull_request_rules:
           - check-failure=smoke (firefox)
           - check-failure=smoke (webkit)
           - check-failure=Lighthouse CI (a11y >=95, best-practices >=90, PWA-installable audits)
+          - check-failure=npm-audit
     actions:
       comment:
         message: |
