@@ -203,6 +203,34 @@ spec disables service-worker registration before navigation so the
 SW precache doesn't race with the direct fetch (Chromium throws
 `ERR_CACHE_WRITE_FAILURE` on the 16 MiB file under that race).
 
+## Hybrid quality reporting
+
+The Phase 18 hybrid path emits two audit kinds — `llm-classify` (per
+finding) and `hybrid-feedback` with `signal: 'not-relevant'` (per user
+reject). Wave 30-A's `HybridPrecisionPanel` surfaces per-rule precision
+live in the running app. Wave 35 Part A adds a Node-only offline
+report that runs against an exported audit chain so the precision
+table can be captured for review (e.g. in PR descriptions when
+deciding whether to demote noisy `hybridAnchors`).
+
+Flow:
+
+1. In the running app, click `Export audit log` to download a
+   `leaseguard-audit-*.json` file (schema `leaseguard.audit.v1`).
+2. From `app/`, run:
+
+   ```bash
+   npm run hybrid:stats -- /path/to/leaseguard-audit-2026-04-28.json
+   ```
+
+3. The script prints a per-rule markdown table (`ruleId | fires |
+   rejects | precision`) and a one-line decision: `ACT` if any rule
+   has `fires ≥ 10 AND precision < 0.70`, `NO-OP` otherwise.
+
+The script is pure Node (no jsdom, no browser); the test fixtures live
+in `app/scripts/hybrid-stats-report.test.mjs` and exercise the rich /
+sparse / empty branches plus the defensive precision-clamp path.
+
 ## Run commands
 
 ```bash

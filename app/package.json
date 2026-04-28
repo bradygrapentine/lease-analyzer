@@ -24,6 +24,7 @@
     "check:budget": "node scripts/check-bundle-budget.mjs",
     "check:csp": "node scripts/check-csp.mjs",
     "audit:prod": "node scripts/audit-prod.mjs",
+    "hybrid:stats": "node scripts/hybrid-stats-report.mjs",
     "lhci": "lhci autorun",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
