@@ -169,4 +169,56 @@ describe('createLeaseWorkerClient', () => {
     expect(out.doc.pages.length).toBeGreaterThan(0);
     client.terminate();
   });
+
+  it('uses createWorkerPipelineClient when globalThis.Worker is available', async () => {
+    // Stub a Worker constructor that hands every postMessage to the real
+    // request handler — proves the auto-select takes the worker branch
+    // (not the inline fallback) when `typeof Worker !== 'undefined'`.
+    const constructed = vi.fn();
+    class FakeWorker {
+      onmessage: ((ev: MessageEvent<WorkerResponse>) => void) | null = null;
+      onerror: ((ev: { message?: string }) => void) | null = null;
+      constructor() {
+        constructed();
+      }
+      postMessage(message: unknown): void {
+        const req = message as WorkerRequest;
+        void handleWorkerRequest(req).then((resp) => {
+          this.onmessage?.({ data: resp } as MessageEvent<WorkerResponse>);
+        });
+      }
+      terminate(): void {}
+    }
+    vi.stubGlobal('Worker', FakeWorker);
+    try {
+      const client = createLeaseWorkerClient();
+      const out = await client.parseAndAnalyze(await makeBytes(), RULE_PACK_V1);
+      expect(constructed).toHaveBeenCalledTimes(1);
+      expect(out.doc.pages.length).toBeGreaterThan(0);
+      client.terminate();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('falls back to inline pipeline when the Worker constructor throws', async () => {
+    // Some browsers (older Safari, Tauri edge cases) throw when
+    // constructing a module worker. The auto-selector must catch and
+    // still return a working client.
+    class ThrowingWorker {
+      constructor() {
+        throw new Error('module worker construction not supported');
+      }
+    }
+    vi.stubGlobal('Worker', ThrowingWorker);
+    try {
+      const client = createLeaseWorkerClient();
+      // The fallback inline client must still work end-to-end.
+      const out = await client.parseAndAnalyze(await makeBytes(), RULE_PACK_V1);
+      expect(out.doc.pages.length).toBeGreaterThan(0);
+      client.terminate();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
