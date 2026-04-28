@@ -206,7 +206,6 @@ shape.
 - Full WCAG 2.1 AA audit. (Wave 28-F shipped a fix-as-found pass:
   axe-core scans on accordion + severity table, `landmark-unique`
   fix in `SectionGroup`. A full external AA audit remains deferred.)
-- Tauri desktop wrapper (stub dir exists; no code).
 - Cloud sync / accounts / telemetry.
 - Pre-commit hooks via `lint-staged` (CI is authoritative).
 
