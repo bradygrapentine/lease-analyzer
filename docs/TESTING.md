@@ -89,17 +89,19 @@ which is also directly covered.
 ## Coverage thresholds
 
 Defined in `app/vite.config.ts` under `test.coverage.thresholds`.
-Current floors: **stmt 95 / branch 89 / func 91 / line 95**. Actuals
-as of 2026-04-26 (post-Wave-26-A): 97.24 / 89.62 / 93.58 / 97.24.
-Wave 26-A's coverage push closed targeted gaps in `extractPages.ts`
-(branches 43.75 → 60), `handleRequest.ts` (50 → 71.4), and
-`App.tsx` (84.6 → 85), but the new component flow tests in
-`App.test.tsx` exposed previously-unreached App.tsx branches that
-roughly offset the gains in aggregate (89.64 → 89.62). The 89→90
-floor bump SKIPPED per the plan's ≥ 90.5% contingency.
+Current floors: **stmt 96 / branch 90 / func 93 / line 96** (ratcheted
+2026-04-28 in Wave 43). Actuals as of 2026-04-28: 97.56 / 90.29 /
+94.27 / 97.56.
 
-Floors leave ~2 points of headroom on stmt/line, ~2.6 on func, ~0.6
-on branch — branch is the tight one because the two structural
+Ratchet rule: new floor = `floor(actual) - 1`, clamped never to
+decrease. Wave 43 stepped stmt/func/line up to 96/93/96; branch
+headroom (0.29) was below the 2-point margin so the branch floor
+held at 90. Limiter files for any future branch push:
+`src/worker/handleRequest.ts` (71.42), `src/parser/customRuleDraft.ts`
+(79.41), and `src/ui/renderPdfPages.ts` (77.77).
+
+Floors leave ~1.5 points of headroom on stmt/line, ~1.3 on func,
+~0.3 on branch — branch is the tight one because the two structural
 ceilings on the codebase keep it sticky:
 
 - `App.tsx` decomposition (Waves 17–21) trimmed it 1007 → 541 lines;
