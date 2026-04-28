@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 //   }): Promise<DeltaPacket>
 //
 //   verifyDeltaPacket(packet: DeltaPacket): Promise<{ ok: boolean }>
-import { buildDeltaPacket, verifyDeltaPacket } from './deltaPacket';
+import { applyLineDiff, buildDeltaPacket, verifyDeltaPacket } from './deltaPacket';
 
 async function genKey(): Promise<CryptoKeyPair> {
   return (await crypto.subtle.generateKey(
@@ -70,6 +70,31 @@ describe('deltaPacket', () => {
     });
     const r = await verifyDeltaPacket(packet);
     expect(r.ok).toBe(true);
+  });
+
+  it('verifyDeltaPacket returns ok:false on a malformed signature (catch path)', async () => {
+    // The catch branch fires when fromBase64 / importKey blow up before
+    // the actual verify call — distinct from a "verify returned false"
+    // path. Hand it a packet with a non-base64 signature.
+    const key = await genKey();
+    const packet = await buildDeltaPacket({
+      baseBytes: bytes('a'),
+      targetBytes: bytes('b'),
+      rulePackVersion: '1.0.0',
+      signingKey: key,
+      signedByKeyId: 'key-1',
+    });
+    const malformed = { ...packet, signature: 'not-valid-base64-!!!' };
+    const r = await verifyDeltaPacket(malformed);
+    expect(r.ok).toBe(false);
+  });
+
+  it('applyLineDiff throws when the patch does not consume the full base', () => {
+    // Construct a patch that only matches the first line — bi never
+    // advances to baseLines.length, so the trailing guard fires.
+    const baseText = 'line one\nline two\n';
+    const shortPatch = ' line one\n'; // only consumes one base line
+    expect(() => applyLineDiff(baseText, shortPatch)).toThrow(/did not consume full base/);
   });
 
   it('tampering with changes invalidates the signature', async () => {
