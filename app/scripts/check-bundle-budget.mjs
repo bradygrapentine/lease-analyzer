@@ -37,6 +37,12 @@ const BUDGETS = [
   // Phase 13 lease-analysis Web Worker. Isolates parseLease + analyze off
   // the main thread. No React / UI code should land here.
   { pattern: /^leaseWorker-.+\.js$/, maxBytes: 50_000, label: 'lease worker' },
+  // Wave 36 Part A — Phase 18 transformers runtime chunk. Pattern
+  // matches both v2 (`transformers-*.js`, ~827 KiB) and v4
+  // (`transformers.web-*.js`, ~568 KiB) so the budget covers the
+  // dual-runtime window. Wave 36 Part C tightens to v4-only after
+  // v2 is excised.
+  { pattern: /^transformers(\.web)?-.+\.js$/, maxBytes: 900_000, label: 'transformers' },
 ];
 
 // Same-origin tesseract runtime assets, served from /tesseract/. Tesseract
