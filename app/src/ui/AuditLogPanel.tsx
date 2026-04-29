@@ -28,8 +28,13 @@ export function AuditLogPanel({
     <Section label="audit log" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Audit log</h2>
       <p className="text-body text-fg-body">
-        Append-only, hash-chained record of analyses, exports, and library
-        changes. Entries live in a separate local database.
+        Append-only, hash-chained record of analyses, exports, and library changes. Entries live in
+        a separate local database.
+      </p>
+      <p className="text-small text-fg-muted">
+        Each entry signs the one before it. If a single entry is altered, the chain breaks and
+        verification fails. The full digest is shown in mono so you can copy it; the short form
+        (first 8 characters) is enough for spot-checks.
       </p>
 
       <div role="group" aria-label="audit log actions" className="flex flex-wrap gap-2">
@@ -54,9 +59,7 @@ export function AuditLogPanel({
           {verification.ok ? (
             <span>Chain intact ({entries.length} entries).</span>
           ) : (
-            <span>
-              Chain broken at seq {verification.firstBadSeq ?? '?'}.
-            </span>
+            <span>Chain broken at seq {verification.firstBadSeq ?? '?'}.</span>
           )}
         </p>
       )}
@@ -67,13 +70,24 @@ export function AuditLogPanel({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table aria-label="audit entries" className="w-full text-small text-fg-body border-collapse">
+          <table
+            aria-label="audit entries"
+            className="w-full text-small text-fg-body border-collapse"
+          >
             <thead>
               <tr className="border-b border-rule">
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">#</th>
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Time</th>
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Kind</th>
-                <th scope="col" className="text-left py-1 text-fg-muted font-sans">Payload</th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  #
+                </th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  Time
+                </th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  Kind
+                </th>
+                <th scope="col" className="text-left py-1 text-fg-muted font-sans">
+                  Payload
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -83,7 +97,9 @@ export function AuditLogPanel({
                   <td className="py-1 pr-3">{e.timestamp}</td>
                   <td className="py-1 pr-3">{e.kind}</td>
                   <td className="py-1">
-                    <code className="font-mono text-mono text-fg-body">{summarizePayload(e.payload)}</code>
+                    <code className="font-mono text-mono text-fg-body">
+                      {summarizePayload(e.payload)}
+                    </code>
                   </td>
                 </tr>
               ))}
