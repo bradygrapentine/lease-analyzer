@@ -18,11 +18,9 @@ function makeFacts(overrides: Partial<LeaseFacts> = {}): LeaseFacts {
 }
 
 describe('LeaseFactsPanel', () => {
-  it('renders an empty state when every fact is missing', () => {
-    render(<LeaseFactsPanel facts={makeFacts()} />);
-    expect(
-      screen.getByText(/no structured facts detected/i),
-    ).toBeInTheDocument();
+  it('renders nothing when every fact is missing (distill: hide-empty rail)', () => {
+    const { container } = render(<LeaseFactsPanel facts={makeFacts()} />);
+    expect(container).toBeEmptyDOMElement();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -120,25 +118,23 @@ describe('LeaseFactsPanel', () => {
   });
 
   it('does not render the definitions section when the list is empty', () => {
-    render(
-      <LeaseFactsPanel
-        facts={makeFacts({ termMonths: 12 })}
-      />,
-    );
+    render(<LeaseFactsPanel facts={makeFacts({ termMonths: 12 })} />);
     expect(screen.queryByRole('heading', { name: /definitions/i })).not.toBeInTheDocument();
   });
 
   it('does not render the cross-references section when the list is empty', () => {
-    render(
-      <LeaseFactsPanel
-        facts={makeFacts({ termMonths: 12 })}
-      />,
-    );
+    render(<LeaseFactsPanel facts={makeFacts({ termMonths: 12 })} />);
     expect(screen.queryByRole('heading', { name: /cross-references/i })).not.toBeInTheDocument();
   });
 
-  it('exposes an accessible region label', () => {
-    render(<LeaseFactsPanel facts={makeFacts()} />);
+  it('exposes an accessible region label when populated', () => {
+    render(
+      <LeaseFactsPanel
+        facts={makeFacts({
+          baseRent: { amount: 2500, currency: 'USD', raw: '$2,500', page: 1 },
+        })}
+      />,
+    );
     expect(screen.getByRole('region', { name: /lease facts/i })).toBeInTheDocument();
   });
 
@@ -153,9 +149,7 @@ describe('LeaseFactsPanel', () => {
         })}
       />,
     );
-    expect(
-      screen.getByRole('heading', { name: /rent schedule \(2\)/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /rent schedule \(2\)/i })).toBeInTheDocument();
     const scheduleTable = screen.getByRole('table', { name: /rent schedule/i });
     expect(within(scheduleTable).getByText('2026-01-01')).toBeInTheDocument();
     expect(within(scheduleTable).getByText('$1,030')).toBeInTheDocument();
@@ -178,8 +172,6 @@ describe('LeaseFactsPanel', () => {
 
   it('does not render the rent-schedule section when the list is missing or empty', () => {
     render(<LeaseFactsPanel facts={makeFacts({ termMonths: 12 })} />);
-    expect(
-      screen.queryByRole('heading', { name: /rent schedule/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /rent schedule/i })).not.toBeInTheDocument();
   });
 });
