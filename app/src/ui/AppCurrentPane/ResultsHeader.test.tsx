@@ -48,11 +48,19 @@ describe('ResultsHeader', () => {
       </I18nProvider>,
     );
     expect(screen.getByText(/what is signed export/i)).toBeInTheDocument();
-    // Wave 45-D copy verbatim — claim must map to code (Ed25519 sign over
-    // payload, recipient must compare embedded pubkey out-of-band).
+    // Wave 46 Item C — copy now references the 8-character fingerprint
+    // surfaced in SigningKeyPanel. Every claim maps to code:
+    //   - "8-character fingerprint" → computeShortFingerprint returns 8 hex
+    //   - "next to your signing key (Settings, Signing key)" → SigningKeyPanel row
+    //   - "embedded in the signed export" → exportReport.ts SignatureBlock.publicKey
+    //   - "computes the same SHA-256 fingerprint" → algorithm is deterministic
     expect(
-      screen.getByText(/share your public key with the recipient out-of-band/i),
+      screen.getByText(/8-character fingerprint shown next to your signing key/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/computes the same sha-256 fingerprint over the public key embedded/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/does not by itself prove identity/i)).toBeInTheDocument();
   });
 
   it('fires onExportJson when the JSON-export button is clicked', async () => {

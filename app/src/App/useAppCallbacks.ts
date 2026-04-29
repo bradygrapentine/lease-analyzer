@@ -118,17 +118,27 @@ export function useAppCallbacks(deps: UseAppCallbacksDeps): UseAppCallbacksApi {
     const passphrase = window.prompt('Passphrase to unlock the signing key:');
     if (!passphrase) return;
     try {
-      await signingKey.signAndDownloadFindings({
+      const result = await signingKey.signAndDownloadFindings({
         fileName: status.fileName,
         doc: status.result.doc,
         findings: status.result.findings,
         bytes: status.bytes,
         passphrase,
       });
+      await safeAudit({
+        kind: 'signed-export',
+        payload: {
+          fileName: result.fileName,
+          format: 'json',
+          inputHash: result.inputHash,
+          signingKeyId: result.signingKeyId,
+        },
+      });
+      void refreshAuditLog();
     } catch (err) {
       pipeline.setError(`Signing failed: ${friendlyError(err)}`);
     }
-  }, [pipeline, signingKey]);
+  }, [pipeline, signingKey, safeAudit, refreshAuditLog]);
 
   return {
     handleBytes,

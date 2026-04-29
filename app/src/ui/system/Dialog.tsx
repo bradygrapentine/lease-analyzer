@@ -45,6 +45,30 @@ export function Dialog({
   // Focus trap inside the dialog while open.
   useFocusTrap(dialogRef, open);
 
+  // Wave 46 Item D — apply `inert` to body siblings while open. The focus
+  // trap governs Tab cycling; `inert` blocks programmatic .focus() and
+  // pointer interaction from outside the dialog (e.g. the App `/` and
+  // Cmd+F shortcuts that .focus() the search input directly). We track
+  // which siblings we toggled so cleanup does not stomp siblings that
+  // were already inert for unrelated reasons.
+  useEffect(() => {
+    if (!open) return;
+    const dialogEl = dialogRef.current;
+    if (!dialogEl) return;
+    const toggled: Element[] = [];
+    for (const child of Array.from(document.body.children)) {
+      if (child.contains(dialogEl)) continue;
+      if (child.hasAttribute('inert')) continue;
+      child.setAttribute('inert', '');
+      toggled.push(child);
+    }
+    return () => {
+      for (const el of toggled) {
+        el.removeAttribute('inert');
+      }
+    };
+  }, [open]);
+
   // Esc handler.
   useEffect(() => {
     if (!open || !closeOnEscape) return;

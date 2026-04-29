@@ -139,6 +139,44 @@ describe('Dialog', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('applies inert to body siblings of the dialog while open and clears on close', async () => {
+    // Insert a sibling div on document.body so we have something to mark inert.
+    const sibling = document.createElement('div');
+    sibling.setAttribute('data-test', 'pre-existing-sibling');
+    document.body.appendChild(sibling);
+    try {
+      const user = userEvent.setup();
+      render(<Harness />);
+      // Before opening: sibling is not inert.
+      expect(sibling.hasAttribute('inert')).toBe(false);
+      await user.click(screen.getByRole('button', { name: 'open dialog' }));
+      // While open: sibling is inert.
+      expect(sibling.hasAttribute('inert')).toBe(true);
+      // After dismiss: sibling lost the attribute.
+      await user.keyboard('{Escape}');
+      expect(sibling.hasAttribute('inert')).toBe(false);
+    } finally {
+      sibling.remove();
+    }
+  });
+
+  it('does not strip inert from siblings that were already inert before the dialog opened', async () => {
+    const sibling = document.createElement('div');
+    sibling.setAttribute('inert', '');
+    document.body.appendChild(sibling);
+    try {
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'open dialog' }));
+      expect(sibling.hasAttribute('inert')).toBe(true);
+      await user.keyboard('{Escape}');
+      // Pre-existing inert preserved.
+      expect(sibling.hasAttribute('inert')).toBe(true);
+    } finally {
+      sibling.remove();
+    }
+  });
+
   it('has no a11y violations', async () => {
     const user = userEvent.setup();
     const { container } = render(<Harness />);
