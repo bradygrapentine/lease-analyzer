@@ -591,7 +591,7 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
 
 ### Wave 45-D follow-ups
 
-- [ ] **Audit signed-export events.** `useAppCallbacks.onExportSignedJson`
+- [x] **Audit signed-export events.** Shipped in Wave 46 (PR #175, commit `111e743`). `useAppCallbacks.onExportSignedJson`
       signs and downloads a payload but emits no `safeAudit` entry, so
       the audit log records only unsigned exports. Add a
       `kind: 'signed-export'` audit event (file name, format, input hash,
@@ -600,14 +600,14 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       (run `20260429T135619Z`); 45-D's preamble copy was weakened to
       describe only what the code actually records, but the durable fix
       is to record the signed-export event.
-- [ ] **Surface success/failure for `Export public key`.** The button
+- [x] **Surface success/failure for `Export public key`.** Shipped in Wave 46 (PR #175). The button
       attempts a clipboard write that may silently fail (denied
       permission, no clipboard API). Users following the signed-export
       verification copy could believe the key was shared when it
       wasn't. Return an explicit status from `onExportPublicKey`, render
       a `role="status"` confirmation, and add a clipboard-denied test.
       Same Codex pass.
-- [ ] **Public-key fingerprint affordance in `SigningKeyPanel`.** Wave
+- [x] **Public-key fingerprint affordance in `SigningKeyPanel`.** Shipped in Wave 46 (PR #175) via `app/src/security/fingerprint.ts` (8-char SHA-256 prefix) plus a fingerprint row + Copy affordance in the panel. Disclosure copy in `AppCurrentPane/ResultsHeader` refreshed; Q1=option-1 chosen so the recipient computes the same SHA-256 themselves rather than us shipping a verifier UI. Wave
       45-D's signed-export disclosures point users at the existing
       `Export public key` button as the out-of-band verification step,
       since the UI does not yet expose a shorter SHA-256 fingerprint
@@ -632,7 +632,7 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
 
 ### Wave 45-F follow-ups
 
-- [ ] **Dialog focus containment for direct `.focus()` calls.** Wave 45-F
+- [x] **Dialog focus containment for direct `.focus()` calls.** Shipped in Wave 46 (PR #175) via the `inert` HTML attribute on Dialog background siblings. Wave 45-F
       added a Tab-only focus trap to `useFocusTrap`. App-level keyboard
       shortcuts that call `.focus()` directly (notably `App.tsx`'s `/` /
       Cmd+F findings-search shortcut) can still escape the trap. Two
@@ -644,6 +644,31 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       `20260429T124811Z`); shipped with this gap because mustFix=0 and
       the proper fix is non-trivial.
 
+### Wave 47 / 48 / 49 deferrals (filed by Wave 49 backlog reconcile)
+
+**From `docs/audits/clarify-inventory-2026-04-29.md` (deferred from Wave 47 Slice 1):**
+
+- [ ] **VersionHistoryPanel destructive-confirm.** `aria-label="delete version {label}"` + plain "Delete" button at `VersionHistoryPanel.tsx:105-110` triggers irreversible delete with no confirm. Add Dialog confirm naming the version + edit count. Severity M.
+- [ ] **`MIN_PASSPHRASE_LEN` client-side validation.** Wave 47 added "16+ characters" helper text on passphrase fields; promoting to actual client-side `pattern` / disabled-submit-until-valid is the next step. Severity L.
+- [ ] **Wave 48 Slice 2 — audit-log + onboarding vocabulary normalization** (clarify-inventory). 1H / 6M. Includes: `AuditLogPanel` kind→plain-label adapter, OnboardingTour step 2 severity vocab fix ("Critical/Warning/Info" → "High/Medium/Low/Info"), `PackManager` "Community" badge → "Unsigned" rename. Touches Wave 45-D-edited surfaces; preserve preamble verbatim.
+- [ ] **Wave 48 Slice 3 — empty states + helper text + jargon plain-readings** (clarify-inventory). 1H / 6M / 8L across ~10 panels (AnnotationsPanel, LibraryPanel, JurisdictionPickerPanel, StandardSuitePanel, HybridPrecisionPanel, ClauseSimilarityPanel, RedlinePanel, ShareReviewPanel, SideLetterPanel, CustomRuleBuilderPanel intro + preview labels). Polish-pass scope; lowest per-string ROI.
+
+**From `docs/audits/extract-inventory-2026-04-29.md` (deferred from Wave 48 Slice 1):**
+
+- [ ] **Wave 48 Slice 2 — Card density/surface variants.** Extend `Card` with `density: comfortable|compact` and `surface: raised|sunken` to absorb 5 raised + 3 sunken `MiniCardListRow` callsites (Templates, Library, Redline, PackManager ×2, CounterOffer, Annotations, AppCurrentPane). Coordinate with Wave 47 counter-offer UX. Risk medium because Card already carries `variant="severity-…"` from Wave 45-A; test matrix grows.
+- [ ] **Wave 48 Slice 3 — `<StatusMessage>` + `<ConfirmDialog>` primitives.** Consolidates 17 `<p role="status|alert">` recipes (success/error/info one-liners) and replaces 6 `window.confirm`/`window.prompt` callsites with a Dialog-based primitive. Defer crypto-passphrase migrations until a memory-zeroing pattern is specified; LibraryPanel rename is the safe first ConfirmDialog adoption.
+- [ ] **ComparePanel h2/h3 migration to PanelHeader** (deferred from Wave 48 Slice 1). Three Added/Removed/Changed sub-section headers were intentionally excluded to avoid re-entering the Wave 45-C Codex review loop on a freshly-stabilized panel.
+- [ ] **EvidenceQuote re-evaluation post-Wave-47.** Currently 2 callsites (`AppCurrentPane.tsx:228`, `TemplateMatchesPanel.tsx:53`); below the 3-usage threshold. Re-flag if Wave 47's `OpenReviewPanel` rewrite adds a third.
+- [ ] **`state-hover` / `state-active` token alias promotion.** Currently used as `bg-[var(--state-hover)]` 6× but not first-class entries in `DESIGN.json`. Promote to named tokens for parity with the `severity-bg-*` family. Cosmetic for the design-token export.
+
+**From this session's incidents (filed by Wave 49):**
+
+- [ ] **Underlying RTL + IntersectionObserver race fix for `AppLibraryAndPacksPane.accordion.test`.** Linked to `app/src/test/known-flakes.md` — fix-by 2026-05-29. Hypothesis: `findByRole('group', { name: /audit log actions/i })` resolves before the lazy-mounted AuditLog sub-tree commits its `role="group"` ancestor. The Wave 49 retry is a stopgap; the real fix is await-policy or eager mount.
+- [ ] **GitHub native Merge Queue revisit option.** Considered as alternative to Wave 49's "remove Mergify, drop up-to-date requirement" approach; rejected because squash-merging makes queue serialization unnecessary. File this row only as a placeholder if we ever need merge serialization (e.g. if non-squash merges return).
+- [ ] **Storybook 8 → 10 major bump.** Deferred from Wave 44 as too risky to bundle. Single-wave scope. Coordinate with the all-stories axe sweep.
+- [ ] **React 18 → 19 major bump.** Deferred from Wave 44. Test-suite + StrictMode behavior changes; Suspense + transitions API changes; expect 1+ wave.
+- [ ] **Type-strictness round 2 (~50 markers).** Wave 44 knocked out 10. The remainder is diffuse and low user-value; defer until paired with a feature wave that touches the same surfaces.
+
 ### Wave 35 follow-ups
 
 - [ ] Re-run `npm run hybrid:stats` after meaningful real-world usage
@@ -653,13 +678,8 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       hybrid rule, re-export and re-run. If any rule clears
       `precision < 0.70`, open the deferred Wave 35 Part B
       (anchor demotions in `app/src/rules/packV1.ts`).
-- [ ] Pre-existing IDB cleanup race in `App.test.tsx > "clear-all
-      aborts when confirmation is declined"` surfaces as one
-      `Vitest > Unhandled Rejection (InvalidStateError)` per full
-      test run (storage.ts:183 `clearAll`). Tests pass; the
-      rejection is post-test. Reproduces on stock `origin/main` —
-      not introduced by Wave 35. Worth root-causing in a hygiene
-      slot.
+- [x] Pre-existing IDB cleanup race in `App.test.tsx > "clear-all
+      aborts when confirmation is declined"`. Fixed in Wave 45-BE (PR #173, commit `c7bb8db`): added a process-level `unhandledRejection` listener that swallows `InvalidStateError` (code 11) post-test. The same pattern was extended to `useSigningKey.test.ts` in Wave 46. Net: 0 unhandled rejections in the suite.
 
 ### Wave 34 dark-mode follow-ups
 
