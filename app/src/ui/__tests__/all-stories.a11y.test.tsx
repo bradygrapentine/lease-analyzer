@@ -15,8 +15,13 @@ import { render, cleanup } from '@testing-library/react';
 import { composeStories } from '@storybook/react';
 import { expectAxeClean } from '../../test/axe';
 
-// Vite glob — eager so we don't have to await per file.
-const storyModules = import.meta.glob<Record<string, unknown>>('../*.stories.tsx', { eager: true });
+// Vite glob — eager so we don't have to await per file. Wave 45-BE: also
+// pull in nested story files (e.g. src/ui/AppCurrentPane/*.stories.tsx)
+// so extracted-region stories don't silently bypass the a11y sweep.
+const storyModules = import.meta.glob<Record<string, unknown>>(
+  ['../*.stories.tsx', '../**/*.stories.tsx'],
+  { eager: true },
+);
 
 describe('Wave 41 — all panel stories pass axe', () => {
   beforeEach(() => {

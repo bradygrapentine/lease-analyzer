@@ -84,5 +84,21 @@ describe('ShareReviewPanel', () => {
     await user.type(screen.getByLabelText(/expir/i), future);
     await user.click(screen.getByRole('button', { name: /generate/i }));
     expect(await screen.findByText(/crypto failure/i)).toBeInTheDocument();
+    // Wave 45-BE — error paragraph paired with high-severity badge.
+    expect(screen.getAllByText(/^Error$/i).length).toBeGreaterThan(0);
+  });
+
+  it('pairs the no-lease alert with a high-severity badge (Wave 45-BE)', () => {
+    render(<ShareReviewPanel lease={null} onGenerate={vi.fn()} />);
+    // Both the no-lease alert and (when error state) the form-error
+    // paragraph use the "Error" badge label.
+    expect(screen.getByRole('alert')).toHaveTextContent(/no lease selected/i);
+    expect(screen.getAllByText(/^Error$/i).length).toBeGreaterThan(0);
+  });
+
+  it('pairs the unsigned-pack guidance with an info badge (Wave 45-BE)', () => {
+    render(<ShareReviewPanel lease={lease({ signedPack: false })} onGenerate={vi.fn()} />);
+    expect(screen.getByText(/signed pack required/i)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/requires a signed pack/i);
   });
 });

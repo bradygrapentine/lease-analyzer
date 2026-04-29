@@ -41,7 +41,9 @@ describe('OpenReviewPanel', () => {
     await user.upload(screen.getByLabelText(/file|archive/i) as HTMLInputElement, file());
     await user.type(screen.getByLabelText(/passphrase/i), 'wrong-pass-123');
     await user.click(screen.getByRole('button', { name: /open/i }));
-    expect(await screen.findByText(/wrong|incorrect|passphrase/i)).toBeInTheDocument();
+    expect(await screen.findByText(/wrong|incorrect/i)).toBeInTheDocument();
+    // Wave 45-BE — error paragraph paired with "Error" badge.
+    expect(screen.getAllByText(/^error$/i).length).toBeGreaterThan(0);
   });
 
   it('surfaces a clear "expired" error', async () => {
