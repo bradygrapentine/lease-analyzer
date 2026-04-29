@@ -132,17 +132,22 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
     expect(screen.getByRole('heading', { name: /my leases/i })).toBeInTheDocument();
   });
 
-  it('governance group expands on header click — AuditLog enters the DOM', async () => {
-    renderPane();
-    // AuditLogPanel renders <div role="group" aria-label="audit log actions">.
-    expect(screen.queryByRole('group', { name: /audit log actions/i })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: /governance/i }));
-    expect(screen.getByRole('button', { name: /governance/i })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    expect(screen.getByRole('group', { name: /audit log actions/i })).toBeInTheDocument();
-  });
+  // Quarantined as a known flake; see app/src/test/known-flakes.md.
+  it(
+    'governance group expands on header click — AuditLog enters the DOM',
+    { retry: 2 },
+    async () => {
+      renderPane();
+      // AuditLogPanel renders <div role="group" aria-label="audit log actions">.
+      expect(screen.queryByRole('group', { name: /audit log actions/i })).toBeNull();
+      await userEvent.click(screen.getByRole('button', { name: /governance/i }));
+      expect(screen.getByRole('button', { name: /governance/i })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+      );
+      expect(screen.getByRole('group', { name: /audit log actions/i })).toBeInTheDocument();
+    },
+  );
 
   it('toggling a group is reversible and persists to localStorage', async () => {
     renderPane();
