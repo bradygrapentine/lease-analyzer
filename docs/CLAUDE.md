@@ -216,3 +216,26 @@ shape.
 
 When a task touches one of these, ask before pulling in a dep — they all
 have non-trivial bundle-size or architectural consequences.
+
+## Design Context
+
+Strategic and visual design specs live at the project root and are the
+authoritative reference for any UI work:
+
+- [`PRODUCT.md`](../PRODUCT.md) — register, users, brand personality,
+  anti-references, five design principles, accessibility floor.
+- [`DESIGN.md`](../DESIGN.md) — Stitch-format visual system. North Star
+  is "The Marginalia Edition": cream paper, ink rules, single Court
+  Slate accent, severity in the margins.
+- [`DESIGN.json`](../DESIGN.json) — sidecar with tonal ramps, shadow /
+  motion tokens, and rendered component snippets.
+
+Read DESIGN.md before adding components or color. Eight named rules
+(One Voice, Severity-Earned, No-Pure-Black, Serif-for-Substance,
+Measure, Plain-Reading, Tonal-Before-Shadow, Hairline) are the
+fast-path summary; the Do's and Don'ts list is exhaustive.
+
+The legacy 3px `border-l` severity stripe on `app/src/ui/system/Card.tsx`
+is the system's one heritage side-stripe exception and is scheduled for
+migration to the `severity-bg-*` token pairs (tinted background + icon +
+label). Do not propagate the side-stripe pattern to new components.
