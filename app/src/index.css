@@ -70,9 +70,15 @@
     var(--color-severity-info) 22%,
     var(--color-paper-raised)
   );
+  --color-severity-bg-low: color-mix(
+    in srgb,
+    var(--color-severity-low) 22%,
+    var(--color-paper-raised)
+  );
   --color-severity-border-error: color-mix(in srgb, var(--color-severity-high) 40%, transparent);
   --color-severity-border-warn: color-mix(in srgb, var(--color-severity-medium) 40%, transparent);
   --color-severity-border-info: color-mix(in srgb, var(--color-severity-info) 40%, transparent);
+  --color-severity-border-low: color-mix(in srgb, var(--color-severity-low) 40%, transparent);
 
   /* Status */
   --color-positive: #4a7a4a;

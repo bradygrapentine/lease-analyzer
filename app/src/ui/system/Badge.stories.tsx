@@ -22,3 +22,24 @@ export const SeverityInfo: Story = {
   args: { variant: 'severity', severity: 'info', children: 'Info' },
 };
 export const Mono: Story = { args: { variant: 'mono', children: 'analyze' } };
+
+// Side-by-side preview of all four severities — the canonical going-forward
+// severity treatment per DESIGN.md §5: tinted bg + ink-on-tint + icon + label.
+export const SeverityRow: Story = {
+  render: () => (
+    <div className="inline-flex items-center gap-2">
+      <Badge variant="severity" severity="high">
+        High
+      </Badge>
+      <Badge variant="severity" severity="medium">
+        Medium
+      </Badge>
+      <Badge variant="severity" severity="low">
+        Low
+      </Badge>
+      <Badge variant="severity" severity="info">
+        Info
+      </Badge>
+    </div>
+  ),
+};
