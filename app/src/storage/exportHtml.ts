@@ -44,10 +44,7 @@ export function exportFindingsHtml(input: HtmlExportInput): string {
     `;
   }).join('');
 
-  const body =
-    findings.length === 0
-      ? '<p class="empty">No findings detected.</p>'
-      : sections;
+  const body = findings.length === 0 ? '<p class="empty">No findings detected.</p>' : sections;
 
   return `<!doctype html>
 <html lang="en">
@@ -55,16 +52,20 @@ export function exportFindingsHtml(input: HtmlExportInput): string {
 <meta charset="utf-8">
 <title>${escapeHtml(name)} · LeaseGuard findings</title>
 <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; max-width: 48rem; margin: 0 auto; padding: 2rem 1rem; color: #111; line-height: 1.5; }
-  h1 { margin-bottom: 0.25rem; }
-  .meta { color: #555; font-size: 0.9rem; margin-bottom: 2rem; }
-  section.sev { border-top: 1px solid #ddd; padding-top: 1rem; margin-top: 1.5rem; }
-  section.sev-high h2 { color: #b00020; }
-  section.sev-medium h2 { color: #a35200; }
-  blockquote { border-left: 3px solid #ccc; padding-left: 0.75rem; color: #333; font-style: italic; }
-  .empty { color: #555; }
+  /* Marginalia palette inlined: exported HTML must render the same off any host. */
+  body { font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif; background: #faf6ee; color: #4a3f25; max-width: 65ch; margin: 0 auto; padding: 2rem 1rem; line-height: 1.55; }
+  h1 { font-weight: 600; color: #2a2316; margin-bottom: 0.25rem; }
+  h2, h3 { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #2a2316; }
+  .meta { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #7a6f57; font-size: 0.8125rem; margin-bottom: 2rem; }
+  section.sev { border-top: 1px solid #d6cdb6; padding-top: 1rem; margin-top: 1.5rem; }
+  section.sev-high h2 { color: #b1442d; }
+  section.sev-medium h2 { color: #b8862c; }
+  section.sev-low h2 { color: #5a7a5a; }
+  section.sev-info h2 { color: #6b7b8c; }
+  blockquote { background: #f3eddc; border: 1px solid #d6cdb6; border-radius: 2px; margin: 0.5rem 0; padding: 0.5rem 0.75rem; color: #4a3f25; font-style: italic; }
+  .empty { color: #7a6f57; }
   @media print {
-    body { max-width: none; padding: 0; }
+    body { background: transparent; max-width: none; padding: 0; }
     section.sev { page-break-inside: avoid; }
   }
 </style>

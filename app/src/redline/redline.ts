@@ -90,14 +90,15 @@ export function buildRedlineHtml(input: BuildRedlineHtmlInput): string {
 <meta charset="utf-8">
 <title>${escapeHtml(leaseName)} \u00b7 LeaseGuard redline</title>
 <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; max-width: 48rem; margin: 0 auto; padding: 2rem 1rem; color: #111; line-height: 1.55; }
-  h1 { margin-bottom: 0.25rem; }
-  .meta { color: #555; font-size: 0.9rem; margin-bottom: 2rem; }
+  /* Marginalia palette inlined: ins=Sage Note tint, del=Negative Red tint. */
+  body { font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif; background: #faf6ee; color: #4a3f25; max-width: 65ch; margin: 0 auto; padding: 2rem 1rem; line-height: 1.55; }
+  h1 { font-weight: 600; color: #2a2316; margin-bottom: 0.25rem; }
+  .meta { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #7a6f57; font-size: 0.8125rem; margin-bottom: 2rem; }
   .para { margin: 0 0 1rem; }
-  ins { background: #e6ffed; text-decoration: none; color: #036400; padding: 0 0.1em; }
-  del { background: #ffeef0; color: #86181d; padding: 0 0.1em; }
+  ins { background: rgba(90, 122, 90, 0.18); text-decoration: none; color: #2a2316; padding: 0 0.1em; }
+  del { background: rgba(154, 48, 34, 0.16); color: #2a2316; padding: 0 0.1em; }
   @media print {
-    body { max-width: none; padding: 0; }
+    body { background: transparent; max-width: none; padding: 0; }
     .para { page-break-inside: avoid; }
     ins { background: transparent; color: #2a2316; text-decoration: underline; }
     del { background: transparent; color: #2a2316; text-decoration: line-through; }

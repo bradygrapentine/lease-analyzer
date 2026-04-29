@@ -26,6 +26,8 @@ const LINE_HEIGHT = 14;
 const BODY_SIZE = 11;
 const HEADING_SIZE = 18;
 const META_SIZE = 10;
+// DESIGN.md "No-Pure-Black Rule" — body text uses Ink Black (#2a2316), not rgb(0,0,0).
+const INK_BLACK = rgb(42 / 255, 35 / 255, 22 / 255);
 
 /**
  * Greedy word-wrap for a fixed-width column. pdf-lib has no built-in
@@ -98,7 +100,7 @@ export async function buildSideLetterPdf(input: SideLetterInput): Promise<Uint8A
       y: cursorY - size,
       size,
       font: f,
-      color: rgb(0, 0, 0),
+      color: INK_BLACK,
     });
     cursorY -= size + 4;
   }
@@ -114,7 +116,7 @@ export async function buildSideLetterPdf(input: SideLetterInput): Promise<Uint8A
         y: cursorY - size,
         size,
         font: f,
-        color: rgb(0, 0, 0),
+        color: INK_BLACK,
       });
       cursorY -= LINE_HEIGHT;
     }

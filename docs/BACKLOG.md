@@ -644,6 +644,14 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       `20260429T124811Z`); shipped with this gap because mustFix=0 and
       the proper fix is non-trivial.
 
+### Polish pass deferrals (filed 2026-04-29 by /impeccable polish)
+
+P2 visual items surfaced during the all-surfaces polish walk; deferred from the export-brand PR because they need real-browser confirmation before committing.
+
+- [ ] **Empty home state has 60% vacant viewport.** Pre-upload, the lower 60% of the viewport is blank. Reads as "broken," not "calm." Candidates: a quiet privacy dossier line, the local-first architecture diagram, or a single restrained closing line. Brand-aligned, low risk.
+- [ ] **Native file-chooser text leaks into the upload control.** Dark-mode walk shows raw "Choose File / No file chosen" platform text adjacent to the styled "Upload lease" label. Verify `FileButton` fully suppresses the native control's visual; if not, swap to a label-on-button pattern with `aria-describedby` for the file name.
+- [ ] **Bottom-strip "Clear all saved data" lacks destructive treatment.** DESIGN.md reserves Negative Red for irrecoverable errors. Apply `--color-negative` to the label inside the existing Subtle button shell, or escalate to a dedicated destructive variant on the Button primitive.
+
 ### Wave 50 deferrals (filed after Wave 50 perf fix shipped)
 
 Slice 3 of `docs/audits/perf-probe-2026-04-29.md` was deferred when Wave 50 shipped the high-impact pair (pdf.js worker restoration + pipeline pre-emption). The remaining findings:
