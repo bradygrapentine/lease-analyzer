@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Badge } from './system/Badge';
 
 export type OpenReviewResult =
   | { ok: true; archiveId: string; expiresAt: string }
@@ -102,7 +103,16 @@ export function OpenReviewPanel({ onOpen }: OpenReviewPanelProps): JSX.Element {
         onChange={(e) => setPassphrase(e.target.value)}
         autoComplete="current-password"
       />
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && (
+        <>
+          <Badge variant="severity" severity="high">
+            Error
+          </Badge>{' '}
+          <p role="alert" className="error">
+            {error}
+          </p>
+        </>
+      )}
       {success && (
         <p role="status" className="success">
           Mounted in review mode (archive {success.archiveId}, expires{' '}
