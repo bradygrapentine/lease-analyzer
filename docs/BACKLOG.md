@@ -701,6 +701,38 @@ address — visual or product-level work, not source-color cleanup.
       `npm-audit` as a required branch-protection check is a
       separate ops task; tracked under "Branch-protection
       self-healing" below.
+- [ ] **Major dep bump: React 18 → 19** _(wave-44-survey)_. `npm
+      outdated` shows React 18.3.1 → 19.2.5 available. Each dedicated
+      wave: codemod for new JSX transform, `useFormStatus` /
+      `useActionState` migration audit, validate StrictMode-safe
+      ArrayBuffer copy contract still holds (see `docs/CLAUDE.md` §Data
+      handling gotchas), test suite green under React 19 act-warnings.
+      Pair with `@types/react` 18.3.28 → 19.2.14 in same PR.
+- [ ] **Major dep bump: Vite 5 → 8** _(wave-44-survey)_. `npm outdated`
+      shows Vite 5.4.21 → 8.0.10. Touches `app/vite.config.ts` (PWA
+      plugin compat), `@vitejs/plugin-react` 4 → 6, Tailwind v4 plugin
+      compat. Verify `vite-plugin-pwa` 0.20 → 1.2 + Workbox precache
+      contract still ships sw.js for the local-first contract.
+- [ ] **Major dep bump: vitest 1 → 4** _(wave-44-survey)_. `npm
+      outdated` shows vitest 1.6.1 → 4.1.5 and `@vitest/coverage-v8`
+      1.6.1 → 4.1.5. Major v3/v4 changed mock semantics (`vi.spyOn` on
+      ESM bindings, hoisting). Plan: branch coverage gate stays at 90,
+      validate the App.panels timeout fix from Wave 12-D / 16-A still
+      holds, audit any test using internal vitest types.
+- [ ] **Major dep bump: Storybook 8 → 10** _(wave-44-survey)_. `npm
+      outdated` shows storybook 8.6.18 → 10.3.5 (and matching
+      `@storybook/react`, `@storybook/react-vite`). The all-stories
+      a11y sweep in `src/ui/__tests__/all-stories.a11y.test.tsx`
+      (Wave 41) hits every story — verify CSF compatibility and
+      action-handler shape under v10. Pair with `@storybook/test`
+      bump in same PR.
+- [ ] **Worker-path classifier** _(wave-44-survey, Phase 18 hold)_.
+      Phase 18 embedding pass currently runs on the main thread after
+      the worker returns deterministic findings (see
+      `app/src/App/usePipeline.ts:146`). Move it into the worker if
+      the Phase 18 re-evaluation trigger fires (per
+      `docs/plans/wave40-phase18-revisit-or-retire.md` §6 — sustained
+      user feedback rate showing hybrid value). Until then, deferred.
 - [ ] **Branch-protection self-healing.** When the Tauri workflow row
       above ships (delete or repair), also clean up the
       `Tauri build (ubuntu-latest / macos-latest)` entries from the
