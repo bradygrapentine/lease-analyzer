@@ -175,7 +175,9 @@ export function AppCurrentPane({
           )}
           {ocrState.kind === 'error' && (
             <p role="alert" className="text-body text-severity-high">
-              OCR failed: {ocrState.message}
+              OCR didn&rsquo;t finish reading this PDF. The error was: {ocrState.message}. Clauses
+              on scanned pages may not appear in findings. You can try a different language pack
+              from the picker above, or use the original PDF if its text is selectable.
             </p>
           )}
         </div>

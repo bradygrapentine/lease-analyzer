@@ -59,7 +59,11 @@ export function AuditLogPanel({
           {verification.ok ? (
             <span>Chain intact ({entries.length} entries).</span>
           ) : (
-            <span>Chain broken at seq {verification.firstBadSeq ?? '?'}.</span>
+            <span>
+              Chain broken at seq {verification.firstBadSeq ?? '?'}. An entry was altered or
+              removed; signed exports from this point onward won&rsquo;t verify until the chain is
+              repaired.
+            </span>
           )}
         </p>
       )}

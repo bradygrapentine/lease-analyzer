@@ -232,6 +232,10 @@ describe('AppCurrentPane', () => {
       status,
       ocrState: { kind: 'error', message: 'no traineddata' },
     });
-    expect(screen.getByRole('alert')).toHaveTextContent(/OCR failed: no traineddata/);
+    // Wave 45-D — error copy rewritten from "OCR failed: <msg>" to plain
+    // language ("OCR didn't finish reading this PDF…"). The underlying
+    // message still surfaces.
+    expect(screen.getByRole('alert')).toHaveTextContent(/no traineddata/);
+    expect(screen.getByRole('alert')).toHaveTextContent(/ocr didn.{1,3}t finish reading/i);
   });
 });

@@ -167,7 +167,9 @@ export function PackManagerPanel({
       )}
       {error !== null && (
         <p role="status" className="text-small text-severity-high">
-          Error: {error}
+          Couldn&rsquo;t import the rule pack. {error}. Common causes: the file isn&rsquo;t a{' '}
+          <code className="font-mono text-mono">.lgpack.json</code>, or the signature didn&rsquo;t
+          verify.
         </p>
       )}
 
