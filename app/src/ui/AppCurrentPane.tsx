@@ -139,6 +139,16 @@ export function AppCurrentPane({
           </Button>
         )}
       </div>
+      {hasSigningKey && (
+        <details className="text-small text-fg-muted mb-3">
+          <summary className="cursor-pointer select-none">What is signed export?</summary>
+          <p className="mt-1 max-w-prose">
+            A signed export pairs your findings with a signature derived from a key only you
+            control. Anyone you share the file with can verify it came from you and has not been
+            altered. The key never leaves your browser.
+          </p>
+        </details>
+      )}
       {ocr.likelyScanned && (
         <div
           role="status"

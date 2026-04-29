@@ -48,10 +48,22 @@ export function SigningKeyPanel({
   return (
     <Section label="signing key" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Signing key</h2>
+      <details className="text-small text-fg-muted">
+        <summary className="cursor-pointer select-none">Why does signing matter?</summary>
+        <p className="mt-1 max-w-prose">
+          A signed export pairs your findings with a signature derived from a key only you control.
+          Anyone you share the file with can verify it came from you and has not been altered. The
+          key never leaves your browser.
+        </p>
+      </details>
       {hasKey ? (
         <p className="text-body text-fg-body">
-          <span aria-label="public key" className="text-small text-fg-muted">Key: </span>
-          <code className="font-mono text-mono text-fg-muted">{truncate(state.publicKey ?? '')}</code>
+          <span aria-label="public key" className="text-small text-fg-muted">
+            Key:{' '}
+          </span>
+          <code className="font-mono text-mono text-fg-muted">
+            {truncate(state.publicKey ?? '')}
+          </code>
         </p>
       ) : (
         <p className="text-body text-fg-muted">No signing key.</p>
@@ -86,9 +98,7 @@ export function SigningKeyPanel({
             variant="ghost"
             size="sm"
             onClick={() => {
-              const pp = window.prompt(
-                'Set a passphrase for the new (rotated) signing key:',
-              );
+              const pp = window.prompt('Set a passphrase for the new (rotated) signing key:');
               if (!pp) return;
               void onRotateKey(pp);
             }}
