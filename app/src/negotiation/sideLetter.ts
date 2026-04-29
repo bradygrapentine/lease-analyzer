@@ -37,9 +37,7 @@ function buildClauses(input: SideLetterInput): Clause[] {
     if (seen.has(edit.paragraphIndex)) continue;
     seen.add(edit.paragraphIndex);
     const section = input.sectionFor(edit.paragraphIndex);
-    const label = section
-      ? `Section ${section}`
-      : `Page N, \u00b6 ${edit.paragraphIndex + 1}`;
+    const label = section ? `Section ${section}` : `Page N, \u00b6 ${edit.paragraphIndex + 1}`;
     clauses.push({ label, before: edit.before, after: edit.after });
   }
   return clauses;
@@ -73,16 +71,17 @@ export function buildSideLetterHtml(input: SideLetterInput): string {
 <meta charset="utf-8">
 <title>${escapeHtml(leaseName)} \u00b7 side letter</title>
 <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; max-width: 48rem; margin: 0 auto; padding: 2rem 1rem; color: #111; line-height: 1.55; }
-  h1 { margin-bottom: 0.25rem; }
-  .meta { color: #555; font-size: 0.9rem; margin-bottom: 2rem; }
+  /* Marginalia palette inlined. */
+  body { font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif; background: #faf6ee; color: #4a3f25; max-width: 65ch; margin: 0 auto; padding: 2rem 1rem; line-height: 1.55; }
+  h1 { font-weight: 600; color: #2a2316; margin-bottom: 0.25rem; }
+  .meta { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #7a6f57; font-size: 0.8125rem; margin-bottom: 2rem; }
   ol.clauses li { margin-bottom: 1rem; }
-  .empty { color: #555; font-style: italic; }
+  .empty { color: #7a6f57; font-style: italic; }
   .sig { margin-top: 3rem; }
-  .sig .name { font-weight: 600; margin-bottom: 0; }
-  .sig .title { color: #555; margin-top: 0; }
+  .sig .name { font-weight: 600; color: #2a2316; margin-bottom: 0; }
+  .sig .title { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #7a6f57; margin-top: 0; }
   @media print {
-    body { max-width: none; padding: 0; }
+    body { background: transparent; max-width: none; padding: 0; }
     ol.clauses li { page-break-inside: avoid; }
   }
 </style>
@@ -100,8 +99,7 @@ export function buildSideLetterText(input: SideLetterInput): string {
   const { leaseName, leaseDate, signer } = input;
   const clauses = buildClauses(input);
   const header =
-    `Side Letter\n` +
-    `Re: ${leaseName}${leaseDate ? ` (dated ${leaseDate})` : ''}\n\n`;
+    `Side Letter\n` + `Re: ${leaseName}${leaseDate ? ` (dated ${leaseDate})` : ''}\n\n`;
   const body =
     clauses.length === 0
       ? 'No changes to propose.\n'

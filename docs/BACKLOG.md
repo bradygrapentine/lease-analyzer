@@ -652,6 +652,14 @@ The distill pass on the right-rail supporting context shipped the two highest-RO
 - [ ] **Findings filter chips (4 severity + 4 category, all pressed by default).** The default state is "all visible," so chips do nothing on first paint. Distill candidates: collapse into one disclosure, only render category chips when ≥2 categories present, or surface as a single "Filter…" button that opens an inline sheet. Risk: this is the practitioner-density affordance — the dense bar may be the feature, not the noise. Validate with a practitioner before changing.
 - [ ] **Combine empty `AnnotationsPanel` + `CounterOfferPanel` into one selection-bound section.** Both currently render their own heading + "click a finding" hint when no finding is selected. Combine into a single "Notes & counter-offers" panel with one shared hint, expanding into both forms once selected. Requires shared state model and discoverability decision (how does the renter learn both affordances exist).
 
+### Polish pass deferrals (filed 2026-04-29 by /impeccable polish)
+
+P2 visual items surfaced during the all-surfaces polish walk; deferred from the export-brand PR because they need real-browser confirmation before committing.
+
+- [ ] **Empty home state has 60% vacant viewport.** Pre-upload, the lower 60% of the viewport is blank. Reads as "broken," not "calm." Candidates: a quiet privacy dossier line, the local-first architecture diagram, or a single restrained closing line. Brand-aligned, low risk.
+- [ ] **Native file-chooser text leaks into the upload control.** Dark-mode walk shows raw "Choose File / No file chosen" platform text adjacent to the styled "Upload lease" label. Verify `FileButton` fully suppresses the native control's visual; if not, swap to a label-on-button pattern with `aria-describedby` for the file name.
+- [ ] **Bottom-strip "Clear all saved data" lacks destructive treatment.** DESIGN.md reserves Negative Red for irrecoverable errors. Apply `--color-negative` to the label inside the existing Subtle button shell, or escalate to a dedicated destructive variant on the Button primitive.
+
 ### Wave 50 deferrals (filed after Wave 50 perf fix shipped)
 
 Slice 3 of `docs/audits/perf-probe-2026-04-29.md` was deferred when Wave 50 shipped the high-impact pair (pdf.js worker restoration + pipeline pre-emption). The remaining findings:

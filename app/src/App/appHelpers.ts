@@ -4,7 +4,6 @@ import type { IcsDateInput } from '../workflow/buildIcs';
 import { buildIcs } from '../workflow/buildIcs';
 import { extractLeaseFacts } from '../facts/extractFacts';
 import { buildHandoffZip } from '../workflow/buildHandoffZip';
-import { exportFindingsHtml } from '../storage/exportHtml';
 import { exportFindingsJson } from '../storage/exportReport';
 import type { LeaseDocument } from '../parser/types';
 import type { Finding } from '../rules/types';
@@ -59,11 +58,7 @@ export function downloadBlob(content: string, mime: string, filename: string): v
   triggerDownload(new Blob([content], { type: mime }), filename);
 }
 
-export function downloadBlobBytes(
-  bytes: Uint8Array,
-  mime: string,
-  filename: string,
-): void {
+export function downloadBlobBytes(bytes: Uint8Array, mime: string, filename: string): void {
   triggerDownload(new Blob([bytes as BlobPart], { type: mime }), filename);
 }
 
@@ -112,8 +107,13 @@ export function exportFindingsAsJson(input: AnalyzedExportInput): void {
   );
 }
 
-/** Trigger a printable-HTML export download for the current analysis. */
-export function exportFindingsAsHtml(input: AnalyzedExportInput): void {
+/**
+ * Trigger a printable-HTML export download for the current analysis.
+ * Lazy-imports the export module to keep its inline brand CSS out of the
+ * app shell — see `scripts/check-bundle-budget.mjs` shell-budget comment.
+ */
+export async function exportFindingsAsHtml(input: AnalyzedExportInput): Promise<void> {
+  const { exportFindingsHtml } = await import('../storage/exportHtml');
   downloadBlob(
     exportFindingsHtml({
       name: input.fileName,
@@ -137,15 +137,14 @@ export function buildIcsBytes(input: {
   const dates = leaseFactsToIcsDates(extractLeaseFacts(input.doc));
   if (dates.length === 0) return null;
   return {
-    bytes: new TextEncoder().encode(
-      buildIcs({ leaseName: input.fileName, dates }),
-    ),
+    bytes: new TextEncoder().encode(buildIcs({ leaseName: input.fileName, dates })),
     filename: `${stripPdfExt(input.fileName)}.ics`,
   };
 }
 
 /** Build the handoff zip (PDF + findings + readme) and trigger a download. */
-export function downloadHandoffZip(input: AnalyzedExportInput): void {
+export async function downloadHandoffZip(input: AnalyzedExportInput): Promise<void> {
+  const { exportFindingsHtml } = await import('../storage/exportHtml');
   const findingsJson = exportFindingsJson({
     name: input.fileName,
     doc: input.doc,
@@ -217,9 +216,7 @@ export async function importEncryptedArchiveFlow(
     await cb.onSuccess(payload.leases);
   } catch (err) {
     cb.onError(
-      err instanceof WrongPassphraseError
-        ? err.message
-        : `Import failed: ${friendlyError(err)}`,
+      err instanceof WrongPassphraseError ? err.message : `Import failed: ${friendlyError(err)}`,
     );
   }
 }
