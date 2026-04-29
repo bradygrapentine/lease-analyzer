@@ -65,6 +65,9 @@ describe('CounterSignPanel', () => {
     );
     await user.type(screen.getByLabelText(/passphrase/i), 'a-strong-passphrase-12345');
     await user.click(screen.getByRole('button', { name: /sign/i }));
-    expect(await screen.findByText(/bad passphrase|error|failed/i)).toBeInTheDocument();
+    expect(await screen.findByText(/bad passphrase/i)).toBeInTheDocument();
+    // Wave 45-BE — error paragraph paired with "Sign failed" badge.
+    expect(screen.getAllByText(/^sign failed$/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('alert')).toHaveTextContent(/bad passphrase/);
   });
 });
