@@ -48,10 +48,23 @@ export function SigningKeyPanel({
   return (
     <Section label="signing key" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Signing key</h2>
+      <details className="text-small text-fg-muted">
+        <summary className="cursor-pointer select-none">Why does signing matter?</summary>
+        <p className="mt-1 max-w-prose">
+          A signed export carries a digital signature made with this local key. To use it as proof
+          of origin, share your public key with the recipient out-of-band; they compare it against
+          the key embedded in the signed export. Without that comparison step, the file only
+          verifies against its own embedded key, which an attacker could replace.
+        </p>
+      </details>
       {hasKey ? (
         <p className="text-body text-fg-body">
-          <span aria-label="public key" className="text-small text-fg-muted">Key: </span>
-          <code className="font-mono text-mono text-fg-muted">{truncate(state.publicKey ?? '')}</code>
+          <span aria-label="public key" className="text-small text-fg-muted">
+            Key:{' '}
+          </span>
+          <code className="font-mono text-mono text-fg-muted">
+            {truncate(state.publicKey ?? '')}
+          </code>
         </p>
       ) : (
         <p className="text-body text-fg-muted">No signing key.</p>
@@ -86,9 +99,7 @@ export function SigningKeyPanel({
             variant="ghost"
             size="sm"
             onClick={() => {
-              const pp = window.prompt(
-                'Set a passphrase for the new (rotated) signing key:',
-              );
+              const pp = window.prompt('Set a passphrase for the new (rotated) signing key:');
               if (!pp) return;
               void onRotateKey(pp);
             }}

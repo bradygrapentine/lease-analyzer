@@ -139,6 +139,17 @@ export function AppCurrentPane({
           </Button>
         )}
       </div>
+      {hasSigningKey && (
+        <details className="text-small text-fg-muted mb-3">
+          <summary className="cursor-pointer select-none">What is signed export?</summary>
+          <p className="mt-1 max-w-prose">
+            The exported file carries a digital signature made with your local key. To use it as
+            proof of origin, share your public key with the recipient out-of-band; they compare it
+            against the key embedded in the signed export. Without that comparison step, the file
+            only verifies against its own embedded key, which an attacker could replace.
+          </p>
+        </details>
+      )}
       {ocr.likelyScanned && (
         <div
           role="status"
@@ -165,7 +176,9 @@ export function AppCurrentPane({
           )}
           {ocrState.kind === 'error' && (
             <p role="alert" className="text-body text-severity-high">
-              OCR failed: {ocrState.message}
+              OCR didn&rsquo;t finish reading this PDF. The error was: {ocrState.message}. Clauses
+              on scanned pages may not appear in findings. You can try a different language pack
+              from the picker above, or use the original PDF if its text is selectable.
             </p>
           )}
         </div>

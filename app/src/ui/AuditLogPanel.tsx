@@ -28,8 +28,15 @@ export function AuditLogPanel({
     <Section label="audit log" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Audit log</h2>
       <p className="text-body text-fg-body">
-        Append-only, hash-chained record of analyses, exports, and library
-        changes. Entries live in a separate local database.
+        Append-only, hash-chained record of significant in-app actions. Entries live in a separate
+        local database. Note: signed-export events are not currently written to this log; only
+        unsigned exports are.
+      </p>
+      <p className="text-small text-fg-muted">
+        Each entry references the hash of the entry before it. Verifying the chain re-computes those
+        hashes and confirms the log is internally consistent. This catches a stray edit that
+        doesn&rsquo;t update downstream entries; it is a local consistency check, not a
+        cryptographic proof against an attacker with full access to your browser&rsquo;s storage.
       </p>
 
       <div role="group" aria-label="audit log actions" className="flex flex-wrap gap-2">
@@ -55,7 +62,9 @@ export function AuditLogPanel({
             <span>Chain intact ({entries.length} entries).</span>
           ) : (
             <span>
-              Chain broken at seq {verification.firstBadSeq ?? '?'}.
+              Chain broken at seq {verification.firstBadSeq ?? '?'}. An entry was altered or
+              removed, so the local consistency check no longer holds for the affected range.
+              (Signed exports verify independently of the audit log.)
             </span>
           )}
         </p>
@@ -67,13 +76,24 @@ export function AuditLogPanel({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table aria-label="audit entries" className="w-full text-small text-fg-body border-collapse">
+          <table
+            aria-label="audit entries"
+            className="w-full text-small text-fg-body border-collapse"
+          >
             <thead>
               <tr className="border-b border-rule">
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">#</th>
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Time</th>
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Kind</th>
-                <th scope="col" className="text-left py-1 text-fg-muted font-sans">Payload</th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  #
+                </th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  Time
+                </th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  Kind
+                </th>
+                <th scope="col" className="text-left py-1 text-fg-muted font-sans">
+                  Payload
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -83,7 +103,9 @@ export function AuditLogPanel({
                   <td className="py-1 pr-3">{e.timestamp}</td>
                   <td className="py-1 pr-3">{e.kind}</td>
                   <td className="py-1">
-                    <code className="font-mono text-mono text-fg-body">{summarizePayload(e.payload)}</code>
+                    <code className="font-mono text-mono text-fg-body">
+                      {summarizePayload(e.payload)}
+                    </code>
                   </td>
                 </tr>
               ))}

@@ -79,7 +79,9 @@ describe('FindingsPanel', () => {
         onSelect={() => {}}
       />,
     );
-    const badge = screen.getByLabelText(/identified by on-device classifier \(similarity 83%\)/i);
+    const badge = screen.getByLabelText(
+      /identified by on-device similarity match \(similarity 83%\)/i,
+    );
     expect(badge).toBeInTheDocument();
   });
 
@@ -90,7 +92,9 @@ describe('FindingsPanel', () => {
         onSelect={() => {}}
       />,
     );
-    expect(screen.queryByLabelText(/identified by on-device classifier/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/identified by on-device similarity match/i),
+    ).not.toBeInTheDocument();
   });
 
   // Wave 25-B: clicking the hybrid badge expands an inline detail panel
@@ -112,7 +116,7 @@ describe('FindingsPanel', () => {
       />,
     );
     const badge = screen.getByRole('button', {
-      name: /identified by on-device classifier \(similarity 83%\)/i,
+      name: /identified by on-device similarity match \(similarity 83%\)/i,
     });
     expect(badge).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('Xenova/paraphrase-MiniLM-L3-v2')).not.toBeInTheDocument();
@@ -140,7 +144,7 @@ describe('FindingsPanel', () => {
       />,
     );
     const badge = screen.getByRole('button', {
-      name: /identified by on-device classifier/i,
+      name: /identified by on-device similarity match/i,
     });
     await userEvent.click(badge);
     expect(badge).toHaveAttribute('aria-expanded', 'true');
