@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Badge } from './system/Badge';
 
 export interface ShareReviewPanelProps {
   lease: { id: string; name: string; signedPack: boolean } | null;
@@ -68,12 +69,21 @@ export function ShareReviewPanel({ lease, onGenerate }: ShareReviewPanelProps): 
           Lease: <strong>{lease.name}</strong>
           {!signedPack && (
             <>
-              {' '}<span role="alert">Requires a signed pack to share.</span>
+              {' '}
+              <Badge variant="severity" severity="info">
+                Signed pack required
+              </Badge>{' '}
+              <span role="alert">Requires a signed pack to share.</span>
             </>
           )}
         </p>
       ) : (
-        <p role="alert">No lease selected.</p>
+        <>
+          <Badge variant="severity" severity="high">
+            Error
+          </Badge>{' '}
+          <p role="alert">No lease selected.</p>
+        </>
       )}
       <input
         type="password"
@@ -90,7 +100,16 @@ export function ShareReviewPanel({ lease, onGenerate }: ShareReviewPanelProps): 
           onChange={(e) => setExpiry(e.target.value)}
         />
       </label>
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && (
+        <>
+          <Badge variant="severity" severity="high">
+            Error
+          </Badge>{' '}
+          <p role="alert" className="error">
+            {error}
+          </p>
+        </>
+      )}
       <button type="submit" disabled={disabled}>
         {busy ? 'Generating…' : 'Generate review link'}
       </button>
