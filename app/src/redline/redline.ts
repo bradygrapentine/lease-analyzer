@@ -99,8 +99,8 @@ export function buildRedlineHtml(input: BuildRedlineHtmlInput): string {
   @media print {
     body { max-width: none; padding: 0; }
     .para { page-break-inside: avoid; }
-    ins { background: transparent; color: #000; text-decoration: underline; }
-    del { background: transparent; color: #000; text-decoration: line-through; }
+    ins { background: transparent; color: #2a2316; text-decoration: underline; }
+    del { background: transparent; color: #2a2316; text-decoration: line-through; }
   }
 </style>
 </head>

@@ -140,7 +140,10 @@ export function AppCurrentPane({
         )}
       </div>
       {ocr.likelyScanned && (
-        <div role="status" className="ocr-banner bg-paper-sunken border border-rule rounded-sm p-3 mb-3 space-y-2">
+        <div
+          role="status"
+          className="ocr-banner bg-paper-sunken border border-rule rounded-sm p-3 mb-3 space-y-2"
+        >
           <p className="text-body text-fg-body">
             This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page). Text
             extraction may be incomplete.
@@ -209,7 +212,7 @@ export function AppCurrentPane({
         <Card as="article" aria-label="selected finding" className="p-4 space-y-2 my-3">
           <h3 className="text-heading uppercase text-fg-muted">{selected.title}</h3>
           <p className="text-body text-fg-body">{selected.explanation}</p>
-          <blockquote className="border-l-2 border-rule pl-3 font-mono text-mono text-fg-muted italic">
+          <blockquote className="border-l border-rule pl-3 font-mono text-mono text-fg-muted italic">
             {selected.snippet}
           </blockquote>
           <span className="text-small text-fg-muted">Page {selected.page}</span>
