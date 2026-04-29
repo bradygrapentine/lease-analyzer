@@ -402,13 +402,17 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
     }
   }, [inView, key, pendingFocusRef]);
 
+  // Wave 45-A — Card stays at the default cream-paper-raised variant.
+  // The Card severity-row variant exists in the primitive API for future
+  // surfaces whose content is entirely text-fg, but FindingsPanel rows
+  // render text-fg-muted snippet + page-number sub-elements that fail
+  // WCAG AA (3.5:1) on the tinted background. Severity is signaled by the
+  // leading Badge (icon + label) plus the section header, both of which
+  // sit on the default surface with full text-fg contrast.
   return (
     <li ref={liRef} data-finding-key={key}>
       {inView ? (
-        <Card
-          variant={`severity-${finding.severity as Severity}` as const}
-          className="overflow-hidden"
-        >
+        <Card className="overflow-hidden">
           <div ref={fullRef}>
             <button
               type="button"
