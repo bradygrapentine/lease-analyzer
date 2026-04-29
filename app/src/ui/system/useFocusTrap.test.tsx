@@ -83,4 +83,26 @@ describe('useFocusTrap', () => {
     await user.tab();
     expect(document.activeElement).toBe(first);
   });
+
+  it('Shift+Tab from the container itself wraps to the last focusable (Codex regression)', async () => {
+    const user = userEvent.setup();
+    render(
+      <Trap>
+        <button type="button">first</button>
+        <button type="button">last</button>
+      </Trap>,
+    );
+    const trap = screen.getByTestId('trap');
+    const first = screen.getByRole('button', { name: 'first' });
+    const last = screen.getByRole('button', { name: 'last' });
+    trap.focus();
+    expect(document.activeElement).toBe(trap);
+    await user.tab({ shift: true });
+    // Without the wrap fix, focus would have escaped to outside-before.
+    expect(document.activeElement).toBe(last);
+    // And forward Tab from the root container goes to the first.
+    trap.focus();
+    await user.tab();
+    expect(document.activeElement).toBe(first);
+  });
 });

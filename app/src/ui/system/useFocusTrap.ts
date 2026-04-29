@@ -35,13 +35,23 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boole
       const last = focusable[focusable.length - 1];
       if (!first || !last) return;
       const active = document.activeElement as HTMLElement | null;
+      // Treat the root container itself as a wrap boundary. When initial
+      // focus lands on the dialog root (Dialog default), Shift+Tab from
+      // there must wrap to the last focusable, not fall through to the
+      // background. Forward Tab from the root goes to the first
+      // focusable. (Codex caught this gap in the original logic, which
+      // only wrapped on first/last/outside-root.)
+      const onRoot = active === root;
       if (e.shiftKey) {
-        if (active === first || !root?.contains(active)) {
+        if (onRoot || active === first || !root?.contains(active)) {
           e.preventDefault();
           last.focus();
         }
       } else {
-        if (active === last || !root?.contains(active)) {
+        if (onRoot) {
+          e.preventDefault();
+          first.focus();
+        } else if (active === last || !root?.contains(active)) {
           e.preventDefault();
           first.focus();
         }
