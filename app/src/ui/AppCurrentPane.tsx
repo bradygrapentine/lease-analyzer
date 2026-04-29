@@ -1,20 +1,8 @@
-// Wave 20 Part B — extracted JSX for the `view === 'current' &&
-// status.kind === 'analyzed'` block of App.tsx. Pure presentational
-// (no IDB / audit imports beyond the helpers needed to compute
-// derived data inline). Prop count is wide (~18) because App's
-// state is heavily intertwined with this view; further consolidation
-// (lifting the inline `extractLeaseFacts` / `matchTemplates` /
-// `needsOcr` derivations into a dedicated hook) is a Wave 21
-// candidate.
-
-// Aria/data inventory (preserved verbatim):
-//   role="status" + className="ocr-banner" (div)
-//   aria-live="polite" + className="ocr-progress" (p)
-//   role="alert" (p)
-//   aria-label="selected finding" (article — now Card as="article")
-
-import { useMemo, type Dispatch, type SetStateAction } from 'react';
-import type { OcrLanguage } from '../ocr/availableLanguages';
+// Wave 45-BE — Coordinator for analyzed-view IA. Composes the extracted
+// regions (ResultsHeader / ScannedPdfNotice / FindingsPanel + PdfViewer
+// split / SelectedFindingCard / SupportingContext). Aria inventory
+// preserved verbatim and asserted by the BE-1.4 inventory test.
+import { useMemo } from 'react';
 import { FindingsPanel } from './FindingsPanel';
 import { PdfViewer } from './PdfViewer';
 import { ResultsHeader } from './AppCurrentPane/ResultsHeader';
@@ -23,58 +11,8 @@ import { SupportingContext } from './AppCurrentPane/SupportingContext';
 import { extractLeaseFacts } from '../facts/extractFacts';
 import { needsOcr } from '../compare/needsOcr';
 import { exportFindingsAsHtml } from '../App/appHelpers';
-import { Card } from './system/Card';
-import type { Finding } from '../rules/types';
-import type { LeaseDocument } from '../parser/types';
-import type { ClauseTemplate } from '../templates/types';
-import type { GlossaryEntry } from '../glossary/loadGlossary';
-import type { UseRedlineStateApi } from '../App/useRedlineState';
-import type { UseAnnotationsApi } from '../App/useAnnotations';
-import type { UseCounterOffersApi } from '../App/useCounterOffers';
-
-interface AnalyzedStatus {
-  kind: 'analyzed';
-  fileName: string;
-  bytes: Uint8Array | null;
-  leaseId: string | null;
-  result: {
-    doc: LeaseDocument;
-    findings: Finding[];
-  };
-}
-
-type OcrState =
-  | { kind: 'idle' }
-  | { kind: 'running'; pct: number; stage: string }
-  | { kind: 'error'; message: string };
-
-interface AppCurrentPaneProps {
-  status: AnalyzedStatus;
-  selected: Finding | null;
-  selectedPage: number | null;
-  setSelected: Dispatch<SetStateAction<Finding | null>>;
-  setSelectedPage: Dispatch<SetStateAction<number | null>>;
-  ocrState: OcrState;
-  ocrLanguage: string;
-  setOcrLanguage: (next: string) => void;
-  ocrLanguages: OcrLanguage[];
-  hasSigningKey: boolean;
-  glossaryEntries: GlossaryEntry[];
-  templates: ClauseTemplate[];
-  plainEnglishByRuleId: Record<string, string>;
-  suggestedTextByRuleId: Record<string, string>;
-  suggestedEditByRuleId: Record<string, string>;
-  redline: UseRedlineStateApi;
-  counters: UseCounterOffersApi;
-  annotationsApi: UseAnnotationsApi;
-  analyzedLeaseId: string | null;
-  onExportJson: () => void;
-  onExportSignedJson: () => void;
-  onBuildIcs: () => void;
-  onAttemptOcr: () => void;
-  onPromoteToStandard: (leaseId: string, paragraphIndex: number) => void;
-  setView: (view: 'redline') => void;
-}
+import { SelectedFindingCard } from './AppCurrentPane/SelectedFindingCard';
+import type { AppCurrentPaneProps } from './AppCurrentPane/types';
 
 export function AppCurrentPane({
   status,
@@ -119,7 +57,6 @@ export function AppCurrentPane({
           })
         }
       />
-
       <ScannedPdfNotice
         ocr={ocr}
         ocrState={ocrState}
@@ -140,15 +77,10 @@ export function AppCurrentPane({
           glossary={glossaryEntries}
           plainEnglishByRuleId={plainEnglishByRuleId}
           suggestedTextByRuleId={suggestedTextByRuleId}
-          onApplySuggestion={(f, pIdx, text) => {
+          onApplySuggestion={(finding, paragraphIndex, suggestedText) => {
             if (!status.leaseId) return;
             void redline
-              .applySuggestion({
-                finding: f,
-                paragraphIndex: pIdx,
-                suggestedText: text,
-                doc: status.result.doc,
-              })
+              .applySuggestion({ finding, paragraphIndex, suggestedText, doc: status.result.doc })
               .then(() => setView('redline'));
           }}
           onPromoteToStandard={onPromoteToStandard}
@@ -167,16 +99,7 @@ export function AppCurrentPane({
           selectedFinding={selected}
         />
       </div>
-      {selected && (
-        <Card as="article" aria-label="selected finding" className="p-4 space-y-2 my-3">
-          <h3 className="text-heading uppercase text-fg-muted">{selected.title}</h3>
-          <p className="text-body text-fg-body">{selected.explanation}</p>
-          <blockquote className="border-l border-rule pl-3 font-mono text-mono text-fg-muted italic">
-            {selected.snippet}
-          </blockquote>
-          <span className="text-small text-fg-muted">Page {selected.page}</span>
-        </Card>
-      )}
+      {selected && <SelectedFindingCard finding={selected} />}
       <SupportingContext
         status={status}
         selected={selected}

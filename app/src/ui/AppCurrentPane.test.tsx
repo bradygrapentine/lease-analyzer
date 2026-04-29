@@ -220,6 +220,68 @@ describe('AppCurrentPane', () => {
     expect(screen.getByText(/Running OCR.*recognizing.*42%/i)).toBeInTheDocument();
   });
 
+  // Wave 45-BE — aria inventory test. After the IA split, the four
+  // landmarks listed in the AppCurrentPane header comment must still
+  // be queryable from the coordinator: role="status" (ocr-banner),
+  // aria-live="polite" (ocr-progress), role="alert" (ocr-error),
+  // aria-label="selected finding" (Card as="article").
+  it('preserves the four aria landmarks across the region split', () => {
+    const status = makeStatus();
+    status.result.doc = {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [],
+      sections: [],
+      raw: '',
+    };
+    const finding = {
+      ruleId: 'r1',
+      severity: 'medium',
+      category: 'general',
+      title: 'Picked finding',
+      explanation: 'Why it matters',
+      citation: null,
+      page: 1,
+      paragraphIndex: 0,
+      snippet: 'snippet',
+      span: { start: 0, end: 1 },
+      confidence: 0.9,
+      negated: false,
+      rulePackVersion: '1.0.0',
+    };
+    defaults({
+      status,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      selected: finding as any,
+      ocrState: { kind: 'error', message: 'no traineddata' },
+    });
+    // role="status" — outer ocr-banner div (other status regions may
+    // exist in supporting panels; assert the ocr-banner one is present).
+    const statuses = screen.getAllByRole('status');
+    expect(statuses.some((el) => el.classList.contains('ocr-banner'))).toBe(true);
+    // role="alert" — ocr-error paragraph (running state would emit
+    // aria-live="polite" instead; we exercise error here so all three
+    // can co-exist with the selected-finding card landmark).
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    // aria-label="selected finding" — Card rendered as <article>
+    expect(screen.getByRole('article', { name: /selected finding/i })).toBeInTheDocument();
+  });
+
+  it('preserves the aria-live="polite" progress landmark in OCR running state', () => {
+    const status = makeStatus();
+    status.result.doc = {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [],
+      sections: [],
+      raw: '',
+    };
+    defaults({
+      status,
+      ocrState: { kind: 'running', pct: 0.1, stage: 'init' },
+    });
+    const progress = screen.getByText(/Running OCR/i);
+    expect(progress).toHaveAttribute('aria-live', 'polite');
+  });
+
   it('renders the OCR error alert when ocrState.kind is "error"', () => {
     const status = makeStatus();
     status.result.doc = {
