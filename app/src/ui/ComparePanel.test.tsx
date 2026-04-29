@@ -148,9 +148,25 @@ describe('ComparePanel', () => {
     );
     expect(screen.getByText('Low')).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
-    const arrows = container.querySelectorAll('[aria-hidden="true"]');
-    const hasArrow = Array.from(arrows).some((el) => el.textContent === '→');
+    // The visual arrow + badge cluster is wrapped in aria-hidden so screen
+    // readers don't get the broken "Late fees Low High" sequence.
+    const arrowSpans = container.querySelectorAll('[aria-hidden="true"]');
+    const hasArrow = Array.from(arrowSpans).some((el) => el.textContent?.includes('→'));
     expect(hasArrow).toBe(true);
+  });
+
+  it('exposes a screen-reader-only transition string for changed severities', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 'late', title: 'Late fees', severity: 'low' })]}
+        bFindings={[f({ ruleId: 'late', title: 'Late fees', severity: 'high' })]}
+      />,
+    );
+    expect(
+      screen.getByText(/severity changed from low to high/i),
+    ).toBeInTheDocument();
   });
 
   it('surfaces a negation flip in the Changed section', () => {

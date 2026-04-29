@@ -117,9 +117,14 @@ export function ComparePanel({
             {diff.changed.map((c) => (
               <li key={c.ruleId} className="flex items-center gap-2 flex-wrap">
                 <strong className="text-body text-fg-body">{c.to.title}</strong>
-                <SevBadge severity={c.from.severity} />
-                <span aria-hidden="true" className="text-fg-muted">→</span>
-                <SevBadge severity={c.to.severity} />
+                <span className="sr-only">
+                  {`Severity changed from ${SEVERITY_LABEL[c.from.severity]} to ${SEVERITY_LABEL[c.to.severity]}.`}
+                </span>
+                <span aria-hidden="true" className="inline-flex items-center gap-2 flex-wrap">
+                  <SevBadge severity={c.from.severity} />
+                  <span className="text-fg-muted">→</span>
+                  <SevBadge severity={c.to.severity} />
+                </span>
                 {c.from.negated !== c.to.negated && (
                   <span className="text-small text-fg-muted">
                     {`negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
