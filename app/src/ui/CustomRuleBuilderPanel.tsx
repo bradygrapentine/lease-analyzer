@@ -1,4 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
+import { Badge } from './system/Badge';
 import type { LeaseDocument } from '../parser/types';
 import { analyze } from '../rules/analyze';
 import type { Category, Rule, Severity } from '../rules/types';
@@ -124,9 +125,14 @@ export function CustomRuleBuilderPanel({
           aria-invalid={duplicateId || undefined}
         />
         {duplicateId && (
-          <p id="crb-id-error" role="alert">
-            A rule with id &ldquo;{form.id}&rdquo; already exists.
-          </p>
+          <>
+            <Badge variant="severity" severity="high">
+              Invalid
+            </Badge>{' '}
+            <p id="crb-id-error" role="alert">
+              A rule with id &ldquo;{form.id}&rdquo; already exists.
+            </p>
+          </>
         )}
       </div>
 
@@ -276,13 +282,18 @@ export function CustomRuleBuilderPanel({
       )}
 
       {!validation.ok && form.id.length > 0 && (
-        <ul aria-label="validation errors">
-          {validation.errors.map((err) => (
-            <li key={err} role="alert">
-              {err}
-            </li>
-          ))}
-        </ul>
+        <>
+          <Badge variant="severity" severity="high">
+            Validation errors
+          </Badge>
+          <ul aria-label="validation errors">
+            {validation.errors.map((err) => (
+              <li key={err} role="alert">
+                {err}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       <button type="button" onClick={handleSave} disabled={!canSave}>
@@ -317,9 +328,14 @@ function RegexFields({
           aria-invalid={regexError ? true : undefined}
         />
         {regexError && (
-          <p id="crb-regex-error" role="alert">
-            Regex compile error: {regexError}
-          </p>
+          <>
+            <Badge variant="severity" severity="high">
+              Invalid
+            </Badge>{' '}
+            <p id="crb-regex-error" role="alert">
+              Regex compile error: {regexError}
+            </p>
+          </>
         )}
       </div>
       <div>

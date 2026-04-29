@@ -162,6 +162,8 @@ describe('CustomRuleBuilderPanel', () => {
     expect(
       screen.getByText(/regex compile error/i),
     ).toBeInTheDocument();
+    // Wave 45-BE — regex error paragraph paired with "Invalid" badge.
+    expect(screen.getAllByText(/^Invalid$/i).length).toBeGreaterThan(0);
     const preview = screen.getByTestId('crb-preview');
     expect(preview.textContent).toMatch(/Preview unavailable/);
   });
@@ -187,6 +189,8 @@ describe('CustomRuleBuilderPanel', () => {
     expect(
       screen.getByText(/already exists/i),
     ).toBeInTheDocument();
+    // Wave 45-BE — duplicate-id error paired with "Invalid" badge.
+    expect(screen.getAllByText(/^Invalid$/i).length).toBeGreaterThan(0);
     expect(
       screen.getByRole('button', { name: /save rule/i }),
     ).toBeDisabled();
@@ -253,5 +257,9 @@ describe('CustomRuleBuilderPanel', () => {
     expect(
       screen.getByRole('button', { name: /save rule/i }),
     ).toBeDisabled();
+    // Wave 45-BE — validation-errors list paired with single
+    // "Validation errors" badge (badge applies to the parent <ul>, not
+    // each <li>).
+    expect(screen.getByText(/^validation errors$/i)).toBeInTheDocument();
   });
 });
