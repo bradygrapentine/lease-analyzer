@@ -1,5 +1,5 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, it, expect, vi } from 'vitest';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('./ui/HybridFeedbackButton', () => ({
@@ -80,6 +80,42 @@ function installAccordionStorageOpen(): void {
   window.localStorage.setItem('lg.accordion.bottom-pane-library.open', '1');
   window.localStorage.setItem('lg.accordion.bottom-pane-governance.open', '1');
 }
+
+// Suppress unhandled `InvalidStateError` rejections that fire when a
+// fire-and-forget IDB call (e.g. App's `void clearAllFlow(...)` or
+// `refreshAuditLog`) resolves after its DB cache was nulled by the next
+// test's `beforeEach`. These are benign (the promise would update an
+// unmounted component's state) but pollute vitest output and fail
+// `test:coverage` on CI. Mirrors the same guard in `App.panels.test.tsx`.
+function isBenignIdbTeardownError(err: unknown): boolean {
+  const e = err as { name?: string; code?: number } | null;
+  if (!e) return false;
+  if (e.name === 'InvalidStateError') return true;
+  if (e.code === 11) return true;
+  return false;
+}
+interface NodeProcessLike {
+  on(event: 'unhandledRejection', fn: (err: unknown) => void): void;
+  off(event: 'unhandledRejection', fn: (err: unknown) => void): void;
+}
+const proc = (globalThis as unknown as { process?: NodeProcessLike }).process;
+const onUnhandled = (err: unknown): void => {
+  if (!isBenignIdbTeardownError(err)) throw err as Error;
+};
+beforeAll(() => {
+  proc?.on('unhandledRejection', onUnhandled);
+});
+afterAll(() => {
+  proc?.off('unhandledRejection', onUnhandled);
+});
+
+afterEach(() => {
+  // RTL auto-cleanup normally runs, but explicitly unmount here so any
+  // in-flight `refreshLibrary` / `clearAllFlow` effects tied to the
+  // rendered <App /> see their parents torn down BEFORE the next
+  // `beforeEach` nulls the cached db promises.
+  cleanup();
+});
 
 beforeEach(async () => {
   installAccordionStorageOpen();
