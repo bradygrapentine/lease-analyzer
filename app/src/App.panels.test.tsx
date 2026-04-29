@@ -279,7 +279,9 @@ describe('App panel wire-ups', () => {
     render(<App />);
     await uploadLease('Handoff.pdf');
     await userEvent.click(screen.getByRole('button', { name: /download handoff zip/i }));
-    expect(aClicks).toContain('Handoff-handoff.zip');
+    // downloadHandoffZip lazy-imports the export module (polish: brand-align
+    // exports) so the anchor click fires after the dynamic import resolves.
+    await waitFor(() => expect(aClicks).toContain('Handoff-handoff.zip'));
     createSpy.mockRestore();
   });
 
