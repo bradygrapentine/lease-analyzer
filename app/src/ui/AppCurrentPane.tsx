@@ -18,7 +18,7 @@ import type { OcrLanguage } from '../ocr/availableLanguages';
 import { FindingsPanel } from './FindingsPanel';
 import { PdfViewer } from './PdfViewer';
 import { ResultsHeader } from './AppCurrentPane/ResultsHeader';
-import { OcrLanguagePickerPanel } from './OcrLanguagePickerPanel';
+import { ScannedPdfNotice } from './AppCurrentPane/ScannedPdfNotice';
 import { AnnotationsPanel } from './AnnotationsPanel';
 import { CounterOfferPanel } from './CounterOfferPanel';
 import { TemplateMatchesPanel } from './TemplateMatchesPanel';
@@ -30,7 +30,6 @@ import { matchTemplates } from '../templates/matchTemplates';
 import { buildSummary, copyToClipboard } from '../workflow/copySummary';
 import { exportFindingsAsHtml, downloadHandoffZip } from '../App/appHelpers';
 import { Card } from './system/Card';
-import { Button } from './system/Button';
 import type { Finding } from '../rules/types';
 import type { LeaseDocument } from '../parser/types';
 import type { ClauseTemplate } from '../templates/types';
@@ -127,39 +126,15 @@ export function AppCurrentPane({
         }
       />
 
-      {ocr.likelyScanned && (
-        <div
-          role="status"
-          className="ocr-banner bg-paper-sunken border border-rule rounded-sm p-3 mb-3 space-y-2"
-        >
-          <p className="text-body text-fg-body">
-            This PDF looks scanned (avg {Math.round(ocr.avgCharsPerPage)} chars/page). Text
-            extraction may be incomplete.
-          </p>
-          {status.bytes && ocrState.kind !== 'running' && (
-            <Button type="button" variant="subtle" size="sm" onClick={onAttemptOcr}>
-              Attempt OCR
-            </Button>
-          )}
-          <OcrLanguagePickerPanel
-            available={ocrLanguages}
-            selected={ocrLanguage}
-            onChange={setOcrLanguage}
-          />
-          {ocrState.kind === 'running' && (
-            <p aria-live="polite" className="ocr-progress text-body text-fg-body">
-              Running OCR: {ocrState.stage} ({Math.round(ocrState.pct * 100)}%)
-            </p>
-          )}
-          {ocrState.kind === 'error' && (
-            <p role="alert" className="text-body text-severity-high">
-              OCR didn&rsquo;t finish reading this PDF. The error was: {ocrState.message}. Clauses
-              on scanned pages may not appear in findings. You can try a different language pack
-              from the picker above, or use the original PDF if its text is selectable.
-            </p>
-          )}
-        </div>
-      )}
+      <ScannedPdfNotice
+        ocr={ocr}
+        ocrState={ocrState}
+        ocrLanguage={ocrLanguage}
+        ocrLanguages={ocrLanguages}
+        setOcrLanguage={setOcrLanguage}
+        hasBytes={status.bytes !== null}
+        onAttemptOcr={onAttemptOcr}
+      />
       <div className="split">
         <FindingsPanel
           findings={status.result.findings}
