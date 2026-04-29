@@ -38,7 +38,9 @@ export function TemplateMatchesPanel({
             <li key={m.templateId}>
               <Card className="p-3 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-body text-fg-body font-sans font-semibold">{m.templateName}</span>
+                  <span className="text-body text-fg-body font-sans font-semibold">
+                    {m.templateName}
+                  </span>
                   <span aria-label={`template status ${badge}`} data-badge={badge}>
                     <Badge variant="outline">{badge}</Badge>
                   </span>
@@ -48,7 +50,7 @@ export function TemplateMatchesPanel({
                 </div>
                 {m.matchedSnippet && m.matchedPage !== null && (
                   <div>
-                    <blockquote className="border-l-2 border-rule pl-3 font-mono text-mono text-fg-muted italic">
+                    <blockquote className="border-l border-rule pl-3 font-mono text-mono text-fg-muted italic">
                       {m.matchedSnippet}
                     </blockquote>
                     <span className="text-small text-fg-muted">Page {m.matchedPage}</span>
