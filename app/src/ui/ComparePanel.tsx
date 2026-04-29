@@ -51,9 +51,11 @@ export function ComparePanel({
         <div
           role="alert"
           aria-label="pack version mismatch"
-          data-variant="warning"
           className="flex flex-col gap-2 p-3 rounded-sm bg-[var(--color-severity-bg-info)] border border-[var(--color-severity-border-info)]"
         >
+          <Badge variant="severity" severity="info">
+            Different rule packs
+          </Badge>
           <p className="text-body text-fg-body">
             These leases were analyzed under different rule-pack versions
             (A: v{packVersionMismatch.a}, B: v{packVersionMismatch.b}).

@@ -97,6 +97,7 @@ describe('ComparePanel', () => {
     );
     const alert = screen.getByRole('alert', { name: /pack version mismatch/i });
     expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent(/different rule packs/i);
     expect(alert).toHaveTextContent(/different rule-pack versions/i);
     expect(alert).toHaveTextContent(/v1\.0\.0/);
     expect(alert).toHaveTextContent(/v2\.0\.0/);
