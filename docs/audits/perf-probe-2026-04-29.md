@@ -1,0 +1,217 @@
+# LeaseGuard Performance Probe — 2026-04-29
+
+Browser-driven probe via `chrome-devtools-mcp` against `http://localhost:5173`
+(dev build). Three real public-source lease PDFs were sourced from
+`.gov` URLs in addition to the existing `app/public/sample.pdf`:
+
+| File | Size | Source |
+|---|---|---|
+| `sample.pdf` | 2 KB | Project synthetic fixture |
+| `consumer-gov-basic.pdf` | 162 KB | `consumer.gov` rental agreement basic |
+| `hud-90105a.pdf` | 266 KB | HUD form 90105a, model lease for subsidized programs |
+| `oklahoma-2025.pdf` | 222 KB | Oklahoma Real Estate Commission 2025 residential lease |
+
+Probe focus: cold-start Web Vitals (LCP / CLS), analyze-pipeline timing,
+console errors during the canonical upload-to-findings flow.
+
+---
+
+## TL;DR
+
+The cold-start metrics are good (LCP 387ms, CLS 0.00). The user-perceived
+slowness is the **analyze pipeline post-upload, which blocks for 17–25
+seconds on a 162 KB PDF in dev** because **pdf.js falls back to a
+"fake worker" running on the main thread**. That's the single highest-
+leverage finding. Several smaller issues compound: a malformed Source
+Serif 4 woff2 font that fails to decode, an `audit append failed
+QuotaExceededError` during typical use, multiple silent promise
+rejections, and stuck "Analyzing X" status when a new upload
+pre-empts an in-flight analyze.
+
+## Cold-start Web Vitals (navigation trace, dev build)
+
+```
+LCP:           387 ms
+LCP element:   <p> (H1 + tagline composite text); not fetched from network
+TTFB:           11 ms
+Render delay: 376 ms (97% of LCP time)
+CLS:           0.00
+```
+
+The 376 ms render delay is JS-bundle parse + initial React commit.
+**Acceptable on desktop; likely 2–3× on mid-range mobile.** No image
+or font is on the LCP critical path; reducing main-bundle JS or
+deferring non-critical reducers would shave the render-delay tail.
+
+## Critical findings (ranked by user impact)
+
+### 1. **pdf.js falls back to fake worker — main-thread parsing blocks UI for 15–25 s.** [HIGH]
+
+Console message at every upload: `Warning: Setting up fake worker.`
+
+pdf.js looks for a same-origin worker at the configured `workerSrc`
+URL. When it can't find one (CSP-mismatched, wrong public path, or
+missing register-call), it loads a "fake worker" that runs the entire
+parse on the main thread. That's exactly what's happening here:
+
+- `consumer-gov-basic.pdf` (162 KB, ~3 pages): analyze took ~17 s
+- Concurrent upload mid-analyze on `hud-90105a.pdf`: 25 s span and
+  the status display never caught up
+
+The architectural intent (per `docs/CLAUDE.md` "Build order" and
+"Data handling gotchas") is for parse + analyze to run inside the
+project's own `leaseWorker`, with pdf.js parsing inside that worker.
+The dev build is clearly NOT achieving that: pdf.js's own worker
+isn't running, so document parsing happens on the main thread, which
+serializes against React rendering, IDB writes, and the audit chain.
+
+**Fix surface:** verify `pdfjs.GlobalWorkerOptions.workerSrc` is set
+to the bundled pdf.worker chunk in `parseLease.ts` / `extractPages.ts`,
+and that the chunk is being served (the bundle budget says it's
+1.3 MiB so it exists, but evidently isn't being reached). Confirm
+behaviour matches in the production build (the bundled worker may
+work in `dist/` while the dev import chain breaks it). If the worker
+runs in production, this is a dev-only finding; if it doesn't,
+it's a real perf regression that's been in place since the worker
+was first added.
+
+### 2. **Stuck "Analyzing X" status when a new upload pre-empts.** [HIGH]
+
+Reproduce: upload `consumer-gov-basic.pdf`, immediately upload
+`hud-90105a.pdf` before the first analyze completes. The live
+region keeps reading "Analyzing consumer-gov-basic.pdf…" while the
+internal pipeline is on the new file. The status never updates.
+
+Root cause is almost certainly in `usePipeline.ts`: a single
+in-flight analyze isn't cancelled or its status overwritten when a
+new upload arrives. The user sees a stuck status and may believe
+the second upload was rejected. UX-blocking.
+
+**Fix surface:** `usePipeline` needs an `AbortController`-style
+guard or at minimum a `currentToken` ref that prefixes every
+`setStatus` so stale callbacks lose the race.
+
+### 3. **Source Serif 4 woff2 fails to decode.** [MEDIUM]
+
+```
+Failed to decode downloaded font: http://localhost:5173/fonts/source-serif-4-400.woff2
+OTS parsing error: invalid sfntVersion: 1008821359
+```
+
+DESIGN.md's "Serif-for-Substance Rule" requires the body type to be
+Source Serif 4. With this woff2 corrupted, every finding body and
+every long-form passage falls back to the platform serif (Iowan Old
+Style on macOS, Georgia elsewhere). Visual-fidelity regression that
+the design system contract specifically rejects.
+
+`sfntVersion: 1008821359` is the integer for ASCII `<htm` (or
+similar) — a strong signal the file is HTML (a 404/redirect page) or
+otherwise corrupted, not actual woff2 bytes. Probably regenerated by
+the wrong tool or the font subsetter writes a header it shouldn't.
+
+**Fix surface:** `app/public/fonts/source-serif-4-400.woff2` —
+re-fetch from the upstream Source Serif 4 release, verify with
+`woff2_decompress` or by opening as a font, ship the regenerated
+file. The 500 / 600 / italic variants may have the same issue;
+audit the whole font dir.
+
+### 4. **`audit append failed QuotaExceededError`.** [MEDIUM]
+
+```
+audit append failed QuotaExceededError
+```
+
+The audit chain hit IDB quota during typical local use. The
+`safeAudit` wrapper swallows the failure (per `docs/CLAUDE.md`
+"audit must never abort the caller"), so the user sees nothing,
+but every subsequent audit write also fails until storage frees
+up. The chain becomes lossy.
+
+Worth investigating: is this dev-only profile bloat (multi-day
+session, lots of test runs accumulating audit entries), or do
+production users hit it too over weeks of normal use? If
+production: we need a rotation policy on the audit log
+(`auditLog.rotation.test.ts` exists, suggesting one is partially
+designed). If dev-only: a reset hook on dev startup.
+
+### 5. **Multiple `Uncaught (in promise)` errors with no handler.** [MEDIUM]
+
+Three console errors during the upload flow with no message
+attached:
+
+```
+[error] Uncaught (in promise)
+[error] Uncaught (in promise)
+[error] Uncaught (in promise)
+```
+
+These are silent. Likely the same IDB-teardown rejections we've
+been swallowing in tests (Wave 45-BE, Wave 46), but in dev they
+hit user-visible console. Dev-loud / prod-quiet may be acceptable
+but worth confirming.
+
+### 6. **CSP `frame-ancestors` delivered via `<meta>`.** [LOW]
+
+```
+The Content Security Policy directive 'frame-ancestors' is ignored
+when delivered via a <meta> element.
+```
+
+Per W3C: `frame-ancestors` MUST be an HTTP response header to take
+effect. The current CSP is in `<meta>`. Move `frame-ancestors`
+into a vite dev-server header config (or, in prod, the static-host
+header config). Until then it's a no-op directive — clickjacking
+protection isn't actually enforced.
+
+## What was good
+
+- **CLS 0.00** through both reload + upload flows. Wave 33-A's
+  no-layout-shift claim holds under real input.
+- **TTFB 11 ms** (local dev). No server-rendering hop, no async
+  init blocking the document.
+- **No render-blocking network requests** in the cold-start
+  insight set.
+- **Analyze pipeline succeeds eventually** — every PDF reached an
+  analyzed state in tests; the issue is *time*, not correctness.
+
+## Probe limitations
+
+- **All measurements are dev-build, not production.** The dev
+  build doesn't tree-shake or chunk-split as aggressively, and
+  the pdf.js worker resolution may differ. Re-run against
+  `dist/` (built via `npm run build && npx serve dist/`) to
+  confirm finding #1 in production.
+- **No network throttling** applied. Real users on slow connections
+  would see a different LCP profile. Run with Lighthouse mobile
+  preset for a representative number.
+- **No memory baseline.** Heap-snapshot capture would show whether
+  multi-PDF sessions leak; deferred to a follow-up.
+- **No WCAG 1.4.3 contrast check.** That's the Playwright e2e a11y
+  spec's job (see `tests/e2e/a11y.spec.ts`).
+- **Couldn't measure INP** (no real interactions during the cold
+  navigation trace; uploads are file-input clicks, which don't
+  produce a Web Vitals INP fire).
+
+## Recommended slicing
+
+### Slice 1 — Restore the pdf.js worker (Critical Finding #1)
+
+- Investigate `parseLease.ts` / `extractPages.ts` for `GlobalWorkerOptions.workerSrc` registration.
+- Verify the bundled `pdf.worker.min.js` chunk is reachable in dev; fix the resolver if not.
+- Re-probe: confirm analyze drops from 17 s to expected 1–3 s on small PDFs.
+- Single PR; potentially 1–2 file changes, plus a regression test.
+
+### Slice 2 — Fix font + concurrent-upload UX
+
+- Re-source `source-serif-4-400.woff2` (and 500 / 600 / italic). Add a one-time CI check that the woff2 decodes (a 5-line script using `fontkit` or `woff2_decompress`).
+- Add a `currentToken`/`AbortController` guard to `usePipeline.ts` so a new upload cancels the prior analyze's status updates.
+- Bundle into one PR.
+
+### Slice 3 — Audit-log quota management + CSP header migration
+
+- Quota: design a rotation policy (cap entries, archive oldest to a separate `archived` store, surface in `AuditLogPanel` if approaching cap).
+- CSP: move `frame-ancestors` from `<meta>` to a Vite + production-host header.
+- Lower urgency than 1 + 2; can ride a future hygiene wave.
+
+Recommend **Slice 1 first** (highest impact) followed by **Slice 2**.
+Slice 3 has no user-perceived urgency.
