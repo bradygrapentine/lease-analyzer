@@ -24,7 +24,10 @@ describe('OnboardingTour', () => {
     expect(screen.getByRole('heading', { name: /portfolio.*rollups/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     expect(screen.getByText(/step 4 of 4/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /audit log.*signed export/i })).toBeInTheDocument();
+    // Wave 45-D — heading rewritten from "Audit log + signed export" to
+    // "Audit log + export" (the body now describes what the panel actually
+    // offers without overpromising provenance).
+    expect(screen.getByRole('heading', { name: /audit log.*export/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /finish onboarding tour/i })).toBeInTheDocument();
   });
 

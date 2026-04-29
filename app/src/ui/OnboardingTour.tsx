@@ -48,11 +48,13 @@ const STEPS: readonly Step[] = [
     },
   },
   {
-    title: 'Audit log + signed export',
+    title: 'Audit log + export',
     body:
-      'Every significant action — analyze, export, pack import — appends to ' +
-      'a hash-chained audit log. Scroll to the Audit Log panel at the bottom ' +
-      'of the page to verify the chain or download a signed handoff bundle.',
+      'Most in-app actions append to a local, hash-chained audit log you can ' +
+      'verify and download. The export toolbar above the findings list lets you ' +
+      'save findings as JSON or HTML, and (if you have a signing key) as a ' +
+      'signed JSON file you can hand to a counterparty. See the Audit Log ' +
+      'panel at the bottom for the running record.',
   },
 ];
 
