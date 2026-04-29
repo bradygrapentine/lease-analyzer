@@ -10,6 +10,7 @@
 import type { OcrLanguage } from '../../ocr/availableLanguages';
 import type { OcrVerdict } from '../../compare/needsOcr';
 import { Button } from '../system/Button';
+import { Badge } from '../system/Badge';
 import { OcrLanguagePickerPanel } from '../OcrLanguagePickerPanel';
 
 type OcrState =
@@ -62,11 +63,20 @@ export function ScannedPdfNotice({
         </p>
       )}
       {ocrState.kind === 'error' && (
-        <p role="alert" className="text-body text-severity-high">
-          OCR didn&rsquo;t finish reading this PDF. The error was: {ocrState.message}. Clauses on
-          scanned pages may not appear in findings. You can try a different language pack from the
-          picker above, or use the original PDF if its text is selectable.
-        </p>
+        <>
+          {/* Wave 45-BE — pair the alert paragraph with a severity badge so
+              the signal is icon + label + tinted background, not color alone
+              (WCAG 1.4.1). The role="alert" stays on the body text so screen
+              readers announce the message, not the badge label. */}
+          <Badge variant="severity" severity="high">
+            OCR failed
+          </Badge>
+          <p role="alert" className="text-body text-severity-high">
+            OCR didn&rsquo;t finish reading this PDF. The error was: {ocrState.message}. Clauses on
+            scanned pages may not appear in findings. You can try a different language pack from
+            the picker above, or use the original PDF if its text is selectable.
+          </p>
+        </>
       )}
     </div>
   );

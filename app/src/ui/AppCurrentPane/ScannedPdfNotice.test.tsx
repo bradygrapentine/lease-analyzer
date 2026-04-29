@@ -46,6 +46,14 @@ describe('ScannedPdfNotice', () => {
     expect(alert).toHaveTextContent(/ocr didn.{1,3}t finish reading/i);
   });
 
+  it('pairs the OCR-error alert with a high-severity badge (color-not-alone)', () => {
+    setup({ ocrState: { kind: 'error', message: 'bad data' } });
+    // Badge label is the visible signal that pairs with the alert body.
+    expect(screen.getByText(/OCR failed/i)).toBeInTheDocument();
+    // Alert is still present (badge does not absorb the landmark).
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
   it('hides the Attempt OCR button when hasBytes is false', () => {
     setup({ hasBytes: false });
     expect(screen.queryByRole('button', { name: /attempt ocr/i })).toBeNull();
