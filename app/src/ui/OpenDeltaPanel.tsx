@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Badge } from './system/Badge';
 
 interface OpenDeltaPanelProps {
   onPreview: (
@@ -75,7 +76,12 @@ export function OpenDeltaPanel({ onPreview, onApply }: OpenDeltaPanelProps): JSX
       </div>
       {state.kind === 'loading' && <p>Verifying…</p>}
       {state.kind === 'error' && (
-        <p role="alert">Verification failed: {state.reason}</p>
+        <>
+          <Badge variant="severity" severity="high">
+            Verification failed
+          </Badge>{' '}
+          <p role="alert">Verification failed: {state.reason}</p>
+        </>
       )}
       {state.kind === 'ready' && (
         <>

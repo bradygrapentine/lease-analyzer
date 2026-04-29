@@ -34,6 +34,8 @@ describe('OpenDeltaPanel', () => {
     render(<OpenDeltaPanel onPreview={onPreview} onApply={vi.fn()} />);
     await user.upload(screen.getByLabelText(/file|delta/i) as HTMLInputElement, file());
     expect(await screen.findByText(/signature invalid/i)).toBeInTheDocument();
+    // Wave 45-BE — error paragraph paired with "Verification failed" badge.
+    expect(screen.getAllByText(/^verification failed$/i).length).toBeGreaterThan(0);
   });
 
   it('surfaces a clear error when readBytes throws (FileReader path failure)', async () => {
