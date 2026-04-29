@@ -644,6 +644,15 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       `20260429T124811Z`); shipped with this gap because mustFix=0 and
       the proper fix is non-trivial.
 
+### Wave 50 deferrals (filed after Wave 50 perf fix shipped)
+
+Slice 3 of `docs/audits/perf-probe-2026-04-29.md` was deferred when Wave 50 shipped the high-impact pair (pdf.js worker restoration + pipeline pre-emption). The remaining findings:
+
+- [ ] **`source-serif-4-400.woff2` fails to decode.** `OTS parsing error: invalid sfntVersion: 1008821359`. Body type falls back to platform serif (Iowan Old Style on macOS, Georgia elsewhere). Re-source the woff2 from upstream Source Serif 4 release; audit 500/600/italic variants too. Visual-fidelity regression DESIGN.md "Serif-for-Substance Rule" specifically rejects.
+- [ ] **`audit append failed QuotaExceededError`.** Audit chain hit IDB quota during typical local use; `safeAudit` swallows the failure so subsequent writes silently lose. Either rotation policy (the test file `auditLog.rotation.test.ts` suggests one is partially designed) or a dev-only reset hook. Investigate prod exposure first.
+- [ ] **Three `Uncaught (in promise)` errors during upload flow.** Likely the same IDB-teardown rejections we swallow in tests (Wave 45-BE, Wave 46) but that hit user-visible console in dev. Confirm prod-quiet vs dev-loud.
+- [ ] **CSP `frame-ancestors` via `<meta>` is a no-op.** Per W3C, must be HTTP response header. Move to Vite dev-server header config (and prod static-host header config). Until then clickjacking protection isn't enforced.
+
 ### Wave 47 / 48 / 49 deferrals (filed by Wave 49 backlog reconcile)
 
 **From `docs/audits/clarify-inventory-2026-04-29.md` (deferred from Wave 47 Slice 1):**

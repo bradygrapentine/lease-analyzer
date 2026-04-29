@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { type AnalysisResult } from '../ui/analyzeFile';
 import { runOcr } from '../ocr/runOcr';
 import { analyze } from '../rules/analyze';
@@ -120,6 +120,12 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
     null,
   );
 
+  // Wave 50 — every upload increments this token. Late callbacks from a
+  // previous upload (analyze finishes after a new file was selected) check
+  // the token and no-op if the user has moved on. Prevents the stuck
+  // "Analyzing X" status the perf probe surfaced.
+  const uploadTokenRef = useRef(0);
+
   const { onLibraryChange, rules, pipelineClient, audit } = deps;
   const activeRules = rules ?? RULE_PACK_V1;
 
@@ -131,6 +137,8 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
 
   const upload = useCallback(
     async (bytes: Uint8Array, fileName: string): Promise<void> => {
+      const myToken = ++uploadTokenRef.current;
+      const isCurrent = (): boolean => uploadTokenRef.current === myToken;
       setStatus({ kind: 'loading', fileName });
       setComparisonState(null);
       try {
@@ -175,12 +183,15 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
           findings: result.findings,
         });
         if (onLibraryChange) await onLibraryChange();
+        if (!isCurrent()) return;
         setStatus({ kind: 'analyzed', fileName, result, bytes, leaseId: newId });
 
         // Auto-compare against the standard, if one exists and it isn't this lease.
         const std = await getStandardId();
+        if (!isCurrent()) return;
         if (std && std !== newId) {
           const standard = await getLease(std);
+          if (!isCurrent()) return;
           if (standard) {
             setComparisonState({
               a: standard,
@@ -199,6 +210,7 @@ export function usePipeline(deps: UsePipelineDeps = {}): PipelineApi {
           }
         }
       } catch (err) {
+        if (!isCurrent()) return;
         setStatus({ kind: 'error', message: friendlyError(err) });
       }
     },
