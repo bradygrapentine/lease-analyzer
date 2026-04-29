@@ -17,6 +17,7 @@ import { useMemo, type Dispatch, type SetStateAction } from 'react';
 import type { OcrLanguage } from '../ocr/availableLanguages';
 import { FindingsPanel } from './FindingsPanel';
 import { PdfViewer } from './PdfViewer';
+import { ResultsHeader } from './AppCurrentPane/ResultsHeader';
 import { OcrLanguagePickerPanel } from './OcrLanguagePickerPanel';
 import { AnnotationsPanel } from './AnnotationsPanel';
 import { CounterOfferPanel } from './CounterOfferPanel';
@@ -28,7 +29,6 @@ import { needsOcr } from '../compare/needsOcr';
 import { matchTemplates } from '../templates/matchTemplates';
 import { buildSummary, copyToClipboard } from '../workflow/copySummary';
 import { exportFindingsAsHtml, downloadHandoffZip } from '../App/appHelpers';
-import { useI18n } from '../i18n/I18nContext';
 import { Card } from './system/Card';
 import { Button } from './system/Button';
 import type { Finding } from '../rules/types';
@@ -110,46 +110,23 @@ export function AppCurrentPane({
   onPromoteToStandard,
   setView,
 }: AppCurrentPaneProps): JSX.Element {
-  const { t } = useI18n();
   const ocr = needsOcr(status.result.doc);
   const leaseFacts = useMemo(() => extractLeaseFacts(status.result.doc), [status]);
   return (
     <div className="results">
-      <div className="results-actions flex flex-wrap gap-2 mb-3">
-        <Button type="button" variant="subtle" size="sm" onClick={onExportJson}>
-          {t('findings.export.json')}
-        </Button>
-        <Button
-          type="button"
-          variant="subtle"
-          size="sm"
-          onClick={() =>
-            exportFindingsAsHtml({
-              fileName: status.fileName,
-              doc: status.result.doc,
-              findings: status.result.findings,
-            })
-          }
-        >
-          {t('findings.export.html')}
-        </Button>
-        {hasSigningKey && (
-          <Button type="button" variant="subtle" size="sm" onClick={onExportSignedJson}>
-            {t('findings.export.signed')}
-          </Button>
-        )}
-      </div>
-      {hasSigningKey && (
-        <details className="text-small text-fg-muted mb-3">
-          <summary className="cursor-pointer select-none">What is signed export?</summary>
-          <p className="mt-1 max-w-prose">
-            The exported file carries a digital signature made with your local key. To use it as
-            proof of origin, share your public key with the recipient out-of-band; they compare it
-            against the key embedded in the signed export. Without that comparison step, the file
-            only verifies against its own embedded key, which an attacker could replace.
-          </p>
-        </details>
-      )}
+      <ResultsHeader
+        hasSigningKey={hasSigningKey}
+        onExportJson={onExportJson}
+        onExportSignedJson={onExportSignedJson}
+        onExportHtml={() =>
+          exportFindingsAsHtml({
+            fileName: status.fileName,
+            doc: status.result.doc,
+            findings: status.result.findings,
+          })
+        }
+      />
+
       {ocr.likelyScanned && (
         <div
           role="status"
