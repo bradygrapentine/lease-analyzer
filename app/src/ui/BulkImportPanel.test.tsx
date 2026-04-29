@@ -74,6 +74,28 @@ describe('BulkImportPanel', () => {
     expect(screen.getByText(/corrupted PDF/)).toBeInTheDocument();
   });
 
+  it('renders a progressive aria-live announcement during streaming', async () => {
+    const user = userEvent.setup();
+    const onImport = vi.fn(
+      async (_files: File[], onProgress: (r: BulkResult) => void): Promise<BulkSummary> => {
+        onProgress({ fileName: 'a.pdf', hash: 'h1', status: 'ok', leaseId: 'id-a' });
+        onProgress({ fileName: 'b.pdf', hash: 'h2', status: 'skipped' });
+        onProgress({ fileName: 'c.pdf', hash: 'h3', status: 'error', error: 'broken' });
+        return { ok: 1, skipped: 1, errors: 1 };
+      },
+    );
+    render(<BulkImportPanel onImport={onImport} />);
+    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    await user.upload(input, [makeFile('a.pdf'), makeFile('b.pdf'), makeFile('c.pdf')]);
+    // The live-region is distinct from the terminal summary (different label).
+    const live = await screen.findByLabelText(/bulk import live progress/i);
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveAttribute('aria-atomic', 'false');
+    await waitFor(() =>
+      expect(live).toHaveTextContent(/Processed 3 of 3 · imported 1 · skipped 1 · errors 1/),
+    );
+  });
+
   it('surfaces errors per file', async () => {
     const user = userEvent.setup();
     const onImport = vi.fn(

@@ -1,10 +1,12 @@
 // Wave 27-C — design pass rewrite.
+// Wave 45-F — progressive aria-live announcement during streaming.
 // Semantic attributes preserved verbatim:
-//   aria-label="bulk import"             (section)
-//   aria-label="bulk import files"       (file input)
-//   aria-label="bulk import progress"    (table)
-//   data-testid={`bulk-status-${i}`}     (td)
-//   role="status" aria-label="bulk import summary"  (p)
+//   aria-label="bulk import"                          (section)
+//   aria-label="bulk import files"                    (file input — now FileButton)
+//   aria-label="bulk import progress"                 (table)
+//   aria-live="polite" + aria-label="bulk import live progress" (running summary)
+//   data-testid={`bulk-status-${i}`}                  (td)
+//   role="status" aria-label="bulk import summary"    (p — terminal summary)
 //
 import { useState } from 'react';
 import type { BulkResult, BulkSummary } from '../workflow/bulkImport';
@@ -74,6 +76,27 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
       >
         Choose PDFs or .zip
       </FileButton>
+
+      {rows.length > 0 &&
+        (() => {
+          // Wave 45-F — running summary above the table so SRs hear progress
+          // as rows arrive, not only at the closing terminal summary below.
+          const total = rows.length;
+          const ok = rows.filter((r) => r.status === 'ok').length;
+          const skipped = rows.filter((r) => r.status === 'skipped').length;
+          const errors = rows.filter((r) => r.status === 'error').length;
+          const processed = ok + skipped + errors;
+          return (
+            <p
+              aria-live="polite"
+              aria-atomic="false"
+              aria-label="bulk import live progress"
+              className="text-small text-fg-muted"
+            >
+              Processed {processed} of {total} · imported {ok} · skipped {skipped} · errors {errors}
+            </p>
+          );
+        })()}
 
       {rows.length > 0 && (
         <div className="overflow-x-auto">
