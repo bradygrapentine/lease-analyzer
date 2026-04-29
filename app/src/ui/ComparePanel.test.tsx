@@ -148,9 +148,49 @@ describe('ComparePanel', () => {
     );
     expect(screen.getByText('Low')).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
-    const arrows = container.querySelectorAll('[aria-hidden="true"]');
-    const hasArrow = Array.from(arrows).some((el) => el.textContent === '→');
+    const arrowSpans = container.querySelectorAll('[aria-hidden="true"]');
+    const hasArrow = Array.from(arrowSpans).some((el) => el.textContent?.includes('→'));
     expect(hasArrow).toBe(true);
+  });
+
+  it('exposes a screen-reader-only transition string for changed severities', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 'late', title: 'Late fees', severity: 'low' })]}
+        bFindings={[f({ ruleId: 'late', title: 'Late fees', severity: 'high' })]}
+      />,
+    );
+    expect(
+      screen.getByText(/severity changed from low to high/i),
+    ).toBeInTheDocument();
+  });
+
+  it('does not announce a severity transition when only negation changed', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 'n', title: 'Arb', severity: 'medium', negated: true })]}
+        bFindings={[f({ ruleId: 'n', title: 'Arb', severity: 'medium', negated: false })]}
+      />,
+    );
+    expect(screen.queryByText(/severity changed from/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Severity Medium\.$/i)).toBeInTheDocument();
+    expect(screen.getByText(/negated yes→no/i)).toBeInTheDocument();
+  });
+
+  it('announces no→yes negation flips with explicit screen-reader copy', () => {
+    render(
+      <ComparePanel
+        aName="Old"
+        bName="New"
+        aFindings={[f({ ruleId: 'n', title: 'Arb', negated: false })]}
+        bFindings={[f({ ruleId: 'n', title: 'Arb', negated: true })]}
+      />,
+    );
+    expect(screen.getByText(/negation changed from no to yes/i)).toBeInTheDocument();
   });
 
   it('surfaces a negation flip in the Changed section', () => {
@@ -164,5 +204,7 @@ describe('ComparePanel', () => {
     );
     expect(screen.getByRole('heading', { name: /changed/i })).toBeInTheDocument();
     expect(screen.getByText(/negated yes→no/i)).toBeInTheDocument();
+    // sr-only announcement so screen readers don't get the bare arrow glyph.
+    expect(screen.getByText(/negation changed from yes to no/i)).toBeInTheDocument();
   });
 });
