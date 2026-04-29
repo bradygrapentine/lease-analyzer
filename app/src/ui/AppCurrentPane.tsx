@@ -144,8 +144,7 @@ export function AppCurrentPane({
           <summary className="cursor-pointer select-none">What is signed export?</summary>
           <p className="mt-1 max-w-prose">
             The exported file carries a digital signature made with your local key. To use it as
-            proof of origin, share your public key with the recipient out-of-band (use{' '}
-            <em>Export public key</em> in the Signing key panel). They compare your public key
+            proof of origin, share your public key with the recipient out-of-band; they compare it
             against the key embedded in the signed export. Without that comparison step, the file
             only verifies against its own embedded key, which an attacker could replace.
           </p>

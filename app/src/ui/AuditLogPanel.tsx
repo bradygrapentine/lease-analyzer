@@ -28,8 +28,9 @@ export function AuditLogPanel({
     <Section label="audit log" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Audit log</h2>
       <p className="text-body text-fg-body">
-        Append-only, hash-chained record of analyses, exports, and library changes. Entries live in
-        a separate local database.
+        Append-only, hash-chained record of significant in-app actions. Entries live in a separate
+        local database. Note: signed-export events are not currently written to this log; only
+        unsigned exports are.
       </p>
       <p className="text-small text-fg-muted">
         Each entry references the hash of the entry before it. Verifying the chain re-computes those

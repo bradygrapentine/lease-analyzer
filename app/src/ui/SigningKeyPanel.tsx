@@ -52,10 +52,9 @@ export function SigningKeyPanel({
         <summary className="cursor-pointer select-none">Why does signing matter?</summary>
         <p className="mt-1 max-w-prose">
           A signed export carries a digital signature made with this local key. To use it as proof
-          of origin, share your public key with the recipient out-of-band (use{' '}
-          <em>Export public key</em> below). They compare your public key against the key embedded
-          in the signed export. Without that comparison step, the file only verifies against its own
-          embedded key, which an attacker could replace.
+          of origin, share your public key with the recipient out-of-band; they compare it against
+          the key embedded in the signed export. Without that comparison step, the file only
+          verifies against its own embedded key, which an attacker could replace.
         </p>
       </details>
       {hasKey ? (

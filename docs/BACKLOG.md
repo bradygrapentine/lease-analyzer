@@ -591,6 +591,22 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
 
 ### Wave 45-D follow-ups
 
+- [ ] **Audit signed-export events.** `useAppCallbacks.onExportSignedJson`
+      signs and downloads a payload but emits no `safeAudit` entry, so
+      the audit log records only unsigned exports. Add a
+      `kind: 'signed-export'` audit event (file name, format, input hash,
+      signing-key id) and refresh the panel after success. Codex flagged
+      the resulting prose mismatch in the wave's 4th adversarial pass
+      (run `20260429T135619Z`); 45-D's preamble copy was weakened to
+      describe only what the code actually records, but the durable fix
+      is to record the signed-export event.
+- [ ] **Surface success/failure for `Export public key`.** The button
+      attempts a clipboard write that may silently fail (denied
+      permission, no clipboard API). Users following the signed-export
+      verification copy could believe the key was shared when it
+      wasn't. Return an explicit status from `onExportPublicKey`, render
+      a `role="status"` confirmation, and add a clipboard-denied test.
+      Same Codex pass.
 - [ ] **Public-key fingerprint affordance in `SigningKeyPanel`.** Wave
       45-D's signed-export disclosures point users at the existing
       `Export public key` button as the out-of-band verification step,
