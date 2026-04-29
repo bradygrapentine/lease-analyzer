@@ -24,6 +24,18 @@ function f(over: Partial<Finding>): Finding {
 }
 
 describe('ComparePanel', () => {
+  it('renders an aria-label="compare" landmark region', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 's' })]}
+        bFindings={[f({ ruleId: 's' })]}
+      />,
+    );
+    expect(screen.getByRole('region', { name: /compare/i })).toBeInTheDocument();
+  });
+
   it('lists added, removed, and changed findings', () => {
     const a = [f({ ruleId: 'late-fees', title: 'Late fees', severity: 'low' })];
     const b = [
@@ -85,6 +97,7 @@ describe('ComparePanel', () => {
     );
     const alert = screen.getByRole('alert', { name: /pack version mismatch/i });
     expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent(/different rule packs/i);
     expect(alert).toHaveTextContent(/different rule-pack versions/i);
     expect(alert).toHaveTextContent(/v1\.0\.0/);
     expect(alert).toHaveTextContent(/v2\.0\.0/);
@@ -94,6 +107,50 @@ describe('ComparePanel', () => {
     });
     await userEvent.click(dismiss);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('renders severity badges (not raw severity strings) for added rows', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[]}
+        bFindings={[f({ ruleId: 'new', title: 'Brand new clause', severity: 'high' })]}
+      />,
+    );
+    // Label text comes from SEVERITY_LABEL — capitalized, no parentheses.
+    expect(screen.getByText('High')).toBeInTheDocument();
+    // No bare "(high)" parenthetical.
+    expect(screen.queryByText(/\(high\)/i)).not.toBeInTheDocument();
+  });
+
+  it('renders severity badges for removed rows', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 'gone', title: 'Old clause', severity: 'medium' })]}
+        bFindings={[]}
+      />,
+    );
+    expect(screen.getByText('Medium')).toBeInTheDocument();
+    expect(screen.queryByText(/\(medium\)/i)).not.toBeInTheDocument();
+  });
+
+  it('renders both from and to severity badges for changed rows with the arrow aria-hidden', () => {
+    const { container } = render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 'late', title: 'Late fees', severity: 'low' })]}
+        bFindings={[f({ ruleId: 'late', title: 'Late fees', severity: 'high' })]}
+      />,
+    );
+    expect(screen.getByText('Low')).toBeInTheDocument();
+    expect(screen.getByText('High')).toBeInTheDocument();
+    const arrows = container.querySelectorAll('[aria-hidden="true"]');
+    const hasArrow = Array.from(arrows).some((el) => el.textContent === '→');
+    expect(hasArrow).toBe(true);
   });
 
   it('surfaces a negation flip in the Changed section', () => {

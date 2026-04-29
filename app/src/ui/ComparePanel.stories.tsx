@@ -50,7 +50,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const NoDifferences: Story = {
+export const ZeroDiff: Story = {
   args: {
     aName: 'Standard Lease 2024',
     bName: 'Standard Lease 2024 (copy)',
@@ -59,6 +59,58 @@ export const NoDifferences: Story = {
   },
 };
 
+export const AddedOnly: Story = {
+  args: {
+    aName: 'Empty Draft',
+    bName: 'Reviewed Draft',
+    aFindings: [],
+    bFindings: [
+      makeFinding({ ruleId: 'r-auto-renew', title: 'Auto-renewal', severity: 'high' }),
+      makeFinding({ ruleId: 'r-late-fee', title: 'Late fee', severity: 'medium' }),
+      makeFinding({ ruleId: 'r-pet-fee', title: 'Non-refundable pet fee', severity: 'low' }),
+    ],
+  },
+};
+
+export const RemovedAndChanged: Story = {
+  args: {
+    aName: 'Standard Lease 2024',
+    bName: 'Renewal Draft 2026',
+    aFindings: [
+      makeFinding({ ruleId: 'r-arbitration', title: 'Arbitration', severity: 'medium' }),
+      makeFinding({ ruleId: 'r-late-fee', title: 'Late fee', severity: 'low' }),
+      makeFinding({ ruleId: 'r-pet-fee', title: 'Pet fee', severity: 'low' }),
+      makeFinding({
+        ruleId: 'r-auto-renew',
+        title: 'Auto-renewal',
+        severity: 'medium',
+        negated: true,
+      }),
+    ],
+    bFindings: [
+      // arbitration + pet-fee removed
+      makeFinding({ ruleId: 'r-late-fee', title: 'Late fee (escalated)', severity: 'high' }),
+      makeFinding({
+        ruleId: 'r-auto-renew',
+        title: 'Auto-renewal',
+        severity: 'medium',
+        negated: false,
+      }),
+    ],
+  },
+};
+
+export const PackVersionMismatchActive: Story = {
+  args: {
+    aName: 'Standard Lease 2024',
+    bName: 'Renewal Draft 2026',
+    aFindings: aSide,
+    bFindings: bSide,
+    packVersionMismatch: { a: '1.0.0', b: '2.0.0' },
+  },
+};
+
+// Retained for backward-compatibility with prior Storybook bookmarks.
 export const MixedDiff: Story = {
   args: {
     aName: 'Standard Lease 2024',
