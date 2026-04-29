@@ -1,5 +1,9 @@
 import type { PageText, TextItem } from './types';
 import { mapPdfError } from './errors';
+// Vite resolves `?url` to the bundled worker file URL (hashed in build, dev
+// path in dev). pdf.js uses this URL to spawn a real Web Worker for parsing
+// instead of falling back to the on-main-thread "fake worker" — Wave 50.
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
 
 type PdfjsModule = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
 let pdfjsPromise: Promise<PdfjsModule> | null = null;
@@ -7,10 +11,9 @@ let pdfjsPromise: Promise<PdfjsModule> | null = null;
 async function loadPdfjs(): Promise<PdfjsModule> {
   if (!pdfjsPromise) {
     pdfjsPromise = (async () => {
-      await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
       const mod = await import('pdfjs-dist/legacy/build/pdf.mjs');
       if (!mod.GlobalWorkerOptions.workerSrc) {
-        mod.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+        mod.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
       }
       return mod;
     })();
@@ -27,12 +30,7 @@ interface PdfTextItem {
 }
 
 function toTextItem(raw: unknown): TextItem | null {
-  if (
-    typeof raw !== 'object' ||
-    raw === null ||
-    !('str' in raw) ||
-    !('transform' in raw)
-  ) {
+  if (typeof raw !== 'object' || raw === null || !('str' in raw) || !('transform' in raw)) {
     return null;
   }
   const r = raw as PdfTextItem;
@@ -79,4 +77,3 @@ export async function extractPages(bytes: Uint8Array): Promise<PageText[]> {
   }
   return pages;
 }
-

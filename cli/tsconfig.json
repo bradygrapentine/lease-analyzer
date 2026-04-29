@@ -19,7 +19,8 @@
   "include": [
     "src/**/*.ts",
     "../app/src/parser/**/*.ts",
-    "../app/src/rules/**/*.ts"
+    "../app/src/rules/**/*.ts",
+    "../app/src/vite-env.d.ts"
   ],
   "exclude": [
     "src/**/*.test.ts",

@@ -88,6 +88,36 @@ describe('usePipeline', () => {
     expect(result.current.status.kind).toBe('error');
   });
 
+  // Wave 50 — pipeline pre-emption guard. Without the guard, A's late
+  // setStatus({kind:'analyzed', fileName:'first.pdf'}) overwrites B's
+  // 'loading' status and the live region reads the wrong filename.
+  it('upload pre-empts an in-flight analyze: late callbacks from the prior file no-op', async () => {
+    const { result } = renderHook(() => usePipeline());
+    const bytes1 = await makeBytes();
+    const bytes2 = await makeBytes();
+
+    // Start the first upload but do NOT await it. Its analyze pipeline
+    // will resolve some time after the second upload starts.
+    let firstUpload: Promise<void> | null = null;
+    await act(async () => {
+      firstUpload = result.current.upload(bytes1, 'first.pdf');
+      // Yield a microtask so React commits the 'loading' state for first.pdf,
+      // then start the second upload before the first finishes.
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await result.current.upload(bytes2, 'second.pdf');
+    });
+
+    // After both resolve, status MUST reflect the second upload.
+    if (firstUpload) await firstUpload;
+    await waitFor(() => expect(result.current.status.kind).toBe('analyzed'));
+    if (result.current.status.kind === 'analyzed') {
+      expect(result.current.status.fileName).toBe('second.pdf');
+    }
+  });
+
   it('auto-compares against the standard when one is set', async () => {
     // Seed a standard lease directly through storage.
     const std = await saveLease({
