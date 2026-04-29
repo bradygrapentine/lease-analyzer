@@ -29,19 +29,15 @@ const meta = {
   component: VersionHistoryPanel,
   args: {
     onCreateVersion: (label?: string, note?: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onCreateVersion', label, note);
     },
     onRestoreVersion: (versionId: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onRestoreVersion', versionId);
     },
     onDeleteVersion: (versionId: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onDeleteVersion', versionId);
     },
     onExportVersion: (versionId: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onExportVersion', versionId);
     },
   },

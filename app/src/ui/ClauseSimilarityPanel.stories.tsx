@@ -58,7 +58,6 @@ export const WithClusters: Story = {
   args: {
     clusters: sampleClusters,
     onOpenParagraph: (leaseId, paragraphIndex) => {
-      // eslint-disable-next-line no-console
       console.log('open', leaseId, paragraphIndex);
     },
   },

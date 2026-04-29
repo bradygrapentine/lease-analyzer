@@ -30,7 +30,7 @@ vi.mock('./ui/renderPdfPages', () => ({
     (): AsyncIterable<{ pageIndex: number }> => ({
       // Empty async iterator: no pages to yield; Promise-style consumers (e.g.
       // `for await (…)` in PdfViewer) complete immediately.
-      // eslint-disable-next-line @typescript-eslint/require-await
+
       async *[Symbol.asyncIterator]() {},
     }),
   ),

@@ -164,7 +164,6 @@ function AppContent(): JSX.Element {
       try {
         await appendAuditEntry(input);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.warn('audit append failed', err);
       }
     },
@@ -256,7 +255,6 @@ function AppContent(): JSX.Element {
         try {
           await persistShingles(records);
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.warn('shingle persistence failed', err);
         }
       })();
@@ -412,50 +410,50 @@ function AppContent(): JSX.Element {
           <p role="alert">Could not analyze this file: {status.message}</p>
         )}
         {view === 'current' && status.kind === 'analyzed' && (
-        <AppCurrentPane
-          status={status}
-          selected={selected}
-          selectedPage={selectedPage}
-          setSelected={setSelected}
-          setSelectedPage={setSelectedPage}
-          ocrState={ocrState}
-          ocrLanguage={ocrLanguage}
-          setOcrLanguage={setOcrLanguage}
-          ocrLanguages={ocrLanguages}
-          hasSigningKey={signingKey.publicKey !== null}
-          glossaryEntries={glossaryEntries}
-          templates={templates}
-          plainEnglishByRuleId={plainEnglishByRuleId}
-          suggestedTextByRuleId={suggestedTextByRuleId}
-          suggestedEditByRuleId={suggestedEditByRuleId}
-          redline={redline}
-          counters={counters}
-          annotationsApi={annotationsApi}
-          analyzedLeaseId={analyzedLeaseId}
-          onExportJson={onExportJson}
-          onExportSignedJson={() => void onExportSignedJson()}
-          onBuildIcs={onBuildIcs}
-          onAttemptOcr={() => {
-            setSelected(null);
-            void pipeline.ocr(ocrLanguage);
-          }}
-          onPromoteToStandard={(leaseId, paragraphIndex) => {
-            if (status.kind !== 'analyzed') return;
-            void (async (): Promise<void> => {
-              const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
-              const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
-              await promoteToStandard({
-                name,
-                sourceLeaseId: leaseId,
-                sourceParagraphIndex: paragraphIndex,
-                normalizedText: text,
-              });
-              await refreshStandardSuite();
-              void refreshAuditLog();
-            })();
-          }}
-          setView={setView}
-        />
+          <AppCurrentPane
+            status={status}
+            selected={selected}
+            selectedPage={selectedPage}
+            setSelected={setSelected}
+            setSelectedPage={setSelectedPage}
+            ocrState={ocrState}
+            ocrLanguage={ocrLanguage}
+            setOcrLanguage={setOcrLanguage}
+            ocrLanguages={ocrLanguages}
+            hasSigningKey={signingKey.publicKey !== null}
+            glossaryEntries={glossaryEntries}
+            templates={templates}
+            plainEnglishByRuleId={plainEnglishByRuleId}
+            suggestedTextByRuleId={suggestedTextByRuleId}
+            suggestedEditByRuleId={suggestedEditByRuleId}
+            redline={redline}
+            counters={counters}
+            annotationsApi={annotationsApi}
+            analyzedLeaseId={analyzedLeaseId}
+            onExportJson={onExportJson}
+            onExportSignedJson={() => void onExportSignedJson()}
+            onBuildIcs={onBuildIcs}
+            onAttemptOcr={() => {
+              setSelected(null);
+              void pipeline.ocr(ocrLanguage);
+            }}
+            onPromoteToStandard={(leaseId, paragraphIndex) => {
+              if (status.kind !== 'analyzed') return;
+              void (async (): Promise<void> => {
+                const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
+                const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
+                await promoteToStandard({
+                  name,
+                  sourceLeaseId: leaseId,
+                  sourceParagraphIndex: paragraphIndex,
+                  normalizedText: text,
+                });
+                await refreshStandardSuite();
+                void refreshAuditLog();
+              })();
+            }}
+            setView={setView}
+          />
         )}
       </div>
 

@@ -20,15 +20,12 @@ const meta = {
   args: {
     leaseId: 'L1',
     onSave: (text: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onSave', text);
     },
     onUpdate: (id: string, text: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onUpdate', id, text);
     },
     onDelete: (id: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onDelete', id);
     },
   },

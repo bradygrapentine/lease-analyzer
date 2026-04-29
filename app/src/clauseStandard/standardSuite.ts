@@ -48,17 +48,13 @@ export function _resetStandardsDbForTests(): void {
 
 async function openStandardsDb(): Promise<IDBPDatabase<StandardsSchema>> {
   if (!dbPromise) {
-    dbPromise = openDB<StandardsSchema>(
-      STANDARDS_DB_NAME,
-      STANDARDS_DB_VERSION,
-      {
-        upgrade(db) {
-          if (!db.objectStoreNames.contains(STORE)) {
-            db.createObjectStore(STORE, { keyPath: 'id' });
-          }
-        },
+    dbPromise = openDB<StandardsSchema>(STANDARDS_DB_NAME, STANDARDS_DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(STORE)) {
+          db.createObjectStore(STORE, { keyPath: 'id' });
+        }
       },
-    );
+    });
   }
   return dbPromise;
 }
@@ -77,21 +73,15 @@ function randomId(): string {
 // Audit appends must never abort the primary mutation. Mirrors App.tsx's
 // `safeAudit` wrapper so calling these mutators outside of App still keeps
 // the chain consistent without throwing.
-async function safeAudit(
-  kind: string,
-  payload: Record<string, unknown>,
-): Promise<void> {
+async function safeAudit(kind: string, payload: Record<string, unknown>): Promise<void> {
   try {
     await appendAuditEntry({ kind, payload });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn('audit append failed', err);
   }
 }
 
-export async function promoteToStandard(
-  input: PromoteInput,
-): Promise<StandardClause> {
+export async function promoteToStandard(input: PromoteInput): Promise<StandardClause> {
   const db = await openStandardsDb();
   const record: StandardClause = {
     id: randomId(),

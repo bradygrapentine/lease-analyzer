@@ -18,23 +18,18 @@ const meta = {
   component: SideLetterPanel,
   args: {
     onSignerChange: (signer: { name: string; title: string }) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onSignerChange', signer);
     },
     onPreview: () => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onPreview');
     },
     onDownload: () => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onDownload');
     },
     onDownloadPdf: () => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onDownloadPdf');
     },
     onClosePreview: () => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onClosePreview');
     },
   },

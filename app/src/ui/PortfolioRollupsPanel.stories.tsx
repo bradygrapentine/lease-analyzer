@@ -28,7 +28,6 @@ const meta = {
   component: PortfolioRollupsPanel,
   args: {
     onDrillThrough: (ids: string[]) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] drill-through', ids);
     },
   },

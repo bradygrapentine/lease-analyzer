@@ -28,15 +28,12 @@ const meta = {
   component: RedlinePanel,
   args: {
     onEditParagraph: (paragraphIndex: number, after: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onEditParagraph', paragraphIndex, after);
     },
     onDeleteEdit: (paragraphIndex: number) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onDeleteEdit', paragraphIndex);
     },
     onExportHtml: () => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onExportHtml');
     },
   },

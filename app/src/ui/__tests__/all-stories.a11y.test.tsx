@@ -27,7 +27,6 @@ describe('Wave 41 — all panel stories pass axe', () => {
     vi.spyOn(console, 'error').mockImplementation((msg: unknown) => {
       if (typeof msg === 'string' && msg.includes('HTMLCanvasElement')) return;
       // Surface anything unexpected.
-      // eslint-disable-next-line no-console
       console.warn.call(console, msg);
     });
   });

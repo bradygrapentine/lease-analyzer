@@ -139,7 +139,7 @@ describe('AppCurrentPane', () => {
             redline: { redlineEdits: [], applySuggestion: vi.fn() } as any,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             counters: { counterOffers: [], save: vi.fn(), remove: vi.fn() } as any,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
             annotationsApi: {
               annotations: [],
               save: vi.fn(),
