@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { diffFindings } from '../compare/diffFindings';
 import type { Finding } from '../rules/types';
 import { Card } from './system/Card';
+import { Badge } from './system/Badge';
+
+type Severity = Finding['severity'];
+
+const SEVERITY_LABEL: Record<Severity, string> = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+};
 
 interface ComparePanelProps {
   aName: string;
@@ -74,8 +84,10 @@ export function ComparePanel({
           <ul className="space-y-1">
             {diff.added.map((f) => (
               <li key={f.ruleId} className="flex items-center gap-2 flex-wrap">
-                <strong className="text-body text-fg-body">{f.title}</strong>{' '}
-                <small>({f.severity})</small>
+                <strong className="text-body text-fg-body">{f.title}</strong>
+                <Badge variant="severity" severity={f.severity}>
+                  {SEVERITY_LABEL[f.severity]}
+                </Badge>
               </li>
             ))}
           </ul>
@@ -90,8 +102,10 @@ export function ComparePanel({
           <ul className="space-y-1">
             {diff.removed.map((f) => (
               <li key={f.ruleId} className="flex items-center gap-2 flex-wrap">
-                <strong className="text-body text-fg-body">{f.title}</strong>{' '}
-                <small>({f.severity})</small>
+                <strong className="text-body text-fg-body">{f.title}</strong>
+                <Badge variant="severity" severity={f.severity}>
+                  {SEVERITY_LABEL[f.severity]}
+                </Badge>
               </li>
             ))}
           </ul>
@@ -106,12 +120,21 @@ export function ComparePanel({
           <ul className="space-y-1">
             {diff.changed.map((c) => (
               <li key={c.ruleId} className="flex items-center gap-2 flex-wrap">
-                <strong className="text-body text-fg-body">{c.to.title}</strong>{' '}
-                <small>
-                  {c.from.severity} → {c.to.severity}
-                  {c.from.negated !== c.to.negated &&
-                    ` · negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
-                </small>
+                <strong className="text-body text-fg-body">{c.to.title}</strong>
+                <Badge variant="severity" severity={c.from.severity}>
+                  {SEVERITY_LABEL[c.from.severity]}
+                </Badge>
+                <span aria-hidden="true" className="text-fg-muted">
+                  →
+                </span>
+                <Badge variant="severity" severity={c.to.severity}>
+                  {SEVERITY_LABEL[c.to.severity]}
+                </Badge>
+                {c.from.negated !== c.to.negated && (
+                  <span className="text-small text-fg-muted">
+                    {`negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
