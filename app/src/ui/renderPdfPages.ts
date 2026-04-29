@@ -6,16 +6,19 @@
 // promises. The canvas-paint work itself still happens inside this module so
 // callers only need a for-await-of loop.
 
+// Vite resolves `?url` to the bundled worker file URL so pdf.js spawns a real
+// Web Worker instead of the on-main-thread "fake worker" — Wave 50 follow-up.
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
+
 type PdfjsModule = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
 let pdfjsPromise: Promise<PdfjsModule> | null = null;
 
 export async function loadPdfjs(): Promise<PdfjsModule> {
   if (!pdfjsPromise) {
     pdfjsPromise = (async () => {
-      await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
       const mod = await import('pdfjs-dist/legacy/build/pdf.mjs');
       if (!mod.GlobalWorkerOptions.workerSrc) {
-        mod.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+        mod.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
       }
       return mod;
     })();
@@ -93,12 +96,10 @@ function createIterator(
   pdfjsForTests: (() => Promise<Pick<PdfjsModule, 'getDocument'>>) | undefined,
 ): AsyncIterator<RenderedPage> {
   const renderTasks: Array<{ cancel: () => void }> = [];
-  let loadingTask:
-    | {
-        promise: Promise<import('pdfjs-dist/legacy/build/pdf.mjs').PDFDocumentProxy>;
-        destroy: () => Promise<void>;
-      }
-    | null = null;
+  let loadingTask: {
+    promise: Promise<import('pdfjs-dist/legacy/build/pdf.mjs').PDFDocumentProxy>;
+    destroy: () => Promise<void>;
+  } | null = null;
   let doc: import('pdfjs-dist/legacy/build/pdf.mjs').PDFDocumentProxy | null = null;
   let initPromise: Promise<void> | null = null;
   let i = 0;

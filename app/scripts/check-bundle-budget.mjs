@@ -32,8 +32,12 @@ const BUDGETS = [
   { pattern: /^index-.+\.js$/, maxBytes: 354_000, label: 'app shell' },
   // pdf.js API bundle (wrapper that loads the worker)
   { pattern: /^pdf-.+\.js$/, maxBytes: 600_000, label: 'pdf.js api' },
-  // pdf.worker: the single biggest asset; precached offline
-  { pattern: /^pdf\.worker-.+\.js$/, maxBytes: 1_800_000, label: 'pdf.worker' },
+  // pdf.worker: the single biggest asset; precached offline. Wave 50 follow-up
+  // switched both call sites to `?url` imports, so Vite ships the raw .mjs
+  // asset (≈2.3 MB unminified) rather than a minified chunk. Gzipped wire
+  // size is unchanged; the budget tracks on-disk size so it bumps with the
+  // extension change.
+  { pattern: /^pdf\.worker-.+\.m?js$/, maxBytes: 2_400_000, label: 'pdf.worker' },
   // Phase 13 lease-analysis Web Worker. Isolates parseLease + analyze off
   // the main thread. No React / UI code should land here.
   { pattern: /^leaseWorker-.+\.js$/, maxBytes: 50_000, label: 'lease worker' },
