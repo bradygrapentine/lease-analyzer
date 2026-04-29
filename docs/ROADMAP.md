@@ -232,32 +232,57 @@ modelId }`) recorded in the audit log.
 - Privacy disclosure update.
 - Paraphrased-clause golden-test fixture exercising the full path.
 
-### Phase 19 — Phase 18 productionization (proposed; Wave 27+)
+### Phase 19 — Phase 18 productionization
 
-Phase 18 is functionally complete but operationally raw. The
-Wave 27 candidates queued in [`BACKLOG.md`](./BACKLOG.md) cover:
+Original Wave 27 candidates, status as of Wave 43:
 
-- **Nightly real-model GHA job** that runs the gated
-  `hybrid-golden.spec.ts` on a schedule. Would have caught the
-  Wave 25 loader/CSP gaps weeks earlier; today the spec is
-  manual-only.
-- **Worker-path classifier** if the main-thread embedding pass
-  proves to block the UI on real-world (non-fixture) leases.
-  Today's per-paragraph latency is sub-second on the sample
-  corpus, but production users will hit larger documents.
-- **Click-to-explain → audit-log linkage** so the disclosure
-  surfaces the matching `llm-classify` entry id alongside the
-  evidence payload.
-- **Branches ≥ 90 push** if a guard-removal sweep on the
-  remaining `noUncheckedIndexedAccess` artifacts in
-  parser/matchers clears the buffer.
-- **`@xenova/transformers` upstream-bump watch** to retire the
-  `protobufjs <7.5.5` accept-risk decision (`SECURITY.md` §7.1)
-  when transformers ships with the fix.
+- **Nightly real-model GHA job** — **shipped (Wave 32-A, #135).**
+  `hybrid-golden.spec.ts` runs nightly; Wave 25-class loader/CSP
+  gaps would now be caught within a day.
+- **Worker-path classifier** — **deferred (Phase 18 hold, see
+  Wave 40 below).** Embedding pass still runs on the main thread
+  after the worker returns deterministic findings; deferred until
+  there's evidence Phase 18 produces user value (re-evaluation
+  trigger documented in `docs/plans/wave40-phase18-revisit-or-retire.md`).
+- **Click-to-explain → audit-log linkage** — **shipped
+  (Wave 32-C, #136).** Disclosure surfaces the matching
+  `llm-classify` entry id alongside the evidence payload.
+- **Branches ≥ 90 push** — **shipped (cumulative through
+  Wave 43, #160).** Coverage floor now `96 / 90 / 93 / 96`;
+  branches actuals at 90.47 with the Wave 43 ratchet.
+- **`@xenova/transformers` upstream-bump watch** — **superseded
+  by Wave 36 migration (#149-#155).** Project moved to
+  `@huggingface/transformers` v4 (default since Wave 36-B);
+  v2 branch and the `protobufjs <7.5.5` accept-risk decision
+  removed in Wave 36-C.
 
-Each candidate is small enough to slot into a future wave alone;
-none is blocked on Phase 18 itself. See `BACKLOG.md` "Cross-cutting
-tech debt" and "Known unknowns / risk register" for the full list.
+### Phase 18 status (post-Wave-40)
+
+Phase 18 (hybrid rules + on-device LLM clause classification) is
+**held** as of Wave 40 (#159). Decision: keep the gated, opt-in
+classifier shipped (no removal, no rip-out cost) but pause further
+productionization investment until a re-evaluation trigger fires.
+Trigger criteria are documented in
+`docs/plans/wave40-phase18-revisit-or-retire.md` §6 — primarily
+sustained user feedback rate showing hybrid findings provide
+incremental value beyond deterministic rules. Until then, the
+worker-path classifier and any further hybrid-quality work stay on
+the shelf.
+
+### Phase 19 status (post-Wave-43)
+
+Adjacent productionization items that *did* ship outside Phase 18:
+
+- **WCAG 2.1 AA** — closed (Wave 41, #161). Story-driven axe sweep
+  in `src/ui/__tests__/all-stories.a11y.test.tsx` covers every
+  Storybook story; Lighthouse a11y score = 1.00 (gate ≥ 0.95).
+- **Coverage floors** — `96 / 90 / 93 / 96` (Wave 43, #160).
+- **Tauri matrix** — retired (Wave 42, #157). PWA stays the
+  single shipping surface; native shell is out of scope.
+- **Bundle budget** — re-audited (Wave 38, #158). Classifier
+  ORT subdirectory excluded from the bundle walk in Wave 39 (#162).
+- **CI trust** — Mergify queue gap closed (Wave 30-C, confirmed
+  in Wave 37 #154).
 
 ---
 
