@@ -21,6 +21,36 @@ function SevBadge({ severity }: { severity: Severity }): JSX.Element {
   );
 }
 
+type ChangedRowData = ReturnType<typeof diffFindings>['changed'][number];
+
+function ChangedRow({ c }: { c: ChangedRowData }): JSX.Element {
+  const sevSame = c.from.severity === c.to.severity;
+  return (
+    <li className="flex items-center gap-2 flex-wrap">
+      <strong className="text-body text-fg-body">{c.to.title}</strong>
+      <span className="sr-only">
+        {sevSame
+          ? `Severity ${SEVERITY_LABEL[c.to.severity]}.`
+          : `Severity changed from ${SEVERITY_LABEL[c.from.severity]} to ${SEVERITY_LABEL[c.to.severity]}.`}
+      </span>
+      <span aria-hidden="true" className="inline-flex items-center gap-2 flex-wrap">
+        <SevBadge severity={c.from.severity} />
+        {!sevSame && (
+          <>
+            <span className="text-fg-muted">→</span>
+            <SevBadge severity={c.to.severity} />
+          </>
+        )}
+      </span>
+      {c.from.negated !== c.to.negated && (
+        <span className="text-small text-fg-muted">
+          {`negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
+        </span>
+      )}
+    </li>
+  );
+}
+
 function FlatSection({ label, rows }: { label: string; rows: Finding[] }): JSX.Element | null {
   if (rows.length === 0) return null;
   return (
@@ -45,21 +75,13 @@ interface ComparePanelProps {
   bName: string;
   aFindings: Finding[];
   bFindings: Finding[];
-  /**
-   * Present when the two leases were analyzed under different rule-pack
-   * versions. When set, the panel renders a dismissable warning banner.
-   * Optional so existing callers (App.tsx today) keep compiling; the
-   * coordinator will thread this through in a follow-up pass.
-   */
+  // Set when the two leases were analyzed under different rule-pack versions;
+  // surfaces a dismissable info banner. Optional so callers keep compiling.
   packVersionMismatch?: { a: string; b: string };
 }
 
 export function ComparePanel({
-  aName,
-  bName,
-  aFindings,
-  bFindings,
-  packVersionMismatch,
+  aName, bName, aFindings, bFindings, packVersionMismatch,
 }: ComparePanelProps): JSX.Element {
   const diff = diffFindings(aFindings, bFindings);
   const totalDiffs = diff.added.length + diff.removed.length + diff.changed.length;
@@ -75,27 +97,14 @@ export function ComparePanel({
       </header>
 
       {packVersionMismatch && !mismatchDismissed && (
-        <div
-          role="alert"
-          aria-label="pack version mismatch"
-          className="flex flex-col gap-2 p-3 rounded-sm bg-[var(--color-severity-bg-info)] border border-[var(--color-severity-border-info)]"
-        >
-          <Badge variant="severity" severity="info">
-            Different rule packs
-          </Badge>
+        <div role="alert" aria-label="pack version mismatch" className="flex flex-col gap-2 p-3 rounded-sm bg-[var(--color-severity-bg-info)] border border-[var(--color-severity-border-info)]">
+          <Badge variant="severity" severity="info">Different rule packs</Badge>
           <p className="text-body text-fg-body">
             These leases were analyzed under different rule-pack versions
             (A: v{packVersionMismatch.a}, B: v{packVersionMismatch.b}).
             Differences may reflect rule changes rather than content changes.
           </p>
-          <button
-            type="button"
-            onClick={() => setMismatchDismissed(true)}
-            aria-label="Dismiss pack version mismatch warning"
-            className="self-start text-small text-fg-muted underline hover:text-fg-body focus-visible:focus-ring"
-          >
-            Dismiss
-          </button>
+          <button type="button" onClick={() => setMismatchDismissed(true)} aria-label="Dismiss pack version mismatch warning" className="self-start text-small text-fg-muted underline hover:text-fg-body focus-visible:focus-ring">Dismiss</button>
         </div>
       )}
 
@@ -110,28 +119,9 @@ export function ComparePanel({
 
       {diff.changed.length > 0 && (
         <Card variant="default" className="p-3 space-y-2">
-          <h3 className="text-heading uppercase text-fg-muted">
-            Changed ({diff.changed.length})
-          </h3>
+          <h3 className="text-heading uppercase text-fg-muted">Changed ({diff.changed.length})</h3>
           <ul className="space-y-1">
-            {diff.changed.map((c) => (
-              <li key={c.ruleId} className="flex items-center gap-2 flex-wrap">
-                <strong className="text-body text-fg-body">{c.to.title}</strong>
-                <span className="sr-only">
-                  {`Severity changed from ${SEVERITY_LABEL[c.from.severity]} to ${SEVERITY_LABEL[c.to.severity]}.`}
-                </span>
-                <span aria-hidden="true" className="inline-flex items-center gap-2 flex-wrap">
-                  <SevBadge severity={c.from.severity} />
-                  <span className="text-fg-muted">→</span>
-                  <SevBadge severity={c.to.severity} />
-                </span>
-                {c.from.negated !== c.to.negated && (
-                  <span className="text-small text-fg-muted">
-                    {`negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
-                  </span>
-                )}
-              </li>
-            ))}
+            {diff.changed.map((c) => <ChangedRow key={c.ruleId} c={c} />)}
           </ul>
         </Card>
       )}

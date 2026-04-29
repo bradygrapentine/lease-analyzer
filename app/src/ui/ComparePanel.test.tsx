@@ -169,6 +169,20 @@ describe('ComparePanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('does not announce a severity transition when only negation changed', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 'n', title: 'Arb', severity: 'medium', negated: true })]}
+        bFindings={[f({ ruleId: 'n', title: 'Arb', severity: 'medium', negated: false })]}
+      />,
+    );
+    expect(screen.queryByText(/severity changed from/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Severity Medium\.$/i)).toBeInTheDocument();
+    expect(screen.getByText(/negated yes→no/i)).toBeInTheDocument();
+  });
+
   it('surfaces a negation flip in the Changed section', () => {
     render(
       <ComparePanel
