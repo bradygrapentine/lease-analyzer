@@ -3,7 +3,7 @@ name: LeaseGuard
 description: Local-first lease analyzer; cream paper, ink rules, severity in the margins.
 colors:
   paper: "#faf6ee"
-  paper-raised: "#ffffff"
+  paper-raised: "#fdfcf8"
   paper-sunken: "#f3eddc"
   fg: "#2a2316"
   fg-body: "#4a3f25"
@@ -172,7 +172,9 @@ with an icon and a text label.
 - **Aged Cream** (`#faf6ee`): the canvas. Body background, default page.
 - **Folded Page** (`#f3eddc`): sunken surface for inactive controls,
   toolbars, selected-state ghost buttons.
-- **Paper-Raised** (`#ffffff`): cards, inputs, panels lifted off the page.
+- **Paper-Raised** (`#fdfcf8`): cards, inputs, panels lifted off the page. A
+  near-white with a faint warm tint — never pure `#fff`, in keeping with the
+  No-Pure-Black Rule below.
 - **Ink Black** (`#2a2316`): primary text and headings.
 - **Walnut Body** (`#4a3f25`): body copy. Slightly warmer and lighter than
   Ink Black so paragraphs don't read as headlines.
@@ -365,6 +367,73 @@ description-below pattern.
   color, justified by the highlight metaphor.
 - **Border:** `rgba(255, 193, 7, 0.9)`, 1px. A single visual that says
   "this is the clause the finding points at."
+
+### Sections & Section Groups
+
+The accordion shell. `Section` is a labelled region with an optional
+`collapsible` toggle; `SectionGroup` is the persistent disclosure
+container used by the right rail and the in-page accordion shells
+(THIS LEASE / LIBRARY / GOVERNANCE).
+
+- **Header style:** uppercase 12.5px system-sans (Walnut Muted), with
+  an optional count badge after the title.
+- **Disclosure affordance:** a chevron glyph on the right; the entire
+  header row is the activator (`<button aria-expanded>`).
+- **Persistence:** per-group open/closed state is stored in
+  `localStorage` under `lg.accordion.<id>.open`; presence of the key
+  always wins over the in-code `defaultOpen`.
+- **Density:** `comfortable` (default) or `compact` for dense
+  practitioner panels.
+- **Empty rule:** when a section's body has no rows, the panel renders
+  `null` rather than an empty-state sentinel — the rail collapses to
+  what's actually present (per the distill pass on the right rail).
+
+### EmptyState
+
+Centered placeholder for panels that have a row vocabulary but no
+rows yet (e.g., notes, counter-offers).
+
+- **Style:** vertical stack, centered, `py-8 px-4`, Walnut Muted
+  foreground.
+- **Icon slot:** 32×32 inline SVG (no icon-font dependency); rendered
+  in Walnut Faint and `aria-hidden`.
+- **Title:** body-size system-sans, Ink Black.
+- **Description:** small-size system-sans, Walnut Muted, capped at
+  `max-w-prose` so the copy sits within reading measure.
+- **Action slot:** optional, accepts a `<Button>`. Reserved for first-
+  run states where a single primary action makes the panel useful.
+
+### FileButton
+
+The PDF-picker primitive — a styled `<label>` that fronts a hidden
+`<input type="file">`.
+
+- **Variants and sizes:** mirrors `Button` (`default` / `ghost` /
+  `subtle`, `sm` / `md`).
+- **Accessible name (WCAG 2.5.3):** the visible children are the
+  accessible name. An explicit `aria-label` override is allowed but
+  must contain the visible text so voice-control users can speak the
+  words they see.
+- **Focus:** identical mustard ring + Court Slate outline as `Button`.
+
+### Dialog
+
+Used sparingly; `OnboardingTour` is the only consumer today. The
+primitive codifies the WAI-ARIA APG dialog contract so future dialogs
+inherit it by construction.
+
+- **Behavior:** focus trap on mount, programmatic initial focus,
+  return focus on dismiss, Esc handler, `prefers-reduced-motion`
+  honored, mustard focus ring on focusable descendants.
+- **Backdrop dismiss:** **off by default.** LeaseGuard is a lawyerly
+  app; dialogs are not consumer-soft "tap-anywhere-to-close"
+  surfaces. Opt in only for genuinely cancellable flows.
+- **Required wiring:** `titleId` (for `aria-labelledby`) is
+  mandatory; `descriptionId` is optional but encouraged. The dialog
+  root is `tabIndex={-1}` so it can receive focus programmatically.
+- **Doctrine:** modals are not the first thought (see Don'ts).
+  Inline disclosure, panel state, and `Section` collapse precede a
+  dialog every time.
 
 ## 6. Do's and Don'ts
 
