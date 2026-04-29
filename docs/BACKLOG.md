@@ -589,6 +589,31 @@ score: number }` field that the LLM path populates. The audit
 blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       and the dist build serves the model from same-origin.
 
+### Wave 45-D follow-ups
+
+- [ ] **Public-key fingerprint affordance in `SigningKeyPanel`.** Wave
+      45-D's signed-export disclosures point users at the existing
+      `Export public key` button as the out-of-band verification step,
+      since the UI does not yet expose a shorter SHA-256 fingerprint
+      that would be more practical to compare. Adding a fingerprint
+      row (4-byte SHA-256 of the raw public key bytes, displayed in
+      hex) plus a copy-to-clipboard affordance would make the
+      verification workflow easier for non-technical recipients. Once
+      shipped, refresh the disclosure copy to reference fingerprint
+      compare instead of full public-key compare. Codex flagged the
+      mismatch in the wave's 3rd adversarial pass (run
+      `20260429T135226Z`). See also: the unused `keys?` /
+      `KeyHistoryEntry.fingerprint` plumbing already in
+      `SigningKeyPanel.tsx` — the panel can render fingerprints when a
+      caller wires them in.
+- [ ] **Audit-log `entryHash` column in `AuditLogPanel`.** Wave 45-D's
+      first-pass preamble told users to "spot-check the first 8
+      characters of the digest" — but the panel's table never renders
+      `entryHash`. The instruction was removed in pass 2; surfacing
+      the digest as a real column (full value plus a copy affordance)
+      would make the consistency-check workflow actionable for
+      practitioners.
+
 ### Wave 45-F follow-ups
 
 - [ ] **Dialog focus containment for direct `.focus()` calls.** Wave 45-F

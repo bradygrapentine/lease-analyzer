@@ -143,12 +143,11 @@ export function AppCurrentPane({
         <details className="text-small text-fg-muted mb-3">
           <summary className="cursor-pointer select-none">What is signed export?</summary>
           <p className="mt-1 max-w-prose">
-            The exported file carries a digital signature made with your local key. To verify the
-            file came from you and hasn&rsquo;t been altered since, share your public-key
-            fingerprint with the recipient out-of-band (text, email, in person). They can then
-            confirm the embedded key matches yours and the signature is valid. Without a shared
-            fingerprint, the file only verifies against the key embedded inside it, which an
-            attacker could replace.
+            The exported file carries a digital signature made with your local key. To use it as
+            proof of origin, share your public key with the recipient out-of-band (use{' '}
+            <em>Export public key</em> in the Signing key panel). They compare your public key
+            against the key embedded in the signed export. Without that comparison step, the file
+            only verifies against its own embedded key, which an attacker could replace.
           </p>
         </details>
       )}

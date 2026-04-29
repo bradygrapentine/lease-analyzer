@@ -51,11 +51,11 @@ export function SigningKeyPanel({
       <details className="text-small text-fg-muted">
         <summary className="cursor-pointer select-none">Why does signing matter?</summary>
         <p className="mt-1 max-w-prose">
-          A signed export carries a digital signature made with this local key. To verify the file
-          came from you and hasn&rsquo;t been altered since, share your public-key fingerprint with
-          the recipient out-of-band (text, email, in person). They can then confirm the embedded key
-          matches yours and the signature is valid. Without a shared fingerprint, the file only
-          verifies against the key embedded inside it, which an attacker could replace.
+          A signed export carries a digital signature made with this local key. To use it as proof
+          of origin, share your public key with the recipient out-of-band (use{' '}
+          <em>Export public key</em> below). They compare your public key against the key embedded
+          in the signed export. Without that comparison step, the file only verifies against its own
+          embedded key, which an attacker could replace.
         </p>
       </details>
       {hasKey ? (
