@@ -43,9 +43,14 @@ function ChangedRow({ c }: { c: ChangedRowData }): JSX.Element {
         )}
       </span>
       {c.from.negated !== c.to.negated && (
-        <span className="text-small text-fg-muted">
-          {`negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
-        </span>
+        <>
+          <span className="sr-only">
+            {`Negation changed from ${c.from.negated ? 'yes to no' : 'no to yes'}.`}
+          </span>
+          <span aria-hidden="true" className="text-small text-fg-muted">
+            {`negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
+          </span>
+        </>
       )}
     </li>
   );

@@ -194,5 +194,19 @@ describe('ComparePanel', () => {
     );
     expect(screen.getByRole('heading', { name: /changed/i })).toBeInTheDocument();
     expect(screen.getByText(/negated yes→no/i)).toBeInTheDocument();
+    // sr-only announcement so screen readers don't get the bare arrow glyph.
+    expect(screen.getByText(/negation changed from yes to no/i)).toBeInTheDocument();
+  });
+
+  it('announces no→yes negation flips with explicit copy', () => {
+    render(
+      <ComparePanel
+        aName="Old"
+        bName="New"
+        aFindings={[f({ ruleId: 'n', title: 'Arb', negated: false })]}
+        bFindings={[f({ ruleId: 'n', title: 'Arb', negated: true })]}
+      />,
+    );
+    expect(screen.getByText(/negation changed from no to yes/i)).toBeInTheDocument();
   });
 });
