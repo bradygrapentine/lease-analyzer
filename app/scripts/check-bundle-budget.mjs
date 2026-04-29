@@ -131,6 +131,16 @@ async function main() {
   // recursively under dist/classifier/ if present. Wave 23-A's
   // build:classifier-assets script writes onnx/model_quantized.onnx
   // into a subdirectory, so a non-recursive walk would under-count.
+  //
+  // Wave 39: skip `onnx-runtime-v4/`. Wave 36-B stages ~75 MiB of ORT
+  // `.wasm`/`.mjs` glue under `dist/classifier/onnx-runtime-v4/` for
+  // same-origin on-demand fetch, but `vite.config.ts` `globIgnores`
+  // explicitly excludes that subtree from the PWA precache. The cap
+  // here is the *precache* contract from Wave 18-B; counting
+  // non-precached bytes against it produces a false-fail on machines
+  // that have classifier assets on disk (101 MiB / 30 MiB) and is
+  // semantically wrong. Walk skips the directory by name.
+  const PRECACHE_SKIP = new Set(['onnx-runtime-v4']);
   async function walkBytes(dir) {
     let total = 0;
     let entries;
@@ -140,6 +150,7 @@ async function main() {
       return 0;
     }
     for (const e of entries) {
+      if (e.isDirectory() && PRECACHE_SKIP.has(e.name)) continue;
       const p = join(dir, e.name);
       if (e.isDirectory()) total += await walkBytes(p);
       else if (e.isFile()) total += (await stat(p)).size;

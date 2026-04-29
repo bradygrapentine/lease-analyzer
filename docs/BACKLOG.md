@@ -681,29 +681,26 @@ address — visual or product-level work, not source-color cleanup.
       held green since 2026-04-25 — closing the row. If the flake
       returns, reopen with the new failure mode rather than
       reapplying the same fix.
-- [ ] **Tauri CI workflow cleanup.** `docs/CLAUDE.md` lists the Tauri
-      desktop wrapper as "stub dir exists; no code", but
-      `.github/workflows/tauri.yml` still runs
-      `Tauri build (ubuntu-latest / macos-latest / windows-latest)`
-      against the stub. Wave 29 unblock work scoped the trigger to
-      `app/src-tauri/**` + the workflow file (PR #121) so it no
-      longer fires on JS-only PRs, but the underlying choice
-      remains: delete the workflow to match the stub reality, or
-      wire it up to actual Rust source. Surfaced 2026-04-26 while
-      unblocking Wave 28's broken-CI ghost.
-- [ ] **npm-audit triage refresh.** As of 2026-04-26 PR #121, audit
-      reports 4 critical + 9 moderate vulns. Build-only chains
-      (`esbuild` → `vite` → `vitest`, `uuid` → `@storybook/addon-actions`)
-      are tolerable. The runtime-shipping chain
-      `protobufjs` → `onnx-proto` → `onnxruntime-web` (introduced
-      with Phase 18 transformers.js in Wave 22) is the one that
-      deserves a real look — either upgrade `onnxruntime-web` past
-      the affected protobufjs range or document the residual risk.
-      Wave 26-B's `package.json` `overrides` block has aged out;
-      refresh it. Note that during Wave 29 unblock work,
-      `npm-audit` was dropped from required GitHub branch-protection
-      checks — that is **temporary** and should be reinstated as a
-      required check once this row closes.
+- [x] **Tauri CI workflow cleanup.** Resolved by Wave 42 (PR #157,
+      2026-04-28) — chose retire: deleted `.github/workflows/tauri.yml`,
+      removed the `app/src-tauri/` stub, dropped the Tauri reference
+      from `docs/CLAUDE.md`. Decision recorded in
+      `docs/wave42-tauri-decision.md`.
+- [x] **npm-audit triage refresh.** Runtime-shipping vuln chain is
+      **clear** as of Wave 39 (2026-04-28): `npm audit --omit=dev`
+      reports 0 vulnerabilities. The Wave 36 transformers v2→v4
+      migration moved the `onnxruntime-web` chain past the affected
+      `protobufjs` range, so the original concern in this row no
+      longer applies. Remaining 17 build-only vulns (lighthouse →
+      inquirer → external-editor → tmp; storybook → uuid) are
+      tolerated as before. The `package.json` `overrides` block
+      (`serialize-javascript` ^7.0.5) is **still active** —
+      `npm ls serialize-javascript` confirms the override is
+      pinning workbox-build's transitive dep to the secure version,
+      not aged out as previously assumed. Reinstating
+      `npm-audit` as a required branch-protection check is a
+      separate ops task; tracked under "Branch-protection
+      self-healing" below.
 - [ ] **Branch-protection self-healing.** When the Tauri workflow row
       above ships (delete or repair), also clean up the
       `Tauri build (ubuntu-latest / macos-latest)` entries from the
