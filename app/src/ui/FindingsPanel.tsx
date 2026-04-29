@@ -27,7 +27,7 @@ const HybridFeedbackButton = lazy(() =>
 //   id="findings-${sev}" (h2)
 //   aria-expanded + aria-label="toggle ${sev}" (collapse button)
 //   data-finding-key (li and button — both)
-//   aria-expanded + aria-label="Identified by on-device pattern match..." (llm badge button)
+//   aria-expanded + aria-label="Identified by on-device similarity match..." (llm badge button)
 //   aria-expanded + aria-label="what this means for ${finding.title}" (explainer button)
 //   aria-label="apply suggestion for ${finding.title}" (button)
 //   aria-label="promote to standard ${finding.title}" (button)
@@ -463,7 +463,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                   className="finding-llm-badge inline-flex items-center gap-1 text-small text-fg-muted border border-rule rounded-sm px-2 py-0.5 hover:bg-[var(--state-hover)] active:bg-[var(--state-active)] transition-colors focus-visible:focus-ring"
                   aria-expanded={isHybridDetailOpen}
                   aria-pressed={isHybridDetailOpen}
-                  aria-label={`Identified by on-device pattern match (similarity ${Math.round(
+                  aria-label={`Identified by on-device similarity match (similarity ${Math.round(
                     finding.evidence.similarity * 100,
                   )}%). Click to see details.`}
                   title={`On-device pattern match (similarity ${Math.round(
@@ -471,7 +471,7 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                   )}%)`}
                   onClick={toggleHybridDetail}
                 >
-                  <span>On-device pattern match</span>
+                  <span>On-device similarity match</span>
                   {/* Wave 45-D — small (?) icon signals "click for more" at a
                       glance; aria-hidden because the visible label carries
                       the meaning. */}

@@ -51,9 +51,10 @@ export function SigningKeyPanel({
       <details className="text-small text-fg-muted">
         <summary className="cursor-pointer select-none">Why does signing matter?</summary>
         <p className="mt-1 max-w-prose">
-          A signed export pairs your findings with a signature derived from a key only you control.
-          Anyone you share the file with can verify it came from you and has not been altered. The
-          key never leaves your browser.
+          A signed export pairs your findings with a digital signature so anyone can verify the file
+          hasn&rsquo;t been altered since you exported it. The signing key stays in your browser.
+          Note: the signature proves integrity, not author identity; binding a key to a person
+          (sharing a fingerprint out-of-band, etc.) is up to you and your counterparty.
         </p>
       </details>
       {hasKey ? (

@@ -83,7 +83,7 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
     );
     // Open the hybrid detail disclosure
     const badge = await screen.findByRole('button', {
-      name: /identified by on-device pattern match/i,
+      name: /identified by on-device similarity match/i,
     });
     await userEvent.click(badge);
     // Should show first 8 chars of entryHash
@@ -108,7 +108,7 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
       <FindingsPanel findings={[hybrid]} onSelect={() => {}} auditEntries={[unrelatedEntry]} />,
     );
     const badge = await screen.findByRole('button', {
-      name: /identified by on-device pattern match/i,
+      name: /identified by on-device similarity match/i,
     });
     await userEvent.click(badge);
     expect(screen.queryByText(/audit entry/i)).toBeNull();

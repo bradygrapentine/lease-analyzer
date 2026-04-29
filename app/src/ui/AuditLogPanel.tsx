@@ -61,8 +61,8 @@ export function AuditLogPanel({
           ) : (
             <span>
               Chain broken at seq {verification.firstBadSeq ?? '?'}. An entry was altered or
-              removed; signed exports from this point onward won&rsquo;t verify until the chain is
-              repaired.
+              removed, so the audit log&rsquo;s tamper-evidence guarantee no longer holds for the
+              affected range. (Signed exports verify independently of the audit log.)
             </span>
           )}
         </p>

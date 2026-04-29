@@ -80,7 +80,7 @@ describe('FindingsPanel', () => {
       />,
     );
     const badge = screen.getByLabelText(
-      /identified by on-device pattern match \(similarity 83%\)/i,
+      /identified by on-device similarity match \(similarity 83%\)/i,
     );
     expect(badge).toBeInTheDocument();
   });
@@ -93,7 +93,7 @@ describe('FindingsPanel', () => {
       />,
     );
     expect(
-      screen.queryByLabelText(/identified by on-device pattern match/i),
+      screen.queryByLabelText(/identified by on-device similarity match/i),
     ).not.toBeInTheDocument();
   });
 
@@ -116,7 +116,7 @@ describe('FindingsPanel', () => {
       />,
     );
     const badge = screen.getByRole('button', {
-      name: /identified by on-device pattern match \(similarity 83%\)/i,
+      name: /identified by on-device similarity match \(similarity 83%\)/i,
     });
     expect(badge).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('Xenova/paraphrase-MiniLM-L3-v2')).not.toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('FindingsPanel', () => {
       />,
     );
     const badge = screen.getByRole('button', {
-      name: /identified by on-device pattern match/i,
+      name: /identified by on-device similarity match/i,
     });
     await userEvent.click(badge);
     expect(badge).toHaveAttribute('aria-expanded', 'true');

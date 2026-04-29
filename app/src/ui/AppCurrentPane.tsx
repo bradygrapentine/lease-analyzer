@@ -143,9 +143,11 @@ export function AppCurrentPane({
         <details className="text-small text-fg-muted mb-3">
           <summary className="cursor-pointer select-none">What is signed export?</summary>
           <p className="mt-1 max-w-prose">
-            A signed export pairs your findings with a signature derived from a key only you
-            control. Anyone you share the file with can verify it came from you and has not been
-            altered. The key never leaves your browser.
+            A signed export pairs your findings with a digital signature so anyone can verify the
+            file hasn&rsquo;t been altered since you exported it. The signing key stays in your
+            browser. Note: the signature proves the file is intact, not who created it. Identity
+            binding (recipient verifies a specific public-key fingerprint) is up to you and your
+            counterparty.
           </p>
         </details>
       )}
