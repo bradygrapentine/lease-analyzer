@@ -24,6 +24,18 @@ function f(over: Partial<Finding>): Finding {
 }
 
 describe('ComparePanel', () => {
+  it('renders an aria-label="compare" landmark region', () => {
+    render(
+      <ComparePanel
+        aName="A"
+        bName="B"
+        aFindings={[f({ ruleId: 's' })]}
+        bFindings={[f({ ruleId: 's' })]}
+      />,
+    );
+    expect(screen.getByRole('region', { name: /compare/i })).toBeInTheDocument();
+  });
+
   it('lists added, removed, and changed findings', () => {
     const a = [f({ ruleId: 'late-fees', title: 'Late fees', severity: 'low' })];
     const b = [

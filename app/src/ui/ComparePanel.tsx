@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { diffFindings } from '../compare/diffFindings';
 import type { Finding } from '../rules/types';
+import { Card } from './system/Card';
 
 interface ComparePanelProps {
   aName: string;
@@ -28,17 +29,22 @@ export function ComparePanel({
   const [mismatchDismissed, setMismatchDismissed] = useState(false);
 
   return (
-    <section aria-label="compare">
-      <header>
-        <h2>Compare</h2>
-        <p>
+    <Card as="section" aria-label="compare" className="p-4 space-y-4">
+      <header className="space-y-1">
+        <h2 className="text-heading uppercase text-fg-muted">Compare</h2>
+        <p className="text-body text-fg-body">
           <strong>{aName}</strong> → <strong>{bName}</strong>
         </p>
       </header>
 
       {packVersionMismatch && !mismatchDismissed && (
-        <div role="alert" aria-label="pack version mismatch" data-variant="warning">
-          <p>
+        <div
+          role="alert"
+          aria-label="pack version mismatch"
+          data-variant="warning"
+          className="flex flex-col gap-2 p-3 rounded-sm bg-[var(--color-severity-bg-info)] border border-[var(--color-severity-border-info)]"
+        >
+          <p className="text-body text-fg-body">
             These leases were analyzed under different rule-pack versions
             (A: v{packVersionMismatch.a}, B: v{packVersionMismatch.b}).
             Differences may reflect rule changes rather than content changes.
@@ -47,47 +53,60 @@ export function ComparePanel({
             type="button"
             onClick={() => setMismatchDismissed(true)}
             aria-label="Dismiss pack version mismatch warning"
+            className="self-start text-small text-fg-muted underline hover:text-fg-body focus-visible:focus-ring"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {totalDiffs === 0 && <p>No differences in findings between these leases.</p>}
+      {totalDiffs === 0 && (
+        <p className="text-body text-fg-muted">
+          No differences in findings between these leases.
+        </p>
+      )}
 
       {diff.added.length > 0 && (
-        <div>
-          <h3>Added ({diff.added.length})</h3>
-          <ul>
+        <Card variant="default" className="p-3 space-y-2">
+          <h3 className="text-heading uppercase text-fg-muted">
+            Added ({diff.added.length})
+          </h3>
+          <ul className="space-y-1">
             {diff.added.map((f) => (
-              <li key={f.ruleId}>
-                <strong>{f.title}</strong> <small>({f.severity})</small>
+              <li key={f.ruleId} className="flex items-center gap-2 flex-wrap">
+                <strong className="text-body text-fg-body">{f.title}</strong>{' '}
+                <small>({f.severity})</small>
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {diff.removed.length > 0 && (
-        <div>
-          <h3>Removed ({diff.removed.length})</h3>
-          <ul>
+        <Card variant="default" className="p-3 space-y-2">
+          <h3 className="text-heading uppercase text-fg-muted">
+            Removed ({diff.removed.length})
+          </h3>
+          <ul className="space-y-1">
             {diff.removed.map((f) => (
-              <li key={f.ruleId}>
-                <strong>{f.title}</strong> <small>({f.severity})</small>
+              <li key={f.ruleId} className="flex items-center gap-2 flex-wrap">
+                <strong className="text-body text-fg-body">{f.title}</strong>{' '}
+                <small>({f.severity})</small>
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {diff.changed.length > 0 && (
-        <div>
-          <h3>Changed ({diff.changed.length})</h3>
-          <ul>
+        <Card variant="default" className="p-3 space-y-2">
+          <h3 className="text-heading uppercase text-fg-muted">
+            Changed ({diff.changed.length})
+          </h3>
+          <ul className="space-y-1">
             {diff.changed.map((c) => (
-              <li key={c.ruleId}>
-                <strong>{c.to.title}</strong>{' '}
+              <li key={c.ruleId} className="flex items-center gap-2 flex-wrap">
+                <strong className="text-body text-fg-body">{c.to.title}</strong>{' '}
                 <small>
                   {c.from.severity} → {c.to.severity}
                   {c.from.negated !== c.to.negated &&
@@ -96,8 +115,8 @@ export function ComparePanel({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
-    </section>
+    </Card>
   );
 }
