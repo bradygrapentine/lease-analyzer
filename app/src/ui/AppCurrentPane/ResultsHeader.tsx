@@ -39,10 +39,12 @@ export function ResultsHeader({
         <details className="text-small text-fg-muted mb-3">
           <summary className="cursor-pointer select-none">What is signed export?</summary>
           <p className="mt-1 max-w-prose">
-            The exported file carries a digital signature made with your local key. To use it as
-            proof of origin, share your public key with the recipient out-of-band; they compare it
-            against the key embedded in the signed export. Without that comparison step, the file
-            only verifies against its own embedded key, which an attacker could replace.
+            The exported file carries a digital signature made with your local key. Share the
+            8-character fingerprint shown next to your signing key (Settings, Signing key) with the
+            recipient out-of-band: phone, encrypted message, or paper. The recipient computes the
+            same SHA-256 fingerprint over the public key embedded in the signed export and checks
+            the match. A match is evidence the embedded key was not substituted. It does not by
+            itself prove identity.
           </p>
         </details>
       )}

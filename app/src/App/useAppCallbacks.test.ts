@@ -30,7 +30,11 @@ function fakeSigningKey(overrides: Partial<Record<string, unknown>> = {}) {
     publicKey: null,
     createKey: vi.fn(),
     exportKeyToClipboard: vi.fn(),
-    signAndDownloadFindings: vi.fn(async () => undefined),
+    signAndDownloadFindings: vi.fn(async () => ({
+      fileName: 'L-findings.signed.json',
+      inputHash: null,
+      signingKeyId: null,
+    })),
     ...overrides,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
@@ -230,6 +234,120 @@ describe('useAppCallbacks', () => {
     expect(deps.pipeline.setError).toHaveBeenCalledWith(
       expect.stringMatching(/Signing failed: decrypt failed/),
     );
+    promptSpy.mockRestore();
+  });
+
+  it('onExportSignedJson emits a safeAudit signed-export event with file/hash/keyId after a successful sign', async () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('passphrase');
+    const signingKey = fakeSigningKey({
+      signAndDownloadFindings: vi.fn(async () => ({
+        fileName: 'Lease-findings.signed.json',
+        inputHash: 'deadbeef',
+        signingKeyId: 'cafef00d',
+      })),
+    });
+    const deps = makeDeps({
+      pipeline: fakePipeline({
+        status: {
+          kind: 'analyzed',
+          fileName: 'Lease.pdf',
+          result: {
+            doc: { pages: [], paragraphs: [], sections: [], raw: '' },
+            findings: [],
+          },
+          bytes: new Uint8Array([1, 2, 3]),
+        },
+      }),
+      signingKey,
+    });
+    const { result } = renderHook(() => useAppCallbacks(deps));
+    await act(async () => {
+      await result.current.onExportSignedJson();
+    });
+    expect(deps.safeAudit).toHaveBeenCalledWith({
+      kind: 'signed-export',
+      payload: {
+        fileName: 'Lease-findings.signed.json',
+        format: 'json',
+        inputHash: 'deadbeef',
+        signingKeyId: 'cafef00d',
+      },
+    });
+    expect(deps.refreshAuditLog).toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
+  it('onExportSignedJson signed-export audit payload carries null inputHash + signingKeyId when unknown', async () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('passphrase');
+    const signingKey = fakeSigningKey({
+      signAndDownloadFindings: vi.fn(async () => ({
+        fileName: 'L-findings.signed.json',
+        inputHash: null,
+        signingKeyId: null,
+      })),
+    });
+    const deps = makeDeps({
+      pipeline: fakePipeline({
+        status: {
+          kind: 'analyzed',
+          fileName: 'L.pdf',
+          result: {
+            doc: { pages: [], paragraphs: [], sections: [], raw: '' },
+            findings: [],
+          },
+          bytes: null,
+        },
+      }),
+      signingKey,
+    });
+    const { result } = renderHook(() => useAppCallbacks(deps));
+    await act(async () => {
+      await result.current.onExportSignedJson();
+    });
+    const call = deps.safeAudit.mock.calls.find(
+      (c: unknown[]) => (c[0] as { kind?: string }).kind === 'signed-export',
+    );
+    expect(call?.[0]).toEqual({
+      kind: 'signed-export',
+      payload: {
+        fileName: 'L-findings.signed.json',
+        format: 'json',
+        inputHash: null,
+        signingKeyId: null,
+      },
+    });
+    promptSpy.mockRestore();
+  });
+
+  it('onExportSignedJson does not emit an audit event when signing throws', async () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('passphrase');
+    const signingKey = fakeSigningKey({
+      signAndDownloadFindings: vi.fn(async () => {
+        throw new Error('decrypt failed');
+      }),
+    });
+    const deps = makeDeps({
+      pipeline: fakePipeline({
+        status: {
+          kind: 'analyzed',
+          fileName: 'L.pdf',
+          result: {
+            doc: { pages: [], paragraphs: [], sections: [], raw: '' },
+            findings: [],
+          },
+          bytes: null,
+        },
+      }),
+      signingKey,
+    });
+    const { result } = renderHook(() => useAppCallbacks(deps));
+    await act(async () => {
+      await result.current.onExportSignedJson();
+    });
+    const audited = deps.safeAudit.mock.calls.some(
+      (c: unknown[]) => (c[0] as { kind?: string }).kind === 'signed-export',
+    );
+    expect(audited).toBe(false);
     promptSpy.mockRestore();
   });
 

@@ -246,7 +246,7 @@ export function AppLibraryAndPacksPane({
           <SigningKeyPanel
             state={{ publicKey: signingKey.publicKey }}
             onCreateKey={(pp) => void signingKey.createKey(pp)}
-            onExportPublicKey={(pk) => void signingKey.exportKeyToClipboard(pk)}
+            onExportPublicKey={(pk) => signingKey.exportKeyToClipboard(pk)}
           />
         </div>
       </SectionGroup>
