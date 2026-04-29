@@ -5,6 +5,7 @@
 import type { ChangeEvent } from 'react';
 import { useI18n } from '../i18n/I18nContext';
 import { Button } from './system/Button';
+import { FileButton } from './system/FileButton';
 
 interface AppFooterControlsProps {
   onExportArchive: () => void | Promise<void>;
@@ -23,19 +24,24 @@ export function AppFooterControls({
       <Button variant="subtle" size="sm" onClick={() => void onExportArchive()}>
         {t('footer.archive.export')}
       </Button>
-      <label className="inline-flex items-center gap-2 text-small text-fg-muted cursor-pointer">
-        <span className="sr-only">Import encrypted archive</span>
-        <span className="inline-flex h-7 items-center px-2 rounded-sm border border-rule bg-paper-raised text-small text-fg-body hover:bg-paper-sunken transition-colors">
-          Import encrypted archive
-        </span>
-        <input
-          type="file"
-          accept=".lgarchive,application/octet-stream"
-          aria-label="import encrypted archive"
-          className="sr-only"
-          onChange={(e) => void onImportArchive(e)}
-        />
-      </label>
+      <FileButton
+        variant="subtle"
+        size="sm"
+        accept=".lgarchive,application/octet-stream"
+        aria-label="import encrypted archive"
+        onFiles={(files) => {
+          // Adapter: the existing onImportArchive expects a ChangeEvent because
+          // it was wired against a raw <input type="file">. Synthesize a
+          // minimal compatible event so we don't ripple this rename out.
+          const synthetic = {
+            target: { files },
+            currentTarget: { files },
+          } as unknown as ChangeEvent<HTMLInputElement>;
+          void onImportArchive(synthetic);
+        }}
+      >
+        Import encrypted archive
+      </FileButton>
       <Button variant="ghost" size="sm" onClick={onClearAll}>
         {t('footer.clearAll')}
       </Button>

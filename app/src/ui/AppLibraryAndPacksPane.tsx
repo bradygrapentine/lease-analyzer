@@ -47,6 +47,7 @@ import { SigningKeyPanel } from './SigningKeyPanel';
 import { ComparePanel } from './ComparePanel';
 import { Section } from './system/Section';
 import { SectionGroup } from './system/SectionGroup';
+import { FileButton } from './system/FileButton';
 import { SECTION_GROUPS } from './AppLibraryAndPacksPaneSections';
 import type { LeaseRecord, LeaseMetadata } from '../storage/storage';
 import type { ClauseTemplate } from '../templates/types';
@@ -123,11 +124,7 @@ export function AppLibraryAndPacksPane({
 
   return (
     <div className="space-y-3">
-      <SectionGroup
-        id={thisLease.id}
-        title={thisLease.title}
-        defaultOpen={thisLease.defaultOpen}
-      >
+      <SectionGroup id={thisLease.id} title={thisLease.title} defaultOpen={thisLease.defaultOpen}>
         <div className="divide-y divide-rule">
           <LibraryCompareForm leases={library} onCompare={onCompare} />
           <details className="px-4 py-3">
@@ -198,26 +195,27 @@ export function AppLibraryAndPacksPane({
           <Section label="diff rule pack" className="space-y-3 px-4 py-4">
             <h2 className="text-heading uppercase text-fg-muted">Diff rule pack</h2>
             <p className="text-body text-fg-body">
-              Load a <code className="font-mono text-mono text-fg-muted">.lgpack.json</code> file to see how it differs from the currently active rule
-              set. Nothing is saved until you import it via the pack manager above.
+              Load a <code className="font-mono text-mono text-fg-muted">.lgpack.json</code> file to
+              see how it differs from the currently active rule set. Nothing is saved until you
+              import it via the pack manager above.
             </p>
-            <label className="inline-flex flex-col gap-1">
-              <span className="sr-only">Pack file to diff</span>
-              <input
-                type="file"
-                accept=".lgpack.json,application/json"
-                aria-label="pack file to diff"
-                className="text-small text-fg-body file:mr-2 file:h-7 file:px-2 file:rounded-sm file:border file:border-rule file:bg-paper-raised file:text-small file:text-fg-body file:cursor-pointer hover:file:bg-paper-sunken"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = '';
-                  if (f) void packs.comparePackFile(f);
-                }}
-              />
-            </label>
+            <FileButton
+              variant="subtle"
+              size="sm"
+              accept=".lgpack.json,application/json"
+              aria-label="pack file to diff"
+              onFiles={(files) => {
+                const f = files[0];
+                if (f) void packs.comparePackFile(f);
+              }}
+            >
+              Choose pack file
+            </FileButton>
             {packs.packDiff && <PackDiffPanel diff={packs.packDiff} />}
           </Section>
-          <BulkImportPanel onImport={(files, onProgress) => packs.bulkImportFiles(files, onProgress)} />
+          <BulkImportPanel
+            onImport={(files, onProgress) => packs.bulkImportFiles(files, onProgress)}
+          />
         </div>
       </SectionGroup>
 
