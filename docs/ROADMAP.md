@@ -281,7 +281,7 @@ Adjacent productionization items that *did* ship outside Phase 18:
   single shipping surface; native shell is out of scope.
 - **Bundle budget** — re-audited (Wave 38, #158). Classifier
   ORT subdirectory excluded from the bundle walk in Wave 39 (#162).
-- **CI trust** — Mergify queue gap closed (Wave 30-C, confirmed
+- **CI trust** — ~~Mergify~~ queue gap closed (Wave 30-C, confirmed
   in Wave 37 #154).
 
 ---

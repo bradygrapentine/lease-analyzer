@@ -792,7 +792,7 @@ heartbeats every ~5 min; orchestrator polls every 10 min and treats
 1. **Per-part local gate.** `npm run typecheck && npm run lint &&
    npm test` green before any push.
 2. **CI gate.** `gh pr checks <pr>` must be green before
-   `gh pr ready`. Wave 30-C closed the Mergify red-bypass; A/B/C can
+   `gh pr ready`. Wave 30-C closed the ~~Mergify~~ red-bypass; A/B/C can
    merge in parallel.
 3. **Auto-merge attempt.** `gh pr merge --auto --squash` exactly
    once per PR. If rejected, print PR URL + blocking reason and stop.

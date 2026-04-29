@@ -56,11 +56,11 @@ Wave 32 (PRs #134 docs + #135–#137 parts) shipped:
   a meaningful refactor, not a bump."*
 
 Mid-wave CI fixes:
-- **PR #138** — wired Mergify queue action with `auto_merge_enabled`,
-  not a valid Mergify condition; merged with broken config.
+- **PR #138** — wired ~~Mergify~~ queue action with `auto_merge_enabled`,
+  not a valid ~~Mergify~~ condition; merged with broken config.
 - **PR #139** — replaced trigger with `label=automerge`. Workflow now:
   add the `automerge` label to a PR via UI or
-  `gh pr edit <num> --add-label automerge`; Mergify queues +
+  `gh pr edit <num> --add-label automerge`; ~~Mergify~~ queues +
   rebases + merges. `gh pr merge --auto --squash` continues to work
   as a parallel fallback.
 
@@ -237,12 +237,12 @@ git push -u origin wave33-A-audit-prod-only
   - Before/after vuln counts from local `npm audit`.
   - The doc-location decision.
 
-  Then label-route via Mergify:
+  Then label-route via ~~Mergify~~:
 ```
 gh pr edit <num> --add-label automerge
 ```
 
-  (Mergify queue is functional post-Wave-32 PR #139.) Auto-merge via
+  (~~Mergify~~ queue is functional post-Wave-32 PR #139.) Auto-merge via
   `gh pr merge --auto --squash` is also acceptable as the GitHub-side
   fallback.
 
@@ -580,7 +580,7 @@ Worktrees go under `<project>/worktrees/<branch>`.
    npm test` green before any push.
 2. **CI gate.** `gh pr checks <pr>` must be green before flipping to
    ready.
-3. **Label-route via Mergify.** `gh pr edit <num> --add-label
+3. **Label-route via ~~Mergify~~.** `gh pr edit <num> --add-label
    automerge` after pushing — the queue rebases each PR before
    merging, so no manual rebase chasing across the wave. Native
    `gh pr merge --auto --squash` continues to work as a parallel

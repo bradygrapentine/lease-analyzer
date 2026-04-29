@@ -15,7 +15,7 @@ the Wave 28 trust-infra debt. Four threads, each closing a specific loop:
    accordions default **closed**, per-section open/closed state
    persists to `localStorage`. Was deferred from Wave 28 retro pending
    its own UX brainstorm (this wave).
-3. **CI trust infra** — root-cause and close the Wave 28 Mergify
+3. **CI trust infra** — root-cause and close the Wave 28 ~~Mergify~~
    red-bypass (PRs #113–#116 auto-merged with red `verify`/`smoke`/
    `npm-audit`/`Lighthouse`); install `lhci` binary in CI; verify
    branch-protection required-status-checks list.
@@ -53,7 +53,7 @@ Wave 29 (PRs #122 plan + #123–#126 parts) shipped:
 
 A separate Wave 28 / 29 carry-over: **`enforce_admins: true` was set on
 main branch protection mid-Wave 29** to close the bypass pattern, but
-the underlying Mergify config that allowed red checks to pass through
+the underlying ~~Mergify~~ config that allowed red checks to pass through
 the queue is **still unfixed**. Part C of this wave closes that loop.
 
 ## §1 Scope-shaping decisions (READ BEFORE APPROVING)
@@ -80,7 +80,7 @@ the queue is **still unfixed**. Part C of this wave closes that loop.
    across leases and across `delete-lease` audit events. (Confirmed
    with user during brainstorm.)
 6. **Part C diagnoses BEFORE prescribing.** Step C.1 documents the
-   actual root cause of the Wave 28 red-bypass (Mergify `conditions:`
+   actual root cause of the Wave 28 red-bypass (~~Mergify~~ `conditions:`
    missing required check names? branch protection
    `required_status_checks` list incomplete? `enforce_admins` only just
    landed?) before any config edit. No speculative fixes.
@@ -138,7 +138,7 @@ coverage delta.
 |------|-------------------------------------|---------|----------|-----------|-------|
 | A    | `wave30-A-hybrid-precision`         | ≤ 3     | ≤ 2      | 1         | New `HybridPrecisionPanel.tsx` + audit-mining helper + rule-manager wire-up. |
 | B    | `wave30-B-accordion-persist`        | ≤ 2     | ≤ 1      | n/a       | Accordion component + storage helper. |
-| C    | `wave30-C-ci-trust`                 | 0 src   | 0        | n/a       | `.mergify.yml`, `.github/workflows/*`, `app/package.json` (`@lhci/cli` dep), branch-protection verification script/notes. |
+| C    | `wave30-C-ci-trust`                 | 0 src   | 0        | n/a       | `.~~mergify~~.yml`, `.github/workflows/*`, `app/package.json` (`@lhci/cli` dep), branch-protection verification script/notes. |
 | E    | `wave30-E-coverage`                 | 0       | as needed| n/a       | Tests only; conditional floor bump. |
 
 Disjoint file sets across A/B/C. E rebases off post-merge `main`.
@@ -236,14 +236,14 @@ manager pane.
 - Migration / cleanup of stored keys.
 - Persistence beyond accordions (e.g. view-mode tab).
 
-### Part C — CI trust infra (Mergify, lhci, branch protection)
+### Part C — CI trust infra (~~Mergify~~, lhci, branch protection)
 
 **Branch:** `wave30-C-ci-trust`
 
 **Goal.** Three CI hygiene fixes:
 
-1. **Diagnose + close** the Wave 28 Mergify red-bypass (PRs #113–#116
-   auto-merged with red checks). Update `.mergify.yml` so the queue
+1. **Diagnose + close** the Wave 28 ~~Mergify~~ red-bypass (PRs #113–#116
+   auto-merged with red checks). Update `.~~mergify~~.yml` so the queue
    merge condition requires the actual GitHub Actions check names
    currently emitted (verify with `gh pr checks` on a recent PR).
 2. **Install `lhci` in CI.** `npm run lhci` currently fails locally
@@ -258,7 +258,7 @@ manager pane.
 
 **Files:**
 
-- `.mergify.yml` (root) — `conditions:` updates so the queue requires
+- `.~~mergify~~.yml` (root) — `conditions:` updates so the queue requires
   the real status check names.
 - `.github/workflows/*.yml` (verify which workflow owns Lighthouse) —
   ensure `npx lhci ...` (project-local) rather than expecting a system
@@ -270,10 +270,10 @@ manager pane.
 
 **Acceptance.**
 
-- [ ] **C.1** Diagnose Mergify config + branch protection state.
+- [ ] **C.1** Diagnose ~~Mergify~~ config + branch protection state.
       Document the actual root cause in PR description (and in the
       postmortem doc) BEFORE editing config.
-- [ ] **C.2** Update `.mergify.yml` `conditions:`. Verify by inspecting
+- [ ] **C.2** Update `.~~mergify~~.yml` `conditions:`. Verify by inspecting
       current required check names from a recent PR via `gh pr checks`.
 - [ ] **C.3** Add `@lhci/cli` devDep; update workflow if needed; run
       `npm run lhci` locally to confirm it works against the project-
@@ -288,7 +288,7 @@ manager pane.
 
 **Out of scope:**
 
-- Migrating off Mergify entirely (own discussion).
+- Migrating off ~~Mergify~~ entirely (own discussion).
 - Adding new CI checks (security, perf budget tightening, etc.).
 - Self-hosted runners.
 - Reverting Wave 29's `enforce_admins: true` change (it stays).
@@ -372,9 +372,9 @@ heartbeats every ~5 min; orchestrator polls every 10 min and treats
       chains with `hybrid-feedback` entries.
 - [ ] Bottom-pane accordions default closed; per-section state
       persists across reloads via `localStorage`.
-- [ ] Wave 28 Mergify red-bypass diagnosed and closed; postmortem
+- [ ] Wave 28 ~~Mergify~~ red-bypass diagnosed and closed; postmortem
       written; `lhci` runs from project-local binary in CI.
 - [ ] Branch coverage ≥ 89.5% (target 90.0%); floor bumped per §1.8.
-- [ ] All four PRs CI-green at merge (no Mergify-bypass red status).
+- [ ] All four PRs CI-green at merge (no ~~Mergify~~-bypass red status).
 - [ ] No new audit `kind`s. No CSP / bundle / IDB schema bumps. Only
       new dep is `@lhci/cli` devDependency in Part C.

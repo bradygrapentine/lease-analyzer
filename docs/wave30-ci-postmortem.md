@@ -9,8 +9,8 @@
 All four Wave 28 PRs merged into `main` while every required status
 check was failing: `verify`, `smoke (chromium|firefox|webkit)`,
 `Lighthouse CI (...)`, plus the non-required `npm-audit` and Tauri
-build matrix. The `Mergify Merge Queue` check was stuck in `pending`
-state at merge time — Mergify itself never merged these PRs.
+build matrix. The `~~Mergify~~ Merge Queue` check was stuck in `pending`
+state at merge time — ~~Mergify~~ itself never merged these PRs.
 
 ## Root cause
 
@@ -22,8 +22,8 @@ Two compounding factors:
    `enforce_admins` on `main` was `false`. Required status checks
    were configured (`verify`, three `smoke` browsers, `Lighthouse CI`)
    but the admin override flag let the merge through anyway.
-2. **No `.mergify.yml` existed.** The `Mergify Merge Queue` check
-   posted by the Mergify GitHub App was inert (no `queue_rules` /
+2. **No `.~~mergify~~.yml` existed.** The `~~Mergify~~ Merge Queue` check
+   posted by the ~~Mergify~~ GitHub App was inert (no `queue_rules` /
    `pull_request_rules` to act on). It showed `pending` forever and
    contributed nothing — neither protection nor a path to legitimate
    queue-merge. So the only thing standing between red checks and
@@ -54,8 +54,8 @@ emitted on PRs (confirmed via `gh pr checks` on recent green PRs).
 Three changes in this wave (Wave 30-C, PR opened on
 `wave30-C-ci-trust`):
 
-1. **`.mergify.yml` added** with `queue_rules` + `pull_request_rules`
-   that require the same five contexts as branch protection. Mergify
+1. **`.~~mergify~~.yml` added** with `queue_rules` + `pull_request_rules`
+   that require the same five contexts as branch protection. ~~Mergify~~
    will not merge while any of them are red, and posts a comment if
    it sees a failure on a PR targeting `main`. Defense in depth — GH
    branch protection remains authoritative.
@@ -72,8 +72,8 @@ Three changes in this wave (Wave 30-C, PR opened on
 - **`enforce_admins: true` from day one.** The cost of typing the
   override on legitimate emergency merges is small; the cost of
   drifting four red merges into `main` is large.
-- **Don't install GitHub Apps without their config.** The Mergify
-  app was active and posting checks before any `.mergify.yml`
+- **Don't install GitHub Apps without their config.** The ~~Mergify~~
+  app was active and posting checks before any `.~~mergify~~.yml`
   existed. A pending check that never resolves is worse than no
   check at all because it implies process where there is none.
 - **`gh pr ready` should be the only path to merge.** The local-gate
@@ -81,7 +81,7 @@ Three changes in this wave (Wave 30-C, PR opened on
   `~/.claude/CLAUDE.md` (CI Discipline + PR Merge Policy) makes the
   red-bypass impossible by construction; admin click-to-merge is the
   off-ramp we keep tripping over.
-- **Audit hooks for any future "merge while red" event.** A Mergify
+- **Audit hooks for any future "merge while red" event.** A ~~Mergify~~
   rule that *comments* when checks are red (added in this PR) is the
   minimum; a periodic `gh api` audit job that flags any PR merged
   with red required checks would close the loop.

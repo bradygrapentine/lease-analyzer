@@ -1,7 +1,7 @@
 # Wave 49 — Housekeeping: Merge Boundary + Flake Hygiene + Backlog Truth
 
-**Goal.** Eliminate the recurring Mergify-stale-SHA failure mode by
-removing Mergify and its up-to-date-branch dependency, register today's
+**Goal.** Eliminate the recurring ~~Mergify~~-stale-SHA failure mode by
+removing ~~Mergify~~ and its up-to-date-branch dependency, register today's
 known accordion-test flake with a retry policy so flakes stop masking
 real failures, and reconcile `docs/BACKLOG.md` against the actual state
 of shipped Wave-45/46 work plus the new deferred rows from the clarify
@@ -11,7 +11,7 @@ reflects the true state of the project.
 
 **Architecture.** Three independent pillars, one PR.
 
-- **Pillar A (Merge protocol):** delete `.mergify.yml`; remove Mergify
+- **Pillar A (Merge protocol):** delete `.~~mergify~~.yml`; remove ~~Mergify~~
   from required-status-checks on `main`; turn OFF "Require branches to
   be up to date before merging" in branch protection; ship a small
   `scripts/rebase-and-merge.sh` for the rare high-stakes PR that wants
@@ -47,8 +47,8 @@ in-flight wave PRs.
 1. **One PR.** Whole wave on one feature branch `wave49-housekeeping`.
 2. **No new dependencies.** Reuse existing Vitest config + bash. No new GitHub Actions, no new npm packages.
 3. **Pillar A's branch-protection change requires admin.** Document the steps in the PR body so the user can apply them via GitHub Settings UI; do NOT attempt to apply via gh API in the PR commit.
-4. **Pillar A is reversible.** If post-merge `ci` starts failing more often than expected, restoring `.mergify.yml` is one PR. The change is not load-bearing on anything else.
-5. **Memory entries get rewritten, not deleted.** `feedback_rebase_before_push.md` (project memory) becomes "rebase only for high-stakes PRs touching `security/`, `audit/`, `storage/`." `project_ci_mergify_discrepancy.md` gets a "resolved by Wave 49 — Mergify removed" closeout note.
+4. **Pillar A is reversible.** If post-merge `ci` starts failing more often than expected, restoring `.~~mergify~~.yml` is one PR. The change is not load-bearing on anything else.
+5. **Memory entries get rewritten, not deleted.** `feedback_rebase_before_push.md` (project memory) becomes "rebase only for high-stakes PRs touching `security/`, `audit/`, `storage/`." `project_ci_~~mergify~~_discrepancy.md` gets a "resolved by Wave 49 — ~~Mergify~~ removed" closeout note.
 6. **Pillar B retries must be opt-in per test.** No global vitest retry — that would mask real regressions wholesale. Only tests listed in `known-flakes.md` get the retry wrapper, and the registry includes a "fix-by" date for each entry to prevent permanent quarantine.
 7. **Pillar C runs after A and B in the same PR but in a separate commit** so the BACKLOG diff is reviewable independently.
 8. **Local gate green** (`npm run typecheck && npm run lint && npm run test:coverage`) before push.
@@ -67,13 +67,13 @@ in-flight wave PRs.
 ## §3 Files in scope
 
 **Pillar A — Merge protocol:**
-- Delete: `.mergify.yml` (if present at repo root)
+- Delete: `.~~mergify~~.yml` (if present at repo root)
 - New: `scripts/rebase-and-merge.sh` (high-stakes PR escape hatch)
 - Modify: `docs/CLAUDE.md` — "PR Merge Policy" + "Subagent Dispatch Rules" + "CI Discipline" sections to reflect: rebase-before-push is no longer mandatory; rebase-and-merge.sh is the opt-in path for `security/`, `audit/`, `storage/` PRs.
 - Modify: `~/.claude/projects/-Users-bradygrapentine-projects-lease-analyzer/memory/feedback_rebase_before_push.md` — rewrite scope.
-- Modify: `~/.claude/projects/-Users-bradygrapentine-projects-lease-analyzer/memory/project_ci_mergify_discrepancy.md` — append "resolved by Wave 49" closeout.
+- Modify: `~/.claude/projects/-Users-bradygrapentine-projects-lease-analyzer/memory/project_ci_~~mergify~~_discrepancy.md` — append "resolved by Wave 49" closeout.
 - New memory: `~/.claude/projects/-Users-bradygrapentine-projects-lease-analyzer/memory/project_post_merge_ci_safety_net.md` — explains that the post-merge `ci` workflow on `main` is now the canonical semantic-conflict safety net (instead of the up-to-date branch requirement).
-- PR body must document the GitHub Settings UI steps for the user to apply branch protection changes (turn off "Require branches to be up to date before merging"; remove Mergify Merge Queue from required status checks if listed).
+- PR body must document the GitHub Settings UI steps for the user to apply branch protection changes (turn off "Require branches to be up to date before merging"; remove ~~Mergify~~ Merge Queue from required status checks if listed).
 
 **Pillar B — Flake hygiene:**
 - New: `app/src/test/known-flakes.md` — registry with columns: test path, test name, first-observed date, fix-by date, hypothesis, owning skill/file. Today's accordion test is the seed entry.
@@ -108,7 +108,7 @@ From this session's incidents:
 
 ## §4 Item ordering
 
-1. **Pillar A first.** Merge-protocol change. Branch-protection edits remain user-applied via GitHub Settings UI; `.mergify.yml` deletion + `scripts/rebase-and-merge.sh` + CLAUDE.md/memory rewrites all land in one commit titled `chore(49-A): drop Mergify, document gh-native merge path`.
+1. **Pillar A first.** Merge-protocol change. Branch-protection edits remain user-applied via GitHub Settings UI; `.~~mergify~~.yml` deletion + `scripts/rebase-and-merge.sh` + CLAUDE.md/memory rewrites all land in one commit titled `chore(49-A): drop ~~Mergify~~, document gh-native merge path`.
 2. **Pillar B second.** `known-flakes.md` + `withRetry` helper + accordion-test wrap + `flake-watch.sh` in one commit titled `chore(49-B): flake registry + per-test retry + watch script`.
 3. **Pillar C last.** Single commit `chore(49-C): reconcile BACKLOG with shipped Wave 45/46 + deferred rows from clarify + extract inventories`.
 4. Push, open PR, attempt one `gh pr merge --auto --squash --delete-branch` after CI green.
@@ -124,7 +124,7 @@ From this session's incidents:
 ## §6 Risks and mitigations
 
 - **Pillar A: semantic-conflict slipping through PR-CI but caught only by post-merge `ci`.** Mitigation: post-merge `ci` runs on every commit to `main`; today's flake on `bed8be6` proved the safety net works. Reverts on `main` are cheap (single PR). Acceptable risk for the rebasing toil eliminated.
-- **Pillar A: branch-protection change requires user admin action.** Mitigation: PR body lists exact Settings UI steps; the change is reversible. The `.mergify.yml` deletion + rebase-and-merge.sh ship even if the user defers the protection edit; they're additive.
+- **Pillar A: branch-protection change requires user admin action.** Mitigation: PR body lists exact Settings UI steps; the change is reversible. The `.~~mergify~~.yml` deletion + rebase-and-merge.sh ship even if the user defers the protection edit; they're additive.
 - **Pillar B: flake registry becomes a permanent garbage dump.** Mitigation: every entry has a fix-by date; `flake-watch.sh` could grow to alert on entries that pass their fix-by date.
 - **Pillar B: per-test retry masks a real regression.** Mitigation: only tests in the registry get `withRetry`; default suite remains zero-retry. New flakes still fail loudly until added to the registry, forcing inspection.
 - **Pillar C: backlog rewrite collides with concurrent edits.** Mitigation: no other PRs are open (Wave 46 just merged); land Pillar C as the final commit before push to minimize the window.
@@ -132,7 +132,7 @@ From this session's incidents:
 
 ## §7 Success definition
 
-- `.mergify.yml` removed from repo (or absent if it was never tracked); GitHub branch protection on `main` no longer requires up-to-date branches; `scripts/rebase-and-merge.sh` exists and is tested.
+- `.~~mergify~~.yml` removed from repo (or absent if it was never tracked); GitHub branch protection on `main` no longer requires up-to-date branches; `scripts/rebase-and-merge.sh` exists and is tested.
 - `app/src/test/known-flakes.md` exists with at least the accordion-test entry; the test self-heals on retry; `flake-watch.sh` runs and reports.
 - `docs/BACKLOG.md` reflects current truth: shipped Wave-45/46 follow-ups in §7 Done; new rows from clarify + extract inventories filed; status-board counts accurate.
 - CLAUDE.md and memory entries updated; no contradictory rebase guidance remains.
