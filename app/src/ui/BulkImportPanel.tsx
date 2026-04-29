@@ -1,15 +1,17 @@
 // Wave 27-C — design pass rewrite.
+// Wave 45-F — progressive aria-live announcement during streaming.
 // Semantic attributes preserved verbatim:
-//   aria-label="bulk import"             (section)
-//   aria-label="bulk import files"       (file input)
-//   aria-label="bulk import progress"    (table)
-//   data-testid={`bulk-status-${i}`}     (td)
-//   role="status" aria-label="bulk import summary"  (p)
+//   aria-label="bulk import"                          (section)
+//   aria-label="bulk import files"                    (file input — now FileButton)
+//   aria-label="bulk import progress"                 (table)
+//   aria-live="polite" + aria-label="bulk import live progress" (running summary)
+//   data-testid={`bulk-status-${i}`}                  (td)
+//   role="status" aria-label="bulk import summary"    (p — terminal summary)
 //
-import { useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import { useState } from 'react';
 import type { BulkResult, BulkSummary } from '../workflow/bulkImport';
 import { Section } from './system/Section';
+import { FileButton } from './system/FileButton';
 
 export interface BulkImportPanelProps {
   /**
@@ -28,15 +30,10 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<BulkSummary | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  async function onFileChange(e: ChangeEvent<HTMLInputElement>): Promise<void> {
-    const list = e.target.files;
-    if (!list || list.length === 0) return;
+  async function onFiles(list: FileList): Promise<void> {
+    if (list.length === 0) return;
     const files = Array.from(list);
-    // Reset the input so re-selecting the same batch re-fires.
-    e.target.value = '';
-
     setBusy(true);
     setSummary(null);
     // For PDF inputs we get one progress event per file; for `.zip` inputs
@@ -63,39 +60,81 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
     <Section label="bulk import" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Bulk import</h2>
       <p className="text-body text-fg-body">
-        Select multiple PDF leases — or a single <code className="font-mono text-mono text-fg-muted">.zip</code> of PDFs — to analyze and save in
-        one pass. Exact duplicates (by content hash) are skipped automatically. Top-level zip
-        entries only; nested folders are ignored.
+        Select multiple PDF leases — or a single{' '}
+        <code className="font-mono text-mono text-fg-muted">.zip</code> of PDFs — to analyze and
+        save in one pass. Exact duplicates (by content hash) are skipped automatically. Top-level
+        zip entries only; nested folders are ignored.
       </p>
-      <label className="inline-flex flex-col gap-1">
-        <span className="sr-only">Bulk import files</span>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="application/pdf,application/zip,.pdf,.zip"
-          multiple
-          aria-label="bulk import files"
-          disabled={busy}
-          className="text-small text-fg-body file:mr-2 file:h-7 file:px-2 file:rounded-sm file:border file:border-rule file:bg-paper-raised file:text-small file:text-fg-body file:cursor-pointer hover:file:bg-paper-sunken"
-          onChange={(e) => void onFileChange(e)}
-        />
-      </label>
+      <FileButton
+        variant="subtle"
+        size="md"
+        accept="application/pdf,application/zip,.pdf,.zip"
+        multiple
+        disabled={busy}
+        onFiles={(list) => void onFiles(list)}
+      >
+        Bulk import files
+      </FileButton>
+
+      {rows.length > 0 &&
+        (() => {
+          // Wave 45-F — running summary above the table so SRs hear progress
+          // as rows arrive, not only at the closing terminal summary below.
+          //
+          // We deliberately do NOT announce a "X of Y" denominator while
+          // streaming. Y is unknowable for `.zip` inputs (the archive count
+          // is not bounded until the workflow walks every entry), and the
+          // existing rows-replacement pattern means rows.length tracks
+          // results-so-far, not the original batch size. Announcing
+          // "Processed 1 of 1" while more entries are still arriving would
+          // mislead screen-reader users into thinking the batch is done.
+          // The terminal `<p role="status">` summary below carries the
+          // final batch counts when busy flips false.
+          const ok = rows.filter((r) => r.status === 'ok').length;
+          const skipped = rows.filter((r) => r.status === 'skipped').length;
+          const errors = rows.filter((r) => r.status === 'error').length;
+          const verb = busy ? 'Processing' : 'Processed';
+          return (
+            <p
+              aria-live="polite"
+              aria-atomic="false"
+              aria-label="bulk import live progress"
+              className="text-small text-fg-muted"
+            >
+              {verb}… imported {ok} · skipped {skipped} · errors {errors}
+            </p>
+          );
+        })()}
 
       {rows.length > 0 && (
         <div className="overflow-x-auto">
-          <table aria-label="bulk import progress" className="w-full text-small text-fg-body border-collapse">
+          <table
+            aria-label="bulk import progress"
+            className="w-full text-small text-fg-body border-collapse"
+          >
             <thead>
               <tr className="border-b border-rule">
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">File</th>
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">Status</th>
-                <th scope="col" className="text-left py-1 text-fg-muted font-sans">Detail</th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  File
+                </th>
+                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                  Status
+                </th>
+                <th scope="col" className="text-left py-1 text-fg-muted font-sans">
+                  Detail
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={`${r.fileName}-${i}`} className="even:bg-paper-sunken border-b border-rule-subtle">
+                <tr
+                  key={`${r.fileName}-${i}`}
+                  className="even:bg-paper-sunken border-b border-rule-subtle"
+                >
                   <td className="py-1 pr-3">{r.fileName}</td>
-                  <td className="py-1 pr-3" data-testid={`bulk-status-${i}`}>{labelFor(r.status)}</td>
+                  <td className="py-1 pr-3" data-testid={`bulk-status-${i}`}>
+                    {labelFor(r.status)}
+                  </td>
                   <td className="py-1">
                     <small className="font-mono text-mono text-fg-muted">{detailFor(r)}</small>
                   </td>

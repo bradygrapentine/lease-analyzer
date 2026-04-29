@@ -8,15 +8,12 @@
 //   role="status"                                    (p — status/error messages)
 //   aria-expanded={browseOpen}                       (button — marketplace toggle)
 //
-import { useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import { useState } from 'react';
 import type { RulePackFile } from '../rules/packSchema';
-import {
-  MarketplacePanel,
-  type MarketplacePanelProps,
-} from './MarketplacePanel';
+import { MarketplacePanel, type MarketplacePanelProps } from './MarketplacePanel';
 import { Section } from './system/Section';
 import { Button } from './system/Button';
+import { FileButton } from './system/FileButton';
 
 /**
  * Signature trust vocabulary surfaced in the panel. Intentionally a
@@ -80,15 +77,12 @@ export function PackManagerPanel({
   signatureStatusByPackId,
   marketplace,
 }: PackManagerPanelProps): JSX.Element {
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [browseOpen, setBrowseOpen] = useState(false);
 
-  async function handleFile(e: ChangeEvent<HTMLInputElement>): Promise<void> {
-    const file = e.target.files?.[0];
-    // Reset so selecting the same file twice re-triggers onChange.
-    e.target.value = '';
+  async function handleFiles(files: FileList): Promise<void> {
+    const file = files[0];
     if (!file) return;
     setStatus(null);
     setError(null);
@@ -108,10 +102,12 @@ export function PackManagerPanel({
           <strong className="text-fg-body">{builtInName}</strong> <em>(built-in)</em>
         </li>
         {installed.map((p) => {
-          const sig: PackSignatureBadge =
-            signatureStatusByPackId?.[p.id] ?? 'community';
+          const sig: PackSignatureBadge = signatureStatusByPackId?.[p.id] ?? 'community';
           return (
-            <li key={p.id} className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 flex items-start gap-2">
+            <li
+              key={p.id}
+              className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 flex items-start gap-2"
+            >
               <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
                 <input
                   type="checkbox"
@@ -154,23 +150,26 @@ export function PackManagerPanel({
       </ul>
 
       <div className="space-y-1">
-        <label htmlFor="pack-import-input" className="text-small text-fg-muted font-sans">
-          Import rule pack
-        </label>
-        <input
-          id="pack-import-input"
-          ref={inputRef}
-          type="file"
+        <FileButton
+          variant="subtle"
+          size="md"
           accept=".lgpack.json,application/json"
-          className="block text-small text-fg-body file:mr-2 file:h-7 file:px-2 file:rounded-sm file:border file:border-rule file:bg-paper-raised file:text-small file:text-fg-body file:cursor-pointer hover:file:bg-paper-sunken"
-          onChange={(e) => {
-            void handleFile(e);
-          }}
-        />
+          onFiles={(files) => void handleFiles(files)}
+        >
+          Import rule pack
+        </FileButton>
       </div>
 
-      {status !== null && <p role="status" className="text-small text-positive">{status}</p>}
-      {error !== null && <p role="status" className="text-small text-severity-high">Error: {error}</p>}
+      {status !== null && (
+        <p role="status" className="text-small text-positive">
+          {status}
+        </p>
+      )}
+      {error !== null && (
+        <p role="status" className="text-small text-severity-high">
+          Error: {error}
+        </p>
+      )}
 
       {marketplace !== undefined && (
         <div className="border-t border-rule pt-3 space-y-2">

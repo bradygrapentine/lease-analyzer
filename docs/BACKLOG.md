@@ -589,6 +589,20 @@ score: number }` field that the LLM path populates. The audit
 blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       and the dist build serves the model from same-origin.
 
+### Wave 45-F follow-ups
+
+- [ ] **Dialog focus containment for direct `.focus()` calls.** Wave 45-F
+      added a Tab-only focus trap to `useFocusTrap`. App-level keyboard
+      shortcuts that call `.focus()` directly (notably `App.tsx`'s `/` /
+      Cmd+F findings-search shortcut) can still escape the trap. Two
+      paths: (a) inert the background while a Dialog is open via the
+      `inert` attribute (Chrome 102+ / Firefox 112+ / Safari 15.5+), or
+      (b) seed the OnboardingTour as dismissed in App test setup so a
+      focusin-guard can be reintroduced without breaking tests. Codex
+      flagged this in the wave's adversarial review (run
+      `20260429T124811Z`); shipped with this gap because mustFix=0 and
+      the proper fix is non-trivial.
+
 ### Wave 35 follow-ups
 
 - [ ] Re-run `npm run hybrid:stats` after meaningful real-world usage

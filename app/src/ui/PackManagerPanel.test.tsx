@@ -106,7 +106,9 @@ describe('PackManagerPanel', () => {
         onDelete={() => {}}
       />,
     );
-    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input is no longer the labelable
+    // surface (the button is); query the hidden input directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="lgpack"]')!;
     const file = new File(['{"schema":"leaseguard.rulepack.v1"}'], 'example.lgpack.json', {
       type: 'application/json',
     });
@@ -130,7 +132,8 @@ describe('PackManagerPanel', () => {
     );
     expect(screen.getByText(/LG built-in/)).toBeInTheDocument();
     expect(screen.getByText(/no additional packs installed/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/import rule pack/i)).toBeInTheDocument();
+    // Wave 45-F — accessible name = visible text per WCAG 2.5.3.
+    expect(screen.getByRole('button', { name: /import rule pack/i })).toBeInTheDocument();
   });
 
   it('does not call onImport when the user cancels (no file selected)', async () => {
@@ -145,7 +148,9 @@ describe('PackManagerPanel', () => {
         onDelete={() => {}}
       />,
     );
-    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input is no longer the labelable
+    // surface (the button is); query the hidden input directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="lgpack"]')!;
     // Simulate a change event with no files.
     input.dispatchEvent(new Event('change', { bubbles: true }));
     expect(onImport).not.toHaveBeenCalled();
@@ -162,9 +167,7 @@ describe('PackManagerPanel', () => {
         onDelete={() => {}}
       />,
     );
-    expect(
-      screen.getByLabelText(/signature status: community/i),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/signature status: community/i)).toBeInTheDocument();
   });
 
   it('renders the supplied signature badge per pack', () => {
@@ -183,15 +186,9 @@ describe('PackManagerPanel', () => {
         }}
       />,
     );
-    expect(
-      screen.getByLabelText(/signature status: verified/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/signature status: invalid signature/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/signature status: community/i),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/signature status: verified/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/signature status: invalid signature/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/signature status: community/i)).toBeInTheDocument();
   });
 
   it('renders an "unknown" badge for unknown status', () => {
@@ -206,9 +203,7 @@ describe('PackManagerPanel', () => {
         signatureStatusByPackId={{ p1: 'unknown' }}
       />,
     );
-    expect(
-      screen.getByLabelText(/signature status: unknown/i),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/signature status: unknown/i)).toBeInTheDocument();
   });
 
   it('surfaces import errors via a status message', async () => {
@@ -223,7 +218,9 @@ describe('PackManagerPanel', () => {
         onDelete={() => {}}
       />,
     );
-    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input is no longer the labelable
+    // surface (the button is); query the hidden input directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="lgpack"]')!;
     const file = new File(['junk'], 'bad.lgpack.json', { type: 'application/json' });
     await userEvent.upload(input, file);
     expect(await screen.findByRole('status')).toHaveTextContent(/bad schema/);

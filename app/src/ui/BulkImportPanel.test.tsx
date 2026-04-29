@@ -11,9 +11,10 @@ function makeFile(name: string): File {
 }
 
 describe('BulkImportPanel', () => {
-  it('renders a file input with the expected accessible label', () => {
+  it('renders the import button with the expected accessible name', () => {
     render(<BulkImportPanel onImport={vi.fn()} />);
-    expect(screen.getByLabelText(/bulk import files/i)).toBeInTheDocument();
+    // Wave 45-F — accessible name now matches visible text per WCAG 2.5.3.
+    expect(screen.getByRole('button', { name: /bulk import files/i })).toBeInTheDocument();
   });
 
   it('streams per-file status and renders a summary when done', async () => {
@@ -27,7 +28,9 @@ describe('BulkImportPanel', () => {
     );
 
     render(<BulkImportPanel onImport={onImport} />);
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     await user.upload(input, [makeFile('a.pdf'), makeFile('b.pdf')]);
 
     await waitFor(() =>
@@ -59,7 +62,9 @@ describe('BulkImportPanel', () => {
     );
 
     render(<BulkImportPanel onImport={onImport} />);
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     const zipFile = new File([new Uint8Array([0])], 'batch.zip', { type: 'application/zip' });
     await user.upload(input, [zipFile]);
 
@@ -72,6 +77,33 @@ describe('BulkImportPanel', () => {
     expect(screen.getByText('batch.zip/b.pdf')).toBeInTheDocument();
     expect(screen.getByText('batch.zip/broken.pdf')).toBeInTheDocument();
     expect(screen.getByText(/corrupted PDF/)).toBeInTheDocument();
+  });
+
+  it('renders a progressive aria-live announcement during streaming', async () => {
+    const user = userEvent.setup();
+    const onImport = vi.fn(
+      async (_files: File[], onProgress: (r: BulkResult) => void): Promise<BulkSummary> => {
+        onProgress({ fileName: 'a.pdf', hash: 'h1', status: 'ok', leaseId: 'id-a' });
+        onProgress({ fileName: 'b.pdf', hash: 'h2', status: 'skipped' });
+        onProgress({ fileName: 'c.pdf', hash: 'h3', status: 'error', error: 'broken' });
+        return { ok: 1, skipped: 1, errors: 1 };
+      },
+    );
+    render(<BulkImportPanel onImport={onImport} />);
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
+    await user.upload(input, [makeFile('a.pdf'), makeFile('b.pdf'), makeFile('c.pdf')]);
+    // The live-region is distinct from the terminal summary (different label).
+    const live = await screen.findByLabelText(/bulk import live progress/i);
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveAttribute('aria-atomic', 'false');
+    // Live region announces running counts only — no "X of Y" denominator,
+    // since Y is unknowable for zip inputs while streaming. After the batch
+    // completes the verb flips from "Processing…" to "Processed…".
+    await waitFor(() =>
+      expect(live).toHaveTextContent(/Processed… imported 1 · skipped 1 · errors 1/),
+    );
   });
 
   it('surfaces errors per file', async () => {
@@ -88,7 +120,9 @@ describe('BulkImportPanel', () => {
       },
     );
     render(<BulkImportPanel onImport={onImport} />);
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     await user.upload(input, [makeFile('oops.pdf')]);
     await waitFor(() => expect(screen.getByText(/boom/)).toBeInTheDocument());
   });
