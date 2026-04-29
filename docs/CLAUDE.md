@@ -240,3 +240,25 @@ plus a leading `<Badge variant="severity" severity=…>` (icon + label).
 Side-stripe borders > 1px are forbidden anywhere in `app/src/ui`; a
 policy test (`app/src/test/no-side-stripe.policy.test.ts`) enforces
 this and runs in the standard Vitest suite.
+
+## Merge protocol (project-local)
+
+Wave 49 dropped Mergify and the "Require branches to be up to date
+before merging" branch protection rule. Squash-merging makes the
+up-to-date requirement redundant: linear history is preserved by the
+squash, not by rebasing the source branch first.
+
+**Default merge path:** `gh pr merge --auto --squash --delete-branch`
+once CI is green. No rebase required.
+
+**High-stakes PRs** (touching `app/src/security/`, `app/src/audit/`,
+or `app/src/storage/`) should use `scripts/rebase-and-merge.sh`
+instead. It rebases onto `origin/main`, force-pushes with lease, then
+enables auto-merge atomically from the same client. This keeps the
+Mergify-stale-SHA failure mode (Wave 28, 45-C, 45-BE) from recurring
+on the surfaces where post-merge breakage is hardest to recover.
+
+**Semantic-conflict safety net:** the post-merge `ci` workflow on
+`main` is now the canonical signal that a merge integrated cleanly.
+When it fails, the first move is `gh run rerun --failed` to rule out
+flake; if still red, revert and investigate.
