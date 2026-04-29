@@ -82,6 +82,16 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boole
       }
     }
 
+    // KNOWN GAP (Wave 45-F follow-up): we only intercept Tab/Shift+Tab.
+    // App-level keyboard shortcuts that call .focus() directly (e.g.
+    // App.tsx's `/` / Cmd+F findings-search shortcut) can still move
+    // focus into the background while a Dialog is open. A focusin
+    // guard that bounces stray focus inside is the standard fix, but
+    // it interacts badly with the existing App-level test setup where
+    // OnboardingTour is mounted by default and tests interact with
+    // surrounding panels. The proper resolution is either (a) inert
+    // the background while Dialog is open, or (b) seed the tour as
+    // dismissed in test beforeEach. Tracked in BACKLOG.
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [active, containerRef]);
