@@ -143,11 +143,12 @@ export function AppCurrentPane({
         <details className="text-small text-fg-muted mb-3">
           <summary className="cursor-pointer select-none">What is signed export?</summary>
           <p className="mt-1 max-w-prose">
-            A signed export pairs your findings with a digital signature so anyone can verify the
-            file hasn&rsquo;t been altered since you exported it. The signing key stays in your
-            browser. Note: the signature proves the file is intact, not who created it. Identity
-            binding (recipient verifies a specific public-key fingerprint) is up to you and your
-            counterparty.
+            The exported file carries a digital signature made with your local key. To verify the
+            file came from you and hasn&rsquo;t been altered since, share your public-key
+            fingerprint with the recipient out-of-band (text, email, in person). They can then
+            confirm the embedded key matches yours and the signature is valid. Without a shared
+            fingerprint, the file only verifies against the key embedded inside it, which an
+            attacker could replace.
           </p>
         </details>
       )}

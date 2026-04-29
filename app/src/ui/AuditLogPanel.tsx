@@ -32,9 +32,10 @@ export function AuditLogPanel({
         a separate local database.
       </p>
       <p className="text-small text-fg-muted">
-        Each entry signs the one before it. If a single entry is altered, the chain breaks and
-        verification fails. The full digest is shown in mono so you can copy it; the short form
-        (first 8 characters) is enough for spot-checks.
+        Each entry references the hash of the entry before it. Verifying the chain re-computes those
+        hashes and confirms the log is internally consistent. This catches a stray edit that
+        doesn&rsquo;t update downstream entries; it is a local consistency check, not a
+        cryptographic proof against an attacker with full access to your browser&rsquo;s storage.
       </p>
 
       <div role="group" aria-label="audit log actions" className="flex flex-wrap gap-2">
@@ -61,8 +62,8 @@ export function AuditLogPanel({
           ) : (
             <span>
               Chain broken at seq {verification.firstBadSeq ?? '?'}. An entry was altered or
-              removed, so the audit log&rsquo;s tamper-evidence guarantee no longer holds for the
-              affected range. (Signed exports verify independently of the audit log.)
+              removed, so the local consistency check no longer holds for the affected range.
+              (Signed exports verify independently of the audit log.)
             </span>
           )}
         </p>
