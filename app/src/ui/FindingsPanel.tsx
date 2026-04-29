@@ -7,6 +7,7 @@ import { highlightDefinedTerms } from './highlightDefinedTerms';
 import { useInViewport } from './useInViewport';
 import { Button } from './system/Button';
 import { Card } from './system/Card';
+import { Badge } from './system/Badge';
 import type { HybridFeedbackPayload } from './HybridFeedbackButton';
 import type { AuditEntry } from '../audit/auditLog';
 import { findClassifyEntry } from '../audit/findClassifyEntry';
@@ -219,7 +220,11 @@ export function FindingsPanel({
         </div>
       </div>
 
-      <div ref={listRef} onKeyDown={onListKeyDown} className="flex-1 overflow-y-auto px-3 pb-3 space-y-3">
+      <div
+        ref={listRef}
+        onKeyDown={onListKeyDown}
+        className="flex-1 overflow-y-auto px-3 pb-3 space-y-3"
+      >
         {SEVERITY_ORDER.map((sev) => {
           const group = bySeverity[sev];
           if (!group || group.length === 0) return null;
@@ -400,7 +405,10 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
   return (
     <li ref={liRef} data-finding-key={key}>
       {inView ? (
-        <Card accent={finding.severity as Severity} className="overflow-hidden">
+        <Card
+          variant={`severity-${finding.severity as Severity}` as const}
+          className="overflow-hidden"
+        >
           <div ref={fullRef}>
             <button
               type="button"
@@ -409,12 +417,18 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
               ref={btnRef}
               onClick={() => onSelect(finding)}
             >
-              <span className="font-sans text-body text-fg-body font-semibold">
-                {finding.title}
+              <span className="flex items-center gap-2">
+                <Badge variant="severity" severity={finding.severity as Severity}>
+                  {SEVERITY_LABEL[finding.severity as Severity]}
+                </Badge>
+                <span className="font-sans text-body text-fg-body font-semibold">
+                  {finding.title}
+                </span>
               </span>
               {finding.negated && (
                 <span aria-label="negated" className="text-small text-fg-muted ml-1">
-                  {' '}(possibly not applicable)
+                  {' '}
+                  (possibly not applicable)
                 </span>
               )}
               {finding.deviation && (
@@ -422,7 +436,8 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                   className="finding-deviation-badge text-small text-fg-muted ml-1"
                   aria-label="Deviates from verified baseline"
                 >
-                  {' '}deviates from verified pack
+                  {' '}
+                  deviates from verified pack
                 </span>
               )}
               <div className="text-body text-fg-body">{finding.explanation}</div>
@@ -500,12 +515,11 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                 >
                   What this means
                 </Button>
-                {isExplainerOpen ? (
-                  <p className="mt-1 text-body text-fg-body">{plain}</p>
-                ) : null}
+                {isExplainerOpen ? <p className="mt-1 text-body text-fg-body">{plain}</p> : null}
               </div>
             ) : null}
-            {(onApplySuggestion && suggestedText) || (onPromoteToStandard && leaseId !== undefined) ? (
+            {(onApplySuggestion && suggestedText) ||
+            (onPromoteToStandard && leaseId !== undefined) ? (
               <div className="flex gap-2 px-3 pb-3">
                 {onApplySuggestion && suggestedText ? (
                   <Button
@@ -513,7 +527,9 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                     variant="subtle"
                     size="sm"
                     aria-label={`apply suggestion for ${finding.title}`}
-                    onClick={() => onApplySuggestion(finding, finding.paragraphIndex, suggestedText)}
+                    onClick={() =>
+                      onApplySuggestion(finding, finding.paragraphIndex, suggestedText)
+                    }
                   >
                     Apply suggestion
                   </Button>
