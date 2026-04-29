@@ -81,11 +81,20 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
         (() => {
           // Wave 45-F — running summary above the table so SRs hear progress
           // as rows arrive, not only at the closing terminal summary below.
-          const total = rows.length;
+          //
+          // We deliberately do NOT announce a "X of Y" denominator while
+          // streaming. Y is unknowable for `.zip` inputs (the archive count
+          // is not bounded until the workflow walks every entry), and the
+          // existing rows-replacement pattern means rows.length tracks
+          // results-so-far, not the original batch size. Announcing
+          // "Processed 1 of 1" while more entries are still arriving would
+          // mislead screen-reader users into thinking the batch is done.
+          // The terminal `<p role="status">` summary below carries the
+          // final batch counts when busy flips false.
           const ok = rows.filter((r) => r.status === 'ok').length;
           const skipped = rows.filter((r) => r.status === 'skipped').length;
           const errors = rows.filter((r) => r.status === 'error').length;
-          const processed = ok + skipped + errors;
+          const verb = busy ? 'Processing' : 'Processed';
           return (
             <p
               aria-live="polite"
@@ -93,7 +102,7 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
               aria-label="bulk import live progress"
               className="text-small text-fg-muted"
             >
-              Processed {processed} of {total} · imported {ok} · skipped {skipped} · errors {errors}
+              {verb}… imported {ok} · skipped {skipped} · errors {errors}
             </p>
           );
         })()}

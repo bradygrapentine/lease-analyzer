@@ -20,36 +20,42 @@ function renderFooter(props: Partial<React.ComponentProps<typeof AppFooterContro
 describe('AppFooterControls', () => {
   it('renders the three controls (export, import file input, clear)', () => {
     renderFooter();
-    expect(screen.getByLabelText(/import encrypted archive/i)).toBeInTheDocument();
-    // Two buttons: export archive + clear all. Their labels come from i18n.
-    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /import encrypted archive/i })).toBeInTheDocument();
+    // Wave 45-F — three buttons: export archive + import-archive (FileButton)
+    // + clear all. Pre-45-F there were two buttons + a label-wrapped input.
+    expect(screen.getAllByRole('button')).toHaveLength(3);
   });
 
   it('fires onExportArchive when the export button is clicked', async () => {
     const onExportArchive = vi.fn();
     renderFooter({ onExportArchive });
-    const buttons = screen.getAllByRole('button');
-    await userEvent.click(buttons[0]!);
+    // Match the visible label (i18n string from footer.archive.export).
+    await userEvent.click(screen.getByRole('button', { name: /export.*archive/i }));
     expect(onExportArchive).toHaveBeenCalledTimes(1);
   });
 
   it('fires onClearAll when the clear button is clicked', async () => {
     const onClearAll = vi.fn();
     renderFooter({ onClearAll });
-    const buttons = screen.getAllByRole('button');
-    // Second button is clear-all per render order.
-    await userEvent.click(buttons[1]!);
+    // i18n label from footer.clearAll.
+    await userEvent.click(screen.getByRole('button', { name: /clear/i }));
     expect(onClearAll).toHaveBeenCalledTimes(1);
   });
 
   it('fires onImportArchive with the selected file', async () => {
     const onImportArchive = vi.fn();
     renderFooter({ onImportArchive });
-    const input = screen.getByLabelText(/import encrypted archive/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input is no longer reachable via
+    // getByLabelText (the button carries the accessible name now). Query
+    // the input directly.
+    const input = document.querySelector<HTMLInputElement>(
+      'input[type="file"][accept*="lgarchive"]',
+    );
+    expect(input).not.toBeNull();
     const file = new File([new Uint8Array([0])], 'a.lgarchive', {
       type: 'application/octet-stream',
     });
-    await userEvent.upload(input, file);
+    await userEvent.upload(input!, file);
     expect(onImportArchive).toHaveBeenCalledTimes(1);
   });
 });

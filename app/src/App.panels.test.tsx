@@ -303,7 +303,9 @@ describe('App panel wire-ups', () => {
         },
       ],
     };
-    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    // Wave 45-F — FileButton: walk button→sibling-input.
+    const input = screen.getByRole('button', { name: /import rule pack/i })
+      .nextElementSibling as HTMLInputElement;
     await userEvent.upload(
       input,
       new File([JSON.stringify(pack)], 'custom.lgpack.json', { type: 'application/json' }),
@@ -437,7 +439,9 @@ describe('App panel wire-ups', () => {
         },
       ],
     };
-    const input = screen.getByLabelText(/pack file to diff/i) as HTMLInputElement;
+    // Wave 45-F — FileButton: walk button→sibling-input.
+    const input = screen.getByRole('button', { name: /pack file to diff/i })
+      .nextElementSibling as HTMLInputElement;
     await userEvent.upload(
       input,
       new File([JSON.stringify(pack)], 'diff.lgpack.json', { type: 'application/json' }),
@@ -480,7 +484,9 @@ describe('App panel wire-ups', () => {
     const fileB = new File([bytesB as BlobPart], 'bulk-b.pdf', {
       type: 'application/pdf',
     });
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton: walk button→sibling-input.
+    const input = screen.getByRole('button', { name: /bulk import files/i })
+      .nextElementSibling as HTMLInputElement;
     await userEvent.upload(input, [fileA, fileB]);
     await waitFor(async () => {
       expect((await listLeases()).length).toBe(2);
@@ -698,7 +704,9 @@ describe('App panel wire-ups', () => {
       'verify',
     ])) as CryptoKeyPair;
     const envelope = await signPack(pack, kp.privateKey, kp.publicKey);
-    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    // Wave 45-F — FileButton: walk button→sibling-input.
+    const input = screen.getByRole('button', { name: /import rule pack/i })
+      .nextElementSibling as HTMLInputElement;
     await userEvent.upload(
       input,
       new File([JSON.stringify(envelope)], 'signed.lgpack.json', {
@@ -812,7 +820,9 @@ describe('App panel wire-ups', () => {
       ...envelope,
       payload: envelope.payload.replace('Tampered', 'TamperedX'),
     };
-    const input = screen.getByLabelText(/import rule pack/i) as HTMLInputElement;
+    // Wave 45-F — FileButton: walk button→sibling-input.
+    const input = screen.getByRole('button', { name: /import rule pack/i })
+      .nextElementSibling as HTMLInputElement;
     await userEvent.upload(
       input,
       new File([JSON.stringify(tampered)], 'tampered.lgpack.json', {

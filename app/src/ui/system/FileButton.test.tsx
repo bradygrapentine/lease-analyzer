@@ -5,14 +5,20 @@ import { expectAxeClean } from '../../test/axe';
 import { FileButton } from './FileButton';
 
 describe('FileButton', () => {
-  it('renders the visible label', () => {
-    render(<FileButton onFiles={() => {}}>Import lease</FileButton>);
-    expect(screen.getByText('Import lease')).toBeInTheDocument();
+  it('renders the visible label as a focusable button', () => {
+    render(
+      <FileButton aria-label="Import lease" onFiles={() => {}}>
+        Import lease
+      </FileButton>,
+    );
+    const btn = screen.getByRole('button', { name: 'Import lease' });
+    expect(btn).toBeInTheDocument();
+    expect(btn).not.toHaveAttribute('aria-hidden');
   });
 
   it('exposes a hidden file input with the configured accept and multiple', () => {
     const { container } = render(
-      <FileButton accept=".pdf" multiple onFiles={() => {}}>
+      <FileButton accept=".pdf" multiple aria-label="Pick" onFiles={() => {}}>
         Pick
       </FileButton>,
     );
@@ -20,19 +26,21 @@ describe('FileButton', () => {
     expect(input).not.toBeNull();
     expect(input).toHaveAttribute('accept', '.pdf');
     expect(input).toHaveAttribute('multiple');
-    // Visually hidden but still in the accessibility tree (not aria-hidden).
-    expect(input.className).toContain('sr-only');
+    // Hidden from layout AND a11y tree.
+    expect(input).toHaveAttribute('aria-hidden', 'true');
+    expect(input.style.display).toBe('none');
+    expect(input.tabIndex).toBe(-1);
   });
 
   it('calls onFiles when a file is picked', async () => {
     const user = userEvent.setup();
     const onFiles = vi.fn();
-    render(
-      <FileButton onFiles={onFiles} aria-label="Import lease">
+    const { container } = render(
+      <FileButton aria-label="Import lease" onFiles={onFiles}>
         Import
       </FileButton>,
     );
-    const input = screen.getByLabelText('Import lease') as HTMLInputElement;
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(['content'], 'lease.pdf', { type: 'application/pdf' });
     await user.upload(input, file);
     expect(onFiles).toHaveBeenCalledTimes(1);
@@ -41,56 +49,72 @@ describe('FileButton', () => {
     expect(fileList[0]?.name).toBe('lease.pdf');
   });
 
-  it('size md hits the 44px AAA tap-target floor; sm hits 32px', () => {
-    const { rerender, container } = render(
-      <FileButton size="md" onFiles={() => {}}>
-        Md
-      </FileButton>,
-    );
-    expect((container.firstChild as HTMLElement).className).toContain('h-11');
-    rerender(
-      <FileButton size="sm" onFiles={() => {}}>
-        Sm
-      </FileButton>,
-    );
-    expect((container.firstChild as HTMLElement).className).toContain('h-8');
-  });
-
-  it('disabled state disables the input + visually-disables the label', () => {
+  it('clicking the visible button forwards click to the hidden input', async () => {
+    const user = userEvent.setup();
     const onFiles = vi.fn();
     const { container } = render(
-      <FileButton disabled onFiles={onFiles} aria-label="Import">
-        Import
-      </FileButton>,
-    );
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-    expect(input).toBeDisabled();
-    expect(container.firstChild as HTMLElement).toHaveAttribute('aria-disabled', 'true');
-  });
-
-  it('forwards aria-describedby to the input', () => {
-    const { container } = render(
-      <FileButton aria-describedby="hint" aria-label="Pick" onFiles={() => {}}>
+      <FileButton aria-label="Pick" onFiles={onFiles}>
         Pick
       </FileButton>,
     );
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-    expect(input).toHaveAttribute('aria-describedby', 'hint');
+    const clickSpy = vi.spyOn(input, 'click');
+    await user.click(screen.getByRole('button', { name: 'Pick' }));
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it('size md hits the 44px AAA tap-target floor; sm hits 32px', () => {
+    const { rerender } = render(
+      <FileButton size="md" aria-label="Md" onFiles={() => {}}>
+        Md
+      </FileButton>,
+    );
+    const btnMd = screen.getByRole('button', { name: 'Md' });
+    expect(btnMd.className).toContain('h-11');
+    rerender(
+      <FileButton size="sm" aria-label="Sm" onFiles={() => {}}>
+        Sm
+      </FileButton>,
+    );
+    const btnSm = screen.getByRole('button', { name: 'Sm' });
+    expect(btnSm.className).toContain('h-8');
+  });
+
+  it('disabled state disables both the button and the input', () => {
+    const { container } = render(
+      <FileButton disabled aria-label="Import" onFiles={() => {}}>
+        Import
+      </FileButton>,
+    );
+    const btn = screen.getByRole('button', { name: 'Import' });
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(btn).toBeDisabled();
+    expect(input).toBeDisabled();
+  });
+
+  it('forwards aria-describedby to the button', () => {
+    render(
+      <FileButton aria-describedby="hint" aria-label="Pick" onFiles={() => {}}>
+        Pick
+      </FileButton>,
+    );
+    const btn = screen.getByRole('button', { name: 'Pick' });
+    expect(btn).toHaveAttribute('aria-describedby', 'hint');
   });
 
   it('has no a11y violations across variants and sizes', async () => {
     const { container } = render(
       <div>
-        <FileButton onFiles={() => {}} aria-label="default-md">
+        <FileButton aria-label="default-md" onFiles={() => {}}>
           Default md
         </FileButton>
-        <FileButton variant="ghost" size="sm" onFiles={() => {}} aria-label="ghost-sm">
+        <FileButton variant="ghost" size="sm" aria-label="ghost-sm" onFiles={() => {}}>
           Ghost sm
         </FileButton>
-        <FileButton variant="subtle" size="md" onFiles={() => {}} aria-label="subtle-md">
+        <FileButton variant="subtle" size="md" aria-label="subtle-md" onFiles={() => {}}>
           Subtle md
         </FileButton>
-        <FileButton disabled onFiles={() => {}} aria-label="disabled">
+        <FileButton disabled aria-label="disabled" onFiles={() => {}}>
           Disabled
         </FileButton>
       </div>,

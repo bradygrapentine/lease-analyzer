@@ -17,8 +17,12 @@ interface FileButtonProps {
   onFiles: (files: FileList) => void;
   /** Optional aria-describedby target. */
   'aria-describedby'?: string;
-  /** Optional aria-label override; defaults to the visible children text. */
-  'aria-label'?: string;
+  /**
+   * Accessible name. Required because the button forwards click to a
+   * hidden input — screen readers should hear what the button does, not
+   * just the visible decoration text.
+   */
+  'aria-label': string;
   className?: string;
 }
 
@@ -42,10 +46,12 @@ const SIZE: Record<Size, string> = {
   md: 'h-11 min-w-11 px-3 text-body rounded-sm',
 };
 
-// Wave 45-F — Button-sized file-input affordance. Visually identical to
-// <Button>, but a hidden <input type="file"> sits inside so click /
-// keyboard activation opens the system file picker. Closes the four h-7
-// (28px) reinvented file-input sites the audit flagged.
+// Wave 45-F — Button-sized file-input affordance. The VISIBLE <button> is
+// the focus surface (gets the focus ring, keyboard activation, and
+// accessible name); the <input type="file"> is hidden via display:none
+// and triggered via ref.click() when the button is activated. This is
+// the inverse of the naive sr-only-input pattern, which leaves focus
+// invisible to sighted keyboard users.
 export function FileButton({
   children,
   accept,
@@ -60,20 +66,29 @@ export function FileButton({
 }: FileButtonProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <label
-      className={`inline-flex items-center justify-center font-sans transition-colors cursor-pointer ${VARIANT[variant]} ${SIZE[size]} ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
-      aria-disabled={disabled || undefined}
-    >
-      {children}
+    <>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        onClick={() => inputRef.current?.click()}
+        className={`inline-flex items-center justify-center font-sans transition-colors ${VARIANT[variant]} ${SIZE[size]} ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
+      >
+        {children}
+      </button>
       <input
         ref={inputRef}
         type="file"
         accept={accept}
         multiple={multiple}
         disabled={disabled}
-        aria-label={ariaLabel}
-        aria-describedby={ariaDescribedBy}
-        className="sr-only"
+        // Hidden from layout AND tab order — the button is the focus
+        // surface. tabIndex={-1} is belt-and-braces in case any future
+        // browser exposes display:none inputs (none do today).
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{ display: 'none' }}
         onChange={(e) => {
           const files = e.currentTarget.files;
           if (files && files.length > 0) {
@@ -83,6 +98,6 @@ export function FileButton({
           e.currentTarget.value = '';
         }}
       />
-    </label>
+    </>
   );
 }

@@ -27,7 +27,9 @@ describe('BulkImportPanel', () => {
     );
 
     render(<BulkImportPanel onImport={onImport} />);
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     await user.upload(input, [makeFile('a.pdf'), makeFile('b.pdf')]);
 
     await waitFor(() =>
@@ -59,7 +61,9 @@ describe('BulkImportPanel', () => {
     );
 
     render(<BulkImportPanel onImport={onImport} />);
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     const zipFile = new File([new Uint8Array([0])], 'batch.zip', { type: 'application/zip' });
     await user.upload(input, [zipFile]);
 
@@ -85,14 +89,19 @@ describe('BulkImportPanel', () => {
       },
     );
     render(<BulkImportPanel onImport={onImport} />);
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     await user.upload(input, [makeFile('a.pdf'), makeFile('b.pdf'), makeFile('c.pdf')]);
     // The live-region is distinct from the terminal summary (different label).
     const live = await screen.findByLabelText(/bulk import live progress/i);
     expect(live).toHaveAttribute('aria-live', 'polite');
     expect(live).toHaveAttribute('aria-atomic', 'false');
+    // Live region announces running counts only — no "X of Y" denominator,
+    // since Y is unknowable for zip inputs while streaming. After the batch
+    // completes the verb flips from "Processing…" to "Processed…".
     await waitFor(() =>
-      expect(live).toHaveTextContent(/Processed 3 of 3 · imported 1 · skipped 1 · errors 1/),
+      expect(live).toHaveTextContent(/Processed… imported 1 · skipped 1 · errors 1/),
     );
   });
 
@@ -110,7 +119,9 @@ describe('BulkImportPanel', () => {
       },
     );
     render(<BulkImportPanel onImport={onImport} />);
-    const input = screen.getByLabelText(/bulk import files/i) as HTMLInputElement;
+    // Wave 45-F — FileButton's hidden input no longer carries the
+    // accessible name; query directly.
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     await user.upload(input, [makeFile('oops.pdf')]);
     await waitFor(() => expect(screen.getByText(/boom/)).toBeInTheDocument());
   });

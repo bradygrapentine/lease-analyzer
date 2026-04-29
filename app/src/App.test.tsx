@@ -369,7 +369,10 @@ describe('App', () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('pw');
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    const importInput = screen.getByLabelText(/import encrypted archive/i) as HTMLInputElement;
+    // Wave 45-F — FileButton hides the input from the a11y tree; the
+    // button carries the accessible name. Walk to the sibling input.
+    const importInput = screen.getByRole('button', { name: /import encrypted archive/i })
+      .nextElementSibling as HTMLInputElement;
     await userEvent.upload(importInput, archiveFile);
     await waitFor(async () => {
       expect((await listLeases()).length).toBe(1);
