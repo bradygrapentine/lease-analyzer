@@ -19,16 +19,10 @@ import { FindingsPanel } from './FindingsPanel';
 import { PdfViewer } from './PdfViewer';
 import { ResultsHeader } from './AppCurrentPane/ResultsHeader';
 import { ScannedPdfNotice } from './AppCurrentPane/ScannedPdfNotice';
-import { AnnotationsPanel } from './AnnotationsPanel';
-import { CounterOfferPanel } from './CounterOfferPanel';
-import { TemplateMatchesPanel } from './TemplateMatchesPanel';
-import { LeaseFactsPanel } from './LeaseFactsPanel';
-import { WorkflowPanel } from './WorkflowPanel';
+import { SupportingContext } from './AppCurrentPane/SupportingContext';
 import { extractLeaseFacts } from '../facts/extractFacts';
 import { needsOcr } from '../compare/needsOcr';
-import { matchTemplates } from '../templates/matchTemplates';
-import { buildSummary, copyToClipboard } from '../workflow/copySummary';
-import { exportFindingsAsHtml, downloadHandoffZip } from '../App/appHelpers';
+import { exportFindingsAsHtml } from '../App/appHelpers';
 import { Card } from './system/Card';
 import type { Finding } from '../rules/types';
 import type { LeaseDocument } from '../parser/types';
@@ -183,47 +177,16 @@ export function AppCurrentPane({
           <span className="text-small text-fg-muted">Page {selected.page}</span>
         </Card>
       )}
-      <AnnotationsPanel
-        leaseId={analyzedLeaseId ?? ''}
-        paragraphIndex={selected ? selected.paragraphIndex : null}
-        annotations={annotationsApi.annotations}
-        onSave={(text) => {
-          if (!analyzedLeaseId || selected === null) return;
-          void annotationsApi.save({
-            leaseId: analyzedLeaseId,
-            paragraphIndex: selected.paragraphIndex,
-            text,
-          });
-        }}
-        onUpdate={(id, text) => void annotationsApi.update(id, text)}
-        onDelete={(id) => void annotationsApi.remove(id)}
-      />
-      <CounterOfferPanel
-        finding={selected}
-        counters={counters.counterOffers}
-        onSave={(ruleId, name, text) => void counters.save(ruleId, name, text)}
-        onDelete={(id) => void counters.remove(id)}
-        suggestedEdit={selected ? suggestedEditByRuleId[selected.ruleId] : undefined}
-      />
-      <TemplateMatchesPanel matches={matchTemplates(templates, status.result.doc)} />
-      <LeaseFactsPanel facts={leaseFacts} />
-      <WorkflowPanel
-        leaseName={status.fileName}
-        findings={status.result.findings}
+      <SupportingContext
+        status={status}
+        selected={selected}
+        analyzedLeaseId={analyzedLeaseId}
+        annotationsApi={annotationsApi}
+        counters={counters}
+        templates={templates}
+        leaseFacts={leaseFacts}
+        suggestedEditByRuleId={suggestedEditByRuleId}
         onBuildIcs={onBuildIcs}
-        onCopySummary={async () => {
-          await copyToClipboard(
-            buildSummary({ leaseName: status.fileName, findings: status.result.findings }),
-          );
-        }}
-        onDownloadHandoff={() => {
-          downloadHandoffZip({
-            fileName: status.fileName,
-            doc: status.result.doc,
-            findings: status.result.findings,
-            bytes: status.bytes,
-          });
-        }}
       />
     </div>
   );
