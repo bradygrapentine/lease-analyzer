@@ -3,11 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // is the failing-on-purpose signal. The implementer creates
 // `src/rules/curatedPacks.ts` exporting `loadCuratedManifest()` and
 // `parseCuratedManifest(raw: unknown)`.
-import {
-  loadCuratedManifest,
-  parseCuratedManifest,
-  type CuratedPackEntry,
-} from './curatedPacks';
+import { loadCuratedManifest, parseCuratedManifest, type CuratedPackEntry } from './curatedPacks';
 import { at } from '../test/assert';
 
 const VALID_ENTRY: CuratedPackEntry = {
@@ -46,6 +42,24 @@ describe('curatedPacks: parseCuratedManifest', () => {
     const result = parseCuratedManifest([
       { ...VALID_ENTRY, jurisdictions: 'US-CA' as unknown as string[] },
     ]);
+    expect(result.ok).toBe(false);
+  });
+
+  // Wave 44: cover validateEntry's per-field error branches that the
+  // single "fingerprint missing" test does not exercise.
+  it.each([
+    ['id', { id: '' }],
+    ['name', { name: '' }],
+    ['description', { description: 42 as unknown as string }],
+    ['author', { author: '' }],
+  ])('rejects an entry with bad %s', (_label, override) => {
+    const bad = { ...VALID_ENTRY, ...override };
+    const result = parseCuratedManifest([bad]);
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a non-object entry (string)', () => {
+    const result = parseCuratedManifest(['not-an-object' as unknown as CuratedPackEntry]);
     expect(result.ok).toBe(false);
   });
 
@@ -90,7 +104,9 @@ describe('curatedPacks: loadCuratedManifest (network-free, same-origin only)', (
   });
 
   it('rejects when fetch returns 404', async () => {
-    globalThis.fetch = vi.fn(async () => new Response('', { status: 404 })) as unknown as typeof fetch;
+    globalThis.fetch = vi.fn(
+      async () => new Response('', { status: 404 }),
+    ) as unknown as typeof fetch;
     await expect(loadCuratedManifest()).rejects.toThrow();
   });
 
