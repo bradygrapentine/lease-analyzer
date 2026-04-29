@@ -100,10 +100,19 @@ export default defineConfig({
         // meaningful error-path and fallback branches. Actuals landed
         // at 97.52 / 90.21 / 94.26 / 97.52; branches cleared the 90.2
         // threshold so the floor steps up 89 → 90.
-        statements: 95,
+        //
+        // Ratcheted 2026-04-28 (Wave 43) per the measure→ratchet plan.
+        // Actuals: 97.56 / 90.29 / 94.27 / 97.56. New floor =
+        // floor(actual) - 1, clamped never to decrease. Branches
+        // headroom is 0.29 (< 2-pt margin per plan §4) so the branch
+        // floor holds at 90; the other three step up. Limiter files
+        // for any future branch push: src/worker/handleRequest.ts
+        // (71.42), src/parser/customRuleDraft.ts (79.41), and
+        // src/ui/renderPdfPages.ts (77.77).
+        statements: 96,
         branches: 90,
-        functions: 91,
-        lines: 95,
+        functions: 93,
+        lines: 96,
       },
     },
   },

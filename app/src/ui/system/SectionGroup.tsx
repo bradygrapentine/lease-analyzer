@@ -62,7 +62,8 @@ export function SectionGroup({
 
   return (
     <Card data-density={density} className="overflow-hidden">
-      <h3 className="m-0">
+      {/* h2 (Wave 41): the disclosure header sits directly under the page h1. h3 here skipped a level → axe heading-order. */}
+      <h2 className="m-0">
         <button
           id={headerId}
           type="button"
@@ -86,7 +87,7 @@ export function SectionGroup({
             )}
           </span>
         </button>
-      </h3>
+      </h2>
       {/*
         Wave 28 Part C bugfix: aria-labelledby now points to the disclosure
         button (which carries the title) rather than the panel's own id.
