@@ -227,10 +227,13 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
 }
 
 describe('App panel wire-ups', () => {
-  it('renders the LeaseFacts panel after analysis', async () => {
+  it('hides the LeaseFacts panel when the synthetic lease has no extractable facts', async () => {
+    // Distill: LeaseFactsPanel renders nothing when isEmpty. The minimal
+    // makePdf fixture produces no rent / dates / definitions / cross-refs,
+    // so the rail correctly omits the panel.
     render(<App />);
     await uploadLease();
-    expect(screen.getByRole('region', { name: /lease facts/i })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /lease facts/i })).not.toBeInTheDocument();
   });
 
   it('renders the WorkflowPanel with ics / copy / handoff buttons', async () => {

@@ -17,7 +17,7 @@ interface LeaseFactsPanelProps {
   facts: LeaseFacts;
 }
 
-export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
+export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element | null {
   const rentSchedule = facts.rentSchedule ?? [];
   const isEmpty =
     facts.baseRent === null &&
@@ -30,14 +30,10 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
     facts.crossReferences.length === 0 &&
     rentSchedule.length === 0;
 
-  if (isEmpty) {
-    return (
-      <Section label="lease facts">
-        <h3 className="text-heading uppercase text-fg-muted mb-3">Lease facts</h3>
-        <p className="text-body text-fg-muted">No structured facts detected in this lease.</p>
-      </Section>
-    );
-  }
+  // Distill: a panel showing only "no structured facts detected" is noise.
+  // Hide it; the supporting rail collapses by one slot when extraction
+  // returns nothing usable.
+  if (isEmpty) return null;
 
   return (
     <Section label="lease facts" className="space-y-4">
@@ -88,10 +84,18 @@ export function LeaseFactsPanel({ facts }: LeaseFactsPanelProps): JSX.Element {
           <table aria-label="rent schedule" className="w-full text-body text-fg-body">
             <thead>
               <tr className="border-b border-rule">
-                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">From</th>
-                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">To</th>
-                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">Amount</th>
-                <th scope="col" className="py-1 text-left text-small text-fg-muted font-sans">Escalator</th>
+                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">
+                  From
+                </th>
+                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">
+                  To
+                </th>
+                <th scope="col" className="py-1 pr-3 text-left text-small text-fg-muted font-sans">
+                  Amount
+                </th>
+                <th scope="col" className="py-1 text-left text-small text-fg-muted font-sans">
+                  Escalator
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-rule">
@@ -129,7 +133,9 @@ interface FactRowProps {
 function FactRow({ label, value }: FactRowProps): JSX.Element {
   return (
     <tr>
-      <th scope="row" className="py-1 pr-4 text-left text-small text-fg-muted font-sans w-40">{label}</th>
+      <th scope="row" className="py-1 pr-4 text-left text-small text-fg-muted font-sans w-40">
+        {label}
+      </th>
       <td className="py-1 text-body text-fg-body font-sans">{value}</td>
     </tr>
   );

@@ -644,6 +644,14 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
       `20260429T124811Z`); shipped with this gap because mustFix=0 and
       the proper fix is non-trivial.
 
+### Distill pass deferrals (filed 2026-04-29 by /impeccable distill)
+
+The distill pass on the right-rail supporting context shipped the two highest-ROI moves (hide-empty for `LeaseFactsPanel` and `TemplateMatchesPanel`). The remaining surfaces from the distill triage were evaluated and deferred — each requires a flow / IA decision that wasn't unilateral.
+
+- [ ] **THIS LEASE / LIBRARY / GOVERNANCE accordion shell.** Three full-width disclosure bars where one nests Compare + Custom Rule Builder + Hybrid Precision sub-panels. Structure-on-structure. Distill candidates: collapse to a single density-toggle, hide GOVERNANCE on first-run until a destructive action is needed, or split LIBRARY contents into a top-level tab. Needs a flow decision: which sections does the renter actually need vs. the practitioner.
+- [ ] **Findings filter chips (4 severity + 4 category, all pressed by default).** The default state is "all visible," so chips do nothing on first paint. Distill candidates: collapse into one disclosure, only render category chips when ≥2 categories present, or surface as a single "Filter…" button that opens an inline sheet. Risk: this is the practitioner-density affordance — the dense bar may be the feature, not the noise. Validate with a practitioner before changing.
+- [ ] **Combine empty `AnnotationsPanel` + `CounterOfferPanel` into one selection-bound section.** Both currently render their own heading + "click a finding" hint when no finding is selected. Combine into a single "Notes & counter-offers" panel with one shared hint, expanding into both forms once selected. Requires shared state model and discoverability decision (how does the renter learn both affordances exist).
+
 ### Polish pass deferrals (filed 2026-04-29 by /impeccable polish)
 
 P2 visual items surfaced during the all-surfaces polish walk; deferred from the export-brand PR because they need real-browser confirmation before committing.

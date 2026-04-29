@@ -32,9 +32,9 @@ describe('classifyMatch', () => {
 });
 
 describe('TemplateMatchesPanel', () => {
-  it('renders an empty-state message when there are no matches', () => {
-    render(<TemplateMatchesPanel matches={[]} />);
-    expect(screen.getByText(/no clause templates to compare/i)).toBeInTheDocument();
+  it('renders nothing when there are no matches (distill: hide-empty rail)', () => {
+    const { container } = render(<TemplateMatchesPanel matches={[]} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('renders a matched badge and the snippet when score is high', () => {

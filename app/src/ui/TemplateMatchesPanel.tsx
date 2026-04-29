@@ -19,15 +19,10 @@ export function TemplateMatchesPanel({
   matches,
   matchedThreshold = 0.7,
   weakThreshold = 0.4,
-}: TemplateMatchesPanelProps): JSX.Element {
-  if (matches.length === 0) {
-    return (
-      <Section label="template matches">
-        <h3 className="text-heading uppercase text-fg-muted mb-3">Template matches</h3>
-        <p className="text-body text-fg-muted">No clause templates to compare against.</p>
-      </Section>
-    );
-  }
+}: TemplateMatchesPanelProps): JSX.Element | null {
+  // Distill: when there are no clause templates to compare against (the
+  // default for fresh users), don't render a panel that only says so.
+  if (matches.length === 0) return null;
   return (
     <Section label="template matches" className="space-y-2">
       <h3 className="text-heading uppercase text-fg-muted mb-3">Template matches</h3>
