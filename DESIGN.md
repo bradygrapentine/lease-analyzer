@@ -307,14 +307,14 @@ toggle-pill filters.
 - **Shadow:** `shadow-paper` (the hairline). No diffuse glow.
 - **Internal Padding:** 16px default. Findings cards step up to 20–24px
   for breathing room.
-- **Severity treatment (current, under refactor):** the existing `Card`
-  primitive paints a 3px Court Slate / Severity left-border stripe when
-  given an `accent` prop. This is the system's one heritage exception;
-  see Don'ts.
-- **Severity treatment (going-forward):** prefer the `severity-bg-*`
-  token pairs (tinted background + matching low-alpha border + icon +
-  label) over a side stripe. They survive color-blind viewing better
-  and don't smuggle decorative chroma into the page edge.
+- **Severity treatment:** the `Card` primitive accepts a
+  `variant="severity-{high|medium|low|info}"` prop that paints the row
+  with the matching `severity-bg-*` token (color-mix at 22% against
+  `paper-raised`) and a 1px full-perimeter `severity-border-*` (40%
+  alpha). Pair with a leading `<Badge variant="severity" severity=…>`
+  inside the card so every severity row carries the canonical icon +
+  label per the Severity-Earned doctrine. No side-stripe — the edge is
+  a full perimeter, the signal is the tint plus the badge.
 
 ### Inputs / Fields
 
@@ -336,7 +336,9 @@ description-below pattern.
 
 ### Severity Badges & Row Highlights
 
-- **Style:** background = `severity-bg-{error|warn|info}`, border =
+- **Primitive:** `<Badge variant="severity" severity={…}>Label</Badge>`
+  in `app/src/ui/system/Badge.tsx`.
+- **Style:** background = `severity-bg-{error|warn|low|info}`, border =
   matching `severity-border-*`, foreground = always Ink Black. The
   `color-mix()` derivation lets dark mode auto-rebalance against
   `paper-raised`.
@@ -385,11 +387,11 @@ description-below pattern.
 
 ### Don't:
 
-- **Don't** introduce new side-stripe borders. The 3px `border-l` on
-  the legacy `Card` primitive is the system's one heritage exception
-  and should be migrated to the `severity-bg-*` background-tint
-  pattern. New severity surfaces use background tint + icon + label,
-  never a colored side stripe.
+- **Don't** use side-stripe borders. `border-left` / `border-right`
+  greater than 1px as a colored accent is forbidden. Severity
+  surfaces use background tint + icon + label via the `<Card
+  variant="severity-…">` + `<Badge variant="severity">` pair. A
+  policy test (`no-side-stripe.policy.test.ts`) blocks regressions.
 - **Don't** use `#000` or `#fff` literally. Tinted neutrals only.
 - **Don't** use gradient text or `background-clip: text` for
   decoration. Emphasis is weight or size.

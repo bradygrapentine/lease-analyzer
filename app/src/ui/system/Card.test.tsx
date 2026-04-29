@@ -20,21 +20,53 @@ describe('Card', () => {
     expect(screen.getByRole('article', { name: /selected finding/i })).toBeInTheDocument();
   });
 
-  it('renders every accent variant', () => {
-    for (const accent of ['high', 'medium', 'low', 'info'] as const) {
-      const { unmount } = render(<Card accent={accent}>a</Card>);
-      expect(screen.getByText('a')).toBeInTheDocument();
+  it('renders every severity variant with tinted bg + matching border (no side stripe)', () => {
+    const cases = [
+      {
+        variant: 'severity-high' as const,
+        bgToken: 'severity-bg-error',
+        borderToken: 'severity-border-error',
+      },
+      {
+        variant: 'severity-medium' as const,
+        bgToken: 'severity-bg-warn',
+        borderToken: 'severity-border-warn',
+      },
+      {
+        variant: 'severity-low' as const,
+        bgToken: 'severity-bg-low',
+        borderToken: 'severity-border-low',
+      },
+      {
+        variant: 'severity-info' as const,
+        bgToken: 'severity-bg-info',
+        borderToken: 'severity-border-info',
+      },
+    ];
+    for (const { variant, bgToken, borderToken } of cases) {
+      const { container, unmount } = render(<Card variant={variant}>row</Card>);
+      const el = container.firstChild as HTMLElement;
+      expect(el.className).toContain(`bg-[var(--color-${bgToken})]`);
+      expect(el.className).toContain(`border-[var(--color-${borderToken})]`);
+      // No side-stripe doctrine: any border-l-N where N > 1 is forbidden.
+      expect(el.className).not.toMatch(/border-l-(\[?[2-9]\d*)/);
       unmount();
     }
   });
 
-  it('renders with no accent', () => {
-    render(<Card>no accent</Card>);
-    expect(screen.getByText('no accent')).toBeInTheDocument();
+  it('renders default variant with paper-raised + rule border', () => {
+    const { container } = render(<Card>default</Card>);
+    const el = container.firstChild as HTMLElement;
+    expect(el.className).toContain('bg-paper-raised');
+    expect(el.className).toContain('border-rule');
   });
 
   it('forwards aria-* props verbatim (e2e safety)', () => {
-    render(<Card aria-label="test card" aria-describedby="desc">x</Card>);
+    render(
+      <Card aria-label="test card" aria-describedby="desc">
+        x
+      </Card>,
+    );
     const el = screen.getByRole('article', { name: /test card/i });
     expect(el).toHaveAttribute('aria-describedby', 'desc');
   });
@@ -54,7 +86,9 @@ describe('Card', () => {
       <div>
         <Card>plain</Card>
         <Card aria-label="finding">with label</Card>
-        <Card accent="high" aria-label="high severity">urgent</Card>
+        <Card variant="severity-high" aria-label="high severity">
+          urgent
+        </Card>
       </div>,
     );
     await expectAxeClean(container);

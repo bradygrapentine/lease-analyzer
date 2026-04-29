@@ -235,7 +235,8 @@ Read DESIGN.md before adding components or color. Eight named rules
 Measure, Plain-Reading, Tonal-Before-Shadow, Hairline) are the
 fast-path summary; the Do's and Don'ts list is exhaustive.
 
-The legacy 3px `border-l` severity stripe on `app/src/ui/system/Card.tsx`
-is the system's one heritage side-stripe exception and is scheduled for
-migration to the `severity-bg-*` token pairs (tinted background + icon +
-label). Do not propagate the side-stripe pattern to new components.
+Severity surfaces use the `<Card variant="severity-…">` row variant
+plus a leading `<Badge variant="severity" severity=…>` (icon + label).
+Side-stripe borders > 1px are forbidden anywhere in `app/src/ui`; a
+policy test (`app/src/test/no-side-stripe.policy.test.ts`) enforces
+this and runs in the standard Vitest suite.

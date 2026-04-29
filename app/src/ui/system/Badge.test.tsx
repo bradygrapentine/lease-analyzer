@@ -21,6 +21,47 @@ describe('Badge', () => {
     }
   });
 
+  it('severity variant renders an aria-hidden icon alongside the label', () => {
+    const { container } = render(
+      <Badge variant="severity" severity="high">
+        High
+      </Badge>,
+    );
+    const icon = container.querySelector('svg');
+    expect(icon).not.toBeNull();
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    // The text label still survives next to the icon.
+    expect(screen.getByText('High')).toBeInTheDocument();
+  });
+
+  it('severity variant uses tinted bg + ink-on-tint foreground (DESIGN.md §5)', () => {
+    const { container } = render(
+      <Badge variant="severity" severity="medium">
+        Medium
+      </Badge>,
+    );
+    const span = container.firstChild as HTMLElement;
+    // Classes derive from --color-severity-bg-* and --color-severity-border-*
+    // tokens declared in app/src/index.css. The foreground is always text-fg
+    // (Ink Black) for AA contrast against the tinted bg.
+    expect(span.className).toMatch(/bg-\[var\(--color-severity-bg-warn\)\]/);
+    expect(span.className).toMatch(/text-fg\b/);
+    expect(span.className).toMatch(/border-\[var\(--color-severity-border-warn\)\]/);
+    // No side-stripe doctrine: no border-l-N where N > 1.
+    expect(span.className).not.toMatch(/border-l-(\[?[2-9]\d*)/);
+  });
+
+  it('severity variant uses bg-low / border-low for low severity', () => {
+    const { container } = render(
+      <Badge variant="severity" severity="low">
+        Low
+      </Badge>,
+    );
+    const span = container.firstChild as HTMLElement;
+    expect(span.className).toMatch(/bg-\[var\(--color-severity-bg-low\)\]/);
+    expect(span.className).toMatch(/border-\[var\(--color-severity-border-low\)\]/);
+  });
+
   it('renders outline variant (default)', () => {
     render(<Badge variant="outline">outline</Badge>);
     expect(screen.getByText('outline')).toBeInTheDocument();
@@ -54,7 +95,18 @@ describe('Badge', () => {
   it('has no a11y violations across variants', async () => {
     const { container } = render(
       <div>
-        <Badge variant="severity" severity="high">High</Badge>
+        <Badge variant="severity" severity="high">
+          High
+        </Badge>
+        <Badge variant="severity" severity="medium">
+          Medium
+        </Badge>
+        <Badge variant="severity" severity="low">
+          Low
+        </Badge>
+        <Badge variant="severity" severity="info">
+          Info
+        </Badge>
         <Badge variant="outline">Outline</Badge>
         <Badge variant="mono">mono</Badge>
       </div>,
