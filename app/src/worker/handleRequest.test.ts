@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { makePdf } from '../parser/testFixtures';
+import * as parser from '../parser/parseLease';
 import { RULE_PACK_V1 } from '../rules/packV1';
 import { handleWorkerRequest } from './handleRequest';
 import type { ParseAnalyzeRequest } from './types';
@@ -65,6 +66,31 @@ describe('handleWorkerRequest', () => {
   // `WorkerRequest` discriminated union to fire the `unknown kind`
   // branch — in practice this triggers only when a future caller
   // adds a new request kind without updating the handler.
+  // Wave 44: cover the `err instanceof Error` false branch in the
+  // catch block. Real callers always see an Error from parseLease, but
+  // a future parser change could throw a string/number, and the
+  // handler must still return a structured response.
+  it('returns ok:false when parseLease throws a non-Error value (string/undefined-name path)', async () => {
+    const spy = vi.spyOn(parser, 'parseLease').mockRejectedValueOnce('string-thrown');
+    try {
+      const req: ParseAnalyzeRequest = {
+        id: 11,
+        kind: 'parse-analyze',
+        bytes: new Uint8Array([1, 2, 3]),
+        rules: RULE_PACK_V1,
+      };
+      const resp = await handleWorkerRequest(req);
+      expect(resp.id).toBe(11);
+      expect(resp.ok).toBe(false);
+      if (!resp.ok) {
+        expect(resp.error).toBe('string-thrown');
+        expect(resp.errorName).toBeUndefined();
+      }
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('returns ok:false with an "unknown kind" error on an unrecognized request kind', async () => {
     const req = {
       id: 99,

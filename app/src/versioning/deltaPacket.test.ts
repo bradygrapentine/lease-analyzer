@@ -97,6 +97,23 @@ describe('deltaPacket', () => {
     expect(() => applyLineDiff(baseText, shortPatch)).toThrow(/did not consume full base/);
   });
 
+  // Wave 44: cover the two `throw` arms inside applyLineDiff that
+  // existing happy-path round-trip tests bypass — a removal tag whose
+  // content disagrees with the base, and an unrecognized tag.
+  it('applyLineDiff throws on a removal whose content does not match the base', () => {
+    const baseText = 'line one\nline two\n';
+    // Patch claims to remove "line two" but base actually has "line one" at bi=0.
+    const wrongRemoval = '-line two\n';
+    expect(() => applyLineDiff(baseText, wrongRemoval)).toThrow(/removal mismatch/);
+  });
+
+  it('applyLineDiff throws on an unknown diff tag', () => {
+    const baseText = 'line one\n';
+    // First char "?" isn't in the recognized {' ', '-', '+'} set.
+    const malformed = '?line one\n';
+    expect(() => applyLineDiff(baseText, malformed)).toThrow(/unknown tag/);
+  });
+
   it('tampering with changes invalidates the signature', async () => {
     const key = await genKey();
     const packet = await buildDeltaPacket({

@@ -32,10 +32,7 @@ describe('buildSummary', () => {
   });
 
   it('groups findings by severity and skips empty groups', () => {
-    const findings = [
-      f({ severity: 'high', title: 'H1' }),
-      f({ severity: 'low', title: 'L1' }),
-    ];
+    const findings = [f({ severity: 'high', title: 'H1' }), f({ severity: 'low', title: 'L1' })];
     const { html, plain } = buildSummary({ leaseName: 'X', findings });
     expect(html).toContain('High');
     expect(html).toContain('Low');
@@ -125,6 +122,20 @@ describe('copyToClipboard', () => {
     expect(writeText).toHaveBeenCalledWith('plain text');
   });
 
+  // Wave 44: cover the "clipboard object exists but exposes neither
+  // write nor writeText" branch — pathological host (browser polyfill,
+  // permissions-stripped iframe) where the Clipboard prototype is
+  // present but its methods aren't functions.
+  it('throws when clipboard exposes no write or writeText method', async () => {
+    (globalThis as { ClipboardItem?: unknown }).ClipboardItem = undefined;
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      value: {},
+      configurable: true,
+      writable: true,
+    });
+    await expect(copyToClipboard({ html: '', plain: '' })).rejects.toThrow(/present but unusable/);
+  });
+
   it('throws a clear error when the Clipboard API is missing entirely', async () => {
     (globalThis as { ClipboardItem?: unknown }).ClipboardItem = undefined;
     Object.defineProperty(globalThis.navigator, 'clipboard', {
@@ -132,8 +143,6 @@ describe('copyToClipboard', () => {
       configurable: true,
       writable: true,
     });
-    await expect(copyToClipboard({ html: '', plain: '' })).rejects.toThrow(
-      /Clipboard API/,
-    );
+    await expect(copyToClipboard({ html: '', plain: '' })).rejects.toThrow(/Clipboard API/);
   });
 });

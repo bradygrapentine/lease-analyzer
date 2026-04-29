@@ -106,8 +106,12 @@ describe('useColorScheme', () => {
       configurable: true,
       value: {
         ...window.localStorage,
-        setItem: () => { throw new Error('storage quota exceeded'); },
-        removeItem: () => { throw new Error('storage quota exceeded'); },
+        setItem: () => {
+          throw new Error('storage quota exceeded');
+        },
+        removeItem: () => {
+          throw new Error('storage quota exceeded');
+        },
         getItem: () => null,
       },
     });
@@ -154,5 +158,15 @@ describe('useColorScheme', () => {
 
     expect(result.current.resolvedScheme).toBe('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  // Wave 44: cover the catch-block fallback in resolve() when matchMedia
+  // throws (some sandboxed iframes / Safari ITP modes do this).
+  it('falls back to light when window.matchMedia throws on initial resolve', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(() => {
+      throw new Error('matchMedia blocked');
+    });
+    const { result } = renderHook(() => useColorScheme());
+    expect(result.current.resolvedScheme).toBe('light');
   });
 });

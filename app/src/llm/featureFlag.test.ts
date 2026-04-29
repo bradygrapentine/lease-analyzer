@@ -112,6 +112,27 @@ describe('isPhase18Enabled', () => {
     expect(isPhase18Enabled()).toBe(false);
   });
 
+  // Wave 44: cover the catch in readUrlParam — URLSearchParams is
+  // robust, but property access on a sandboxed/proxied location can
+  // throw. Use a getter that explicitly throws.
+  it('URL parse errors are swallowed (returns null, not crash)', () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        get search(): string {
+          throw new Error('synthetic location.search failure');
+        },
+      },
+      writable: true,
+    });
+    expect(isPhase18Enabled()).toBe(false);
+  });
+
+  // Wave 44: cover the `!window.location` short-circuit branch.
+  it('returns false when window.location is missing entirely', () => {
+    Object.defineProperty(window, 'location', { value: null, writable: true });
+    expect(isPhase18Enabled()).toBe(false);
+  });
+
   it('setPhase18Override is a no-op when localStorage is undefined', () => {
     vi.stubGlobal('localStorage', undefined);
     // Should not throw.
