@@ -33,7 +33,7 @@ describe('FindingsPanel — hybrid badge (Wave 28-D)', () => {
   it('renders the hybrid badge with aria-pressed=false initially', () => {
     render(<FindingsPanel findings={[f({})]} onSelect={() => {}} />);
     const badge = screen.getByRole('button', {
-      name: /identified by on-device classifier/i,
+      name: /identified by on-device pattern match/i,
     });
     expect(badge).toHaveAttribute('aria-pressed', 'false');
   });
@@ -41,7 +41,7 @@ describe('FindingsPanel — hybrid badge (Wave 28-D)', () => {
   it('toggles aria-pressed=true after click', async () => {
     render(<FindingsPanel findings={[f({})]} onSelect={() => {}} />);
     const badge = screen.getByRole('button', {
-      name: /identified by on-device classifier/i,
+      name: /identified by on-device pattern match/i,
     });
     await userEvent.click(badge);
     expect(badge).toHaveAttribute('aria-pressed', 'true');
@@ -50,7 +50,7 @@ describe('FindingsPanel — hybrid badge (Wave 28-D)', () => {
   it('applies the focus-ring utility for keyboard focus', () => {
     render(<FindingsPanel findings={[f({})]} onSelect={() => {}} />);
     const badge = screen.getByRole('button', {
-      name: /identified by on-device classifier/i,
+      name: /identified by on-device pattern match/i,
     });
     expect(badge.className).toMatch(/focus-visible:focus-ring/);
   });

@@ -59,13 +59,7 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
   });
 
   it('omits the button when no onHybridFeedback callback is provided', () => {
-    render(
-      <FindingsPanel
-        findings={[hybrid]}
-        onSelect={() => {}}
-        leaseId="lease-1"
-      />,
-    );
+    render(<FindingsPanel findings={[hybrid]} onSelect={() => {}} leaseId="lease-1" />);
     expect(screen.queryByRole('button', { name: /not relevant/i })).toBeNull();
   });
 
@@ -75,24 +69,30 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
       seq: 1,
       timestamp: '2024-01-01T00:00:00.000Z',
       kind: 'llm-classify',
-      payload: { ruleId: 'auto-renew', paragraphIndex: 3, modelId: 'classifier-x', similarity: 0.82 },
+      payload: {
+        ruleId: 'auto-renew',
+        paragraphIndex: 3,
+        modelId: 'classifier-x',
+        similarity: 0.82,
+      },
       prevHash: '',
       entryHash: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
     };
     render(
-      <FindingsPanel
-        findings={[hybrid]}
-        onSelect={() => {}}
-        auditEntries={[classifyEntry]}
-      />,
+      <FindingsPanel findings={[hybrid]} onSelect={() => {}} auditEntries={[classifyEntry]} />,
     );
     // Open the hybrid detail disclosure
-    const badge = await screen.findByRole('button', { name: /identified by on-device classifier/i });
+    const badge = await screen.findByRole('button', {
+      name: /identified by on-device pattern match/i,
+    });
     await userEvent.click(badge);
     // Should show first 8 chars of entryHash
     const dd = await screen.findByText('abcdef12');
     expect(dd).toBeInTheDocument();
-    expect(dd).toHaveAttribute('title', 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890');
+    expect(dd).toHaveAttribute(
+      'title',
+      'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
+    );
   });
 
   it('does not render the audit-entry section when no matching entry exists', async () => {
@@ -105,13 +105,11 @@ describe('FindingsPanel — hybrid-feedback wiring (Wave 29-C)', () => {
       entryHash: 'deadbeef1234567890deadbeef1234567890deadbeef1234567890deadbeef12',
     };
     render(
-      <FindingsPanel
-        findings={[hybrid]}
-        onSelect={() => {}}
-        auditEntries={[unrelatedEntry]}
-      />,
+      <FindingsPanel findings={[hybrid]} onSelect={() => {}} auditEntries={[unrelatedEntry]} />,
     );
-    const badge = await screen.findByRole('button', { name: /identified by on-device classifier/i });
+    const badge = await screen.findByRole('button', {
+      name: /identified by on-device pattern match/i,
+    });
     await userEvent.click(badge);
     expect(screen.queryByText(/audit entry/i)).toBeNull();
   });

@@ -27,7 +27,7 @@ const HybridFeedbackButton = lazy(() =>
 //   id="findings-${sev}" (h2)
 //   aria-expanded + aria-label="toggle ${sev}" (collapse button)
 //   data-finding-key (li and button — both)
-//   aria-expanded + aria-label="Identified by on-device classifier..." (llm badge button)
+//   aria-expanded + aria-label="Identified by on-device pattern match..." (llm badge button)
 //   aria-expanded + aria-label="what this means for ${finding.title}" (explainer button)
 //   aria-label="apply suggestion for ${finding.title}" (button)
 //   aria-label="promote to standard ${finding.title}" (button)
@@ -463,15 +463,32 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
                   className="finding-llm-badge inline-flex items-center gap-1 text-small text-fg-muted border border-rule rounded-sm px-2 py-0.5 hover:bg-[var(--state-hover)] active:bg-[var(--state-active)] transition-colors focus-visible:focus-ring"
                   aria-expanded={isHybridDetailOpen}
                   aria-pressed={isHybridDetailOpen}
-                  aria-label={`Identified by on-device classifier (similarity ${Math.round(
+                  aria-label={`Identified by on-device pattern match (similarity ${Math.round(
                     finding.evidence.similarity * 100,
-                  )}%)`}
-                  title={`On-device classifier (similarity ${Math.round(
+                  )}%). Click to see details.`}
+                  title={`On-device pattern match (similarity ${Math.round(
                     finding.evidence.similarity * 100,
                   )}%)`}
                   onClick={toggleHybridDetail}
                 >
-                  ~
+                  <span>On-device pattern match</span>
+                  {/* Wave 45-D — small (?) icon signals "click for more" at a
+                      glance; aria-hidden because the visible label carries
+                      the meaning. */}
+                  <svg
+                    width={12}
+                    height={12}
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.25}
+                    aria-hidden="true"
+                    focusable={false}
+                  >
+                    <circle cx="6" cy="6" r="4.5" />
+                    <circle cx="6" cy="3.75" r="0.4" fill="currentColor" stroke="none" />
+                    <path d="M6 5.5v3" strokeLinecap="round" />
+                  </svg>
                 </button>
                 {onHybridFeedback && leaseId !== undefined ? (
                   <span className="ml-2 inline-flex">
