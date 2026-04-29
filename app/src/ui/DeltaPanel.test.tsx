@@ -26,6 +26,20 @@ describe('DeltaPanel', () => {
     expect(screen.getByRole('button', { name: /generate|export/i })).toBeDisabled();
   });
 
+  it('pairs the error paragraph with a high-severity badge when onGenerate rejects (Wave 45-BE)', async () => {
+    const user = userEvent.setup();
+    const onGenerate = vi.fn(async () => {
+      throw new Error('signing failed');
+    });
+    render(<DeltaPanel versions={versions} onGenerate={onGenerate} />);
+    await user.selectOptions(screen.getByLabelText(/base/i), 'v1');
+    await user.selectOptions(screen.getByLabelText(/target/i), 'v2');
+    await user.type(screen.getByLabelText(/passphrase/i), 'a-strong-passphrase-12345');
+    await user.click(screen.getByRole('button', { name: /generate|export/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/signing failed/);
+    expect(screen.getByText(/^Error$/i)).toBeInTheDocument();
+  });
+
   it('happy path: pick base + target + passphrase invokes onGenerate with those ids', async () => {
     const user = userEvent.setup();
     const onGenerate = vi.fn<

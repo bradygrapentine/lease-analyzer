@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Badge } from './system/Badge';
 
 interface VersionRow {
   id: string;
@@ -83,7 +84,14 @@ export function DeltaPanel({ versions, onGenerate }: DeltaPanelProps): JSX.Eleme
           autoComplete="off"
         />
       </div>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <>
+          <Badge variant="severity" severity="high">
+            Error
+          </Badge>{' '}
+          <p role="alert">{error}</p>
+        </>
+      )}
       <button
         type="button"
         disabled={!ready || busy}
