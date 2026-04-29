@@ -11,9 +11,10 @@ function makeFile(name: string): File {
 }
 
 describe('BulkImportPanel', () => {
-  it('renders a file input with the expected accessible label', () => {
+  it('renders the import button with the expected accessible name', () => {
     render(<BulkImportPanel onImport={vi.fn()} />);
-    expect(screen.getByLabelText(/bulk import files/i)).toBeInTheDocument();
+    // Wave 45-F — accessible name now matches visible text per WCAG 2.5.3.
+    expect(screen.getByRole('button', { name: /bulk import files/i })).toBeInTheDocument();
   });
 
   it('streams per-file status and renders a summary when done', async () => {

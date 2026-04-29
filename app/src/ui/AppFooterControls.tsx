@@ -28,7 +28,6 @@ export function AppFooterControls({
         variant="subtle"
         size="sm"
         accept=".lgarchive,application/octet-stream"
-        aria-label="import encrypted archive"
         onFiles={(files) => {
           // Adapter: the existing onImportArchive expects a ChangeEvent because
           // it was wired against a raw <input type="file">. Synthesize a

@@ -132,7 +132,8 @@ describe('PackManagerPanel', () => {
     );
     expect(screen.getByText(/LG built-in/)).toBeInTheDocument();
     expect(screen.getByText(/no additional packs installed/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/import rule pack/i)).toBeInTheDocument();
+    // Wave 45-F — accessible name = visible text per WCAG 2.5.3.
+    expect(screen.getByRole('button', { name: /import rule pack/i })).toBeInTheDocument();
   });
 
   it('does not call onImport when the user cancels (no file selected)', async () => {

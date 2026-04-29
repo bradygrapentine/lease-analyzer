@@ -84,6 +84,33 @@ describe('useFocusTrap', () => {
     expect(document.activeElement).toBe(first);
   });
 
+  it('skips elements hidden via display:none, hidden attribute, or aria-hidden (Codex regression)', async () => {
+    const user = userEvent.setup();
+    render(
+      <Trap>
+        <button type="button">first</button>
+        <button type="button" style={{ display: 'none' }}>
+          display-none
+        </button>
+        <button type="button" hidden>
+          hidden-attr
+        </button>
+        <button type="button" aria-hidden="true">
+          aria-hidden
+        </button>
+        <button type="button">last</button>
+      </Trap>,
+    );
+    const first = screen.getByRole('button', { name: 'first' });
+    const last = screen.getByRole('button', { name: 'last' });
+    last.focus();
+    await user.tab();
+    // Hidden buttons must be skipped — wrap goes straight to first.
+    expect(document.activeElement).toBe(first);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(last);
+  });
+
   it('Shift+Tab from the container itself wraps to the last focusable (Codex regression)', async () => {
     const user = userEvent.setup();
     render(

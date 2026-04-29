@@ -70,11 +70,10 @@ export function BulkImportPanel({ onImport }: BulkImportPanelProps): JSX.Element
         size="md"
         accept="application/pdf,application/zip,.pdf,.zip"
         multiple
-        aria-label="bulk import files"
         disabled={busy}
         onFiles={(list) => void onFiles(list)}
       >
-        Choose PDFs or .zip
+        Bulk import files
       </FileButton>
 
       {rows.length > 0 &&

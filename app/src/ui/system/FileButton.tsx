@@ -18,11 +18,14 @@ interface FileButtonProps {
   /** Optional aria-describedby target. */
   'aria-describedby'?: string;
   /**
-   * Accessible name. Required because the button forwards click to a
-   * hidden input — screen readers should hear what the button does, not
-   * just the visible decoration text.
+   * Optional accessible-name override. **Avoid using this** unless the
+   * override contains the visible button text — WCAG 2.5.3 (Label in
+   * Name, Level A) requires the accessible name to start with or contain
+   * the visible text so voice-control users can activate the button by
+   * speaking the words they see. By default the visible children are
+   * the accessible name, which is what you want.
    */
-  'aria-label': string;
+  'aria-label'?: string;
   className?: string;
 }
 

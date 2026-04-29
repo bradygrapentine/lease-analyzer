@@ -12,14 +12,38 @@ export function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boole
     const root = containerRef.current;
     if (!root) return;
 
+    function isVisible(el: HTMLElement): boolean {
+      // Walk the element + ancestors checking for hidden / aria-hidden /
+      // inert / display:none / visibility:hidden|collapse. We avoid
+      // offsetParent / getClientRects because jsdom doesn't implement
+      // layout, so those return false-negatives for every test-rendered
+      // element. Inline-style checks work the same in jsdom and real
+      // browsers, and getComputedStyle (when available) catches CSS
+      // applied via stylesheet.
+      const hasComputedStyle =
+        typeof window !== 'undefined' && typeof window.getComputedStyle === 'function';
+      let cur: HTMLElement | null = el;
+      while (cur && cur !== root) {
+        if (cur.hasAttribute('hidden')) return false;
+        if (cur.getAttribute('aria-hidden') === 'true') return false;
+        if (cur.hasAttribute('inert')) return false;
+        if (cur.style.display === 'none') return false;
+        if (cur.style.visibility === 'hidden' || cur.style.visibility === 'collapse') return false;
+        if (hasComputedStyle) {
+          const style = window.getComputedStyle(cur);
+          if (style.display === 'none') return false;
+          if (style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+        }
+        cur = cur.parentElement;
+      }
+      return true;
+    }
+
     function getFocusable(): HTMLElement[] {
       if (!root) return [];
       const selector =
         'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-      return Array.from(root.querySelectorAll<HTMLElement>(selector)).filter((el) => {
-        // Filter out hidden / display:none nodes so Tab cycling skips them.
-        return !el.hasAttribute('aria-hidden') || el.getAttribute('aria-hidden') !== 'true';
-      });
+      return Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(isVisible);
     }
 
     function onKeyDown(e: KeyboardEvent): void {

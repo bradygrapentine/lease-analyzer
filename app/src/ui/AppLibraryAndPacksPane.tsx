@@ -203,13 +203,12 @@ export function AppLibraryAndPacksPane({
               variant="subtle"
               size="sm"
               accept=".lgpack.json,application/json"
-              aria-label="pack file to diff"
               onFiles={(files) => {
                 const f = files[0];
                 if (f) void packs.comparePackFile(f);
               }}
             >
-              Choose pack file
+              Pack file to diff
             </FileButton>
             {packs.packDiff && <PackDiffPanel diff={packs.packDiff} />}
           </Section>

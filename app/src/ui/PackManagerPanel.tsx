@@ -150,15 +150,13 @@ export function PackManagerPanel({
       </ul>
 
       <div className="space-y-1">
-        <p className="text-small text-fg-muted font-sans">Import rule pack</p>
         <FileButton
           variant="subtle"
           size="md"
           accept=".lgpack.json,application/json"
-          aria-label="Import rule pack"
           onFiles={(files) => void handleFiles(files)}
         >
-          Choose pack file
+          Import rule pack
         </FileButton>
       </div>
 
