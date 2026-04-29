@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-29T00:00:00Z",
+  "title": "Design System: LeaseGuard",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Aged Cream",
+        "canonical": "oklch(96.5% 0.018 85)",
+        "tonalRamp": ["#1c170f", "#2f2719", "#473a23", "#65553a", "#8a7a5b", "#b3a583", "#d8cdb1", "#faf6ee"]
+      },
+      "paper-raised": {
+        "role": "neutral",
+        "displayName": "Paper-Raised",
+        "canonical": "oklch(99% 0.005 85)",
+        "tonalRamp": ["#1c170f", "#2f2719", "#473a23", "#65553a", "#8a7a5b", "#b3a583", "#e3dac5", "#ffffff"]
+      },
+      "paper-sunken": {
+        "role": "neutral",
+        "displayName": "Folded Page",
+        "canonical": "oklch(94.5% 0.025 85)",
+        "tonalRamp": ["#1a160e", "#2c2417", "#443821", "#615238", "#867759", "#aea182", "#d2c8ad", "#f3eddc"]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "Ink Black",
+        "canonical": "oklch(22% 0.015 70)",
+        "tonalRamp": ["#100c08", "#1a140e", "#2a2316", "#3d3320", "#5a4a2d", "#7d6940", "#a89060", "#d4bf8c"]
+      },
+      "fg-body": {
+        "role": "neutral",
+        "displayName": "Walnut Body",
+        "canonical": "oklch(33% 0.025 70)",
+        "tonalRamp": ["#1a140d", "#26200f", "#332b16", "#4a3f25", "#685735", "#8c7547", "#b5985e", "#dcc185"]
+      },
+      "fg-muted": {
+        "role": "neutral",
+        "displayName": "Walnut Muted",
+        "canonical": "oklch(50% 0.025 70)",
+        "tonalRamp": ["#1f1a13", "#322b1d", "#4d432d", "#7a6f57", "#9f9075", "#b9aa8e", "#d3c4a8", "#ebdec3"]
+      },
+      "fg-faint": {
+        "role": "neutral",
+        "displayName": "Walnut Faint",
+        "canonical": "oklch(66% 0.022 70)",
+        "tonalRamp": ["#3a3220", "#52472d", "#6b5d3e", "#8a7b58", "#a59a7e", "#bfb59b", "#d6cfb8", "#ebe6d4"]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Margin Rule",
+        "canonical": "oklch(83% 0.022 80)",
+        "tonalRamp": ["#3a3220", "#544830", "#6f6041", "#8b7c5a", "#a99a78", "#c2b693", "#d6cdb6", "#ebe5d3"]
+      },
+      "rule-subtle": {
+        "role": "neutral",
+        "displayName": "Rule Subtle",
+        "canonical": "oklch(89% 0.018 80)",
+        "tonalRamp": ["#3f3724", "#5a4f35", "#776a48", "#948668", "#b1a487", "#cabfa3", "#dcd3ba", "#e8e0cf"]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Court Slate",
+        "canonical": "oklch(34% 0.05 235)",
+        "tonalRamp": ["#0d1820", "#142733", "#1f3a4d", "#2c5168", "#3d6a85", "#5286a4", "#7ba9c4", "#a9c8da"]
+      },
+      "severity-high": {
+        "role": "secondary",
+        "displayName": "Terracotta Warning",
+        "canonical": "oklch(53% 0.13 35)",
+        "tonalRamp": ["#3a1409", "#5a2014", "#7c2f1e", "#9b3924", "#b1442d", "#c75c45", "#dc8170", "#eeb1a3"]
+      },
+      "severity-medium": {
+        "role": "secondary",
+        "displayName": "Mustard Caution",
+        "canonical": "oklch(63% 0.11 75)",
+        "tonalRamp": ["#3a2806", "#56390b", "#7a5316", "#9b6c20", "#b8862c", "#cea050", "#e0bc7a", "#eed5a8"]
+      },
+      "severity-low": {
+        "role": "secondary",
+        "displayName": "Sage Note",
+        "canonical": "oklch(50% 0.04 145)",
+        "tonalRamp": ["#172519", "#243823", "#34502f", "#465f3f", "#5a7a5a", "#7a9678", "#9eb39b", "#c2cfbf"]
+      },
+      "severity-info": {
+        "role": "secondary",
+        "displayName": "Stone Note",
+        "canonical": "oklch(53% 0.025 240)",
+        "tonalRamp": ["#181d22", "#262d33", "#384149", "#4d5862", "#6b7b8c", "#8a9aab", "#aab6c3", "#c8d0d9"]
+      },
+      "positive": {
+        "role": "tertiary",
+        "displayName": "Positive Green",
+        "canonical": "oklch(50% 0.06 145)",
+        "tonalRamp": ["#142319", "#1f3624", "#2e4d31", "#3e6440", "#4a7a4a", "#6b9468", "#92ad8c", "#bccab4"]
+      },
+      "negative": {
+        "role": "tertiary",
+        "displayName": "Negative Red",
+        "canonical": "oklch(45% 0.15 30)",
+        "tonalRamp": ["#330e07", "#521509", "#71200f", "#8a2818", "#9a3022", "#b54d3d", "#cc7869", "#e0a99d"]
+      },
+      "ring": {
+        "role": "accent",
+        "displayName": "Mustard Focus Ring",
+        "canonical": "oklch(63% 0.11 75)",
+        "tonalRamp": ["#3a2806", "#56390b", "#7a5316", "#9b6c20", "#b8862c", "#cea050", "#e0bc7a", "#eed5a8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles and modal headlines. One per surface." },
+      "heading": { "displayName": "Heading", "purpose": "Panel and section headers; sparing use." },
+      "body": { "displayName": "Body", "purpose": "Findings, document excerpts, plain-language readings. Capped at 65–75ch." },
+      "label": { "displayName": "Label", "purpose": "Form labels, button text, metadata. The chrome layer." },
+      "mono": { "displayName": "Mono", "purpose": "Hashes, IDs, JSON fragments where character integrity matters." }
+    },
+    "shadows": [
+      { "name": "shadow-paper", "value": "0 1px 0 rgba(42, 35, 22, 0.05)", "purpose": "Default 1px hairline lift for raised cards and panels in light mode." },
+      { "name": "shadow-paper-dark", "value": "0 1px 0 rgba(0, 0, 0, 0.45)", "purpose": "Hairline lift on warm-dark paper; deeper so it reads against the dark surface." }
+    ],
+    "motion": [
+      { "name": "transition-colors", "value": "150ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default ease-out-quart for hover and active color shifts." },
+      { "name": "reduced-motion", "value": "0ms linear", "purpose": "Honor prefers-reduced-motion; disable transitions, keep state changes." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "640px" },
+      { "name": "lg", "value": "960px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Default Button",
+      "kind": "button",
+      "refersTo": "button-default",
+      "description": "Primary action. Court Slate on Aged Cream, 44px tap target.",
+      "html": "<button class=\"ds-btn-default\">Open lease</button>",
+      "css": ".ds-btn-default { background: #1f3a4d; color: #faf6ee; height: 44px; min-width: 44px; padding: 0 12px; border: none; border-radius: 2px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.01em; cursor: pointer; transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1); display: inline-flex; align-items: center; justify-content: center; } .ds-btn-default:hover { background: #1c3445; } .ds-btn-default:active { background: #182d3c; } .ds-btn-default:focus-visible { outline: 2px solid #1f3a4d; outline-offset: 0; box-shadow: 0 0 0 2px #faf6ee, 0 0 0 4px #b8862c; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Quiet secondary action. Transparent bg, mustard-wash hover.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #4a3f25; height: 44px; min-width: 44px; padding: 0 12px; border: none; border-radius: 2px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.01em; cursor: pointer; transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1); display: inline-flex; align-items: center; justify-content: center; } .ds-btn-ghost:hover { background: rgba(184, 134, 44, 0.08); } .ds-btn-ghost:active { background: rgba(184, 134, 44, 0.16); } .ds-btn-ghost:focus-visible { outline: 2px solid #1f3a4d; outline-offset: 0; }"
+    },
+    {
+      "name": "Subtle Button",
+      "kind": "button",
+      "refersTo": "button-subtle",
+      "description": "Bordered, sunken-paper button. Heavier than ghost, lighter than default.",
+      "html": "<button class=\"ds-btn-subtle\">Compare</button>",
+      "css": ".ds-btn-subtle { background: #f3eddc; color: #4a3f25; height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid #d6cdb6; border-radius: 2px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 0.01em; cursor: pointer; transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1); display: inline-flex; align-items: center; justify-content: center; } .ds-btn-subtle:hover { background: rgba(184, 134, 44, 0.08); } .ds-btn-subtle:active { background: rgba(184, 134, 44, 0.16); } .ds-btn-subtle:focus-visible { outline: 2px solid #1f3a4d; outline-offset: 0; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Raised paper card. Hairline border, 1px hairline shadow, 16px padding.",
+      "html": "<article class=\"ds-card\"><h3 class=\"ds-card-title\">Auto-renewal clause</h3><p class=\"ds-card-body\">Clause 14.2 renews this lease for a further 12 months unless written notice is given 60 days before expiry.</p></article>",
+      "css": ".ds-card { background: #ffffff; color: #4a3f25; border: 1px solid #d6cdb6; border-radius: 2px; box-shadow: 0 1px 0 rgba(42, 35, 22, 0.05); padding: 16px; max-width: 65ch; } .ds-card-title { margin: 0 0 8px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 600; line-height: 22px; color: #2a2316; } .ds-card-body { margin: 0; font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif; font-size: 14px; line-height: 22px; color: #4a3f25; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Label-above input on paper-raised. Court Slate focus outline.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Standard lease name</span><input class=\"ds-field-input\" type=\"text\" placeholder=\"e.g. residential-2024\"/></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 4px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; } .ds-field-label { font-size: 12.5px; line-height: 18px; font-weight: 500; letter-spacing: 0.01em; color: #7a6f57; } .ds-field-input { background: #ffffff; color: #2a2316; border: 1px solid #d6cdb6; border-radius: 2px; padding: 6px 8px; height: 32px; font-family: 'Source Serif 4', 'Iowan Old Style', Georgia, serif; font-size: 14px; line-height: 22px; outline: none; transition: border-color 150ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-field-input::placeholder { color: #a59a7e; } .ds-field-input:focus-visible { outline: 2px solid #1f3a4d; outline-offset: 0; }"
+    },
+    {
+      "name": "Severity Badge — High",
+      "kind": "chip",
+      "refersTo": "card",
+      "description": "High-severity finding marker. Tinted background + icon + label; never color-only.",
+      "html": "<span class=\"ds-sev-high\"><svg class=\"ds-sev-icon\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M8 1.5l7 12.5H1L8 1.5zm0 4.75v3.5M8 11.5v.5\" fill=\"none\" stroke=\"#2a2316\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg><span>High</span></span>",
+      "css": ".ds-sev-high { display: inline-flex; align-items: center; gap: 6px; background: color-mix(in srgb, #b1442d 22%, #ffffff); border: 1px solid color-mix(in srgb, #b1442d 40%, transparent); color: #2a2316; padding: 2px 8px; border-radius: 2px; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 12.5px; line-height: 18px; font-weight: 600; letter-spacing: 0.01em; } .ds-sev-icon { width: 14px; height: 14px; flex-shrink: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Marginalia Edition",
+    "overview": "The lease is the primary text. Findings, redlines, and counter-offers are careful annotations in the margin, written by someone who has read the document slowly and twice. The interface borrows from a lawyer's working copy: cream paper, hairline rules, a single ink color, and severity that shows up where a reader would actually mark it, never as decoration.\n\nThe system is restrained on purpose. Only one accent (Court Slate) carries non-severity emphasis; all other color is functional and earned. Surfaces are layered tonally (paper, paper-raised, paper-sunken) before they are shadowed; ambient shadows exist but stay below the threshold of \"designed.\" Type is a serif body (Source Serif 4) for findings and document content, paired with a system sans for chrome and labels.\n\nWhat this rejects: the friendly-legal genre (LegalZoom mascots, purple gradients), crypto / neon-on-black, the generic SaaS dashboard (hero-metric tiles, rainbow chart palettes, identical card grids), and DocuSign-corporate trust theatre.",
+    "keyCharacteristics": [
+      "Paper-and-ink palette built around warm neutrals.",
+      "Source Serif 4 body type at a 65–75ch measure, never the legal-tool 90ch wall.",
+      "Single accent (Court Slate #1f3a4d) used sparingly; severity carries the rest.",
+      "Tonal layering before shadow; shadows are ambient and quiet.",
+      "Tap targets at 44px (WCAG 2.5.5 AAA) for primary actions, 32px for dense toolbars only.",
+      "Severity is never color-only: every tinted surface pairs with icon + label."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Court Slate is the only non-severity accent. If something needs emphasis and isn't a severity finding, it is Court Slate or it is type weight; it is never a new color.", "section": "colors" },
+      { "name": "The Severity-Earned Rule", "body": "Severity colors appear on severity surfaces only: finding cards, severity badges, severity-filter chips, audit-log entries that reference severity. They never decorate generic UI. Pair every severity surface with an icon and a text label so the signal survives color-blindness and screen readers.", "section": "colors" },
+      { "name": "The No-Pure-Black Rule", "body": "#000 and #fff are forbidden. Even paper-raised carries a faint warm undertone in dark mode. Tinted neutrals only.", "section": "colors" },
+      { "name": "The Serif-for-Substance Rule", "body": "Body type is serif. Document content, findings, and explanations get Source Serif 4. UI chrome (buttons, labels, form fields, navigation) gets the system sans. Don't mix: a serif button or a sans finding both feel wrong.", "section": "typography" },
+      { "name": "The Measure Rule", "body": "Body and findings cap at 65–75ch. Wide-screen practitioner views may show two columns at 65ch each before they break to 90ch.", "section": "typography" },
+      { "name": "The Plain-Reading Rule", "body": "When the rule pack uses a term of art, render the term in the body type; render its plain reading directly beneath in the same size and a slightly lighter weight (Walnut Body). The renter should never need a glossary to understand a finding.", "section": "typography" },
+      { "name": "The Tonal-Before-Shadow Rule", "body": "Always reach for a paper tone first (paper-sunken, paper, paper-raised) before reaching for a shadow. Shadow appears only where tonal layering is insufficient (e.g. an overlay floating above the document plane).", "section": "elevation" },
+      { "name": "The Hairline Rule", "body": "No diffuse glows, no 24px ambient blurs, no glassmorphism. If a surface needs to lift, it lifts by 1px and a tone change.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Court Slate (#1f3a4d) as the only non-severity accent.",
+      "Do layer tonally (paper-sunken → paper → paper-raised) before reaching for a shadow.",
+      "Do pair every severity surface with an icon and a text label.",
+      "Do cap body and findings text at 65–75ch.",
+      "Do use Source Serif 4 for findings and document content; system sans for buttons, labels, and chrome.",
+      "Do keep primary tap targets at 44×44 (WCAG 2.5.5 AAA); reserve 32×32 for dense toolbars only.",
+      "Do use the severity-bg-* token pairs for severity row highlights and badges; their color-mix() definition auto-rebalances in dark mode.",
+      "Do honor prefers-reduced-motion; reserve motion for state transitions where it aids comprehension."
+    ],
+    "donts": [
+      "Don't introduce new side-stripe borders. The 3px border-l on the legacy Card primitive is the system's one heritage exception and should be migrated to the severity-bg-* background-tint pattern. New severity surfaces use background tint + icon + label, never a colored side stripe.",
+      "Don't use #000 or #fff literally. Tinted neutrals only.",
+      "Don't use gradient text or background-clip: text for decoration. Emphasis is weight or size.",
+      "Don't add diffuse ambient shadows, glow halos, or glassmorphism blurs. The hairline shadow-paper is the entire elevation vocabulary.",
+      "Don't ship the friendly-legal genre: no mascots, no \"we make legal easy!\" cheer, no rounded purple gradients, no LegalZoom vocabulary.",
+      "Don't ship the SaaS-dashboard reflex: no hero-metric tiles, no rainbow chart palettes, no identical card grids of features.",
+      "Don't ship crypto/neon-on-black: no glowing accents, no animated gradients, no fintech-coded aggression.",
+      "Don't ship DocuSign-corporate: no stock photos of handshakes, no navy-and-yellow trust theatre.",
+      "Don't introduce a serif button or a sans finding-body. Serif for substance, sans for chrome.",
+      "Don't use severity color outside severity surfaces. Mustard is not a \"pop\"; Terracotta is not a \"warm accent.\"",
+      "Don't signal severity by color alone. Always icon + label.",
+      "Don't write modals as a first thought. Inline disclosure and panel state precede dialogs.",
+      "Don't wrap everything in a card. Long-form content, document text, and finding bodies often read better as bare text on the paper surface with rule lines separating sections."
+    ]
+  }
+}
