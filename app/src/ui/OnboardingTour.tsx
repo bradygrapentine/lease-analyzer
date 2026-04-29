@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { Dialog } from './system/Dialog';
 
 export type OnboardingViewMode = 'current' | 'portfolio' | 'redline';
 
@@ -69,80 +70,67 @@ export function OnboardingTour({
     onDismiss();
   }, [onDismiss]);
 
-  useEffect(() => {
-    if (dismissedAt !== null) return;
-    function onKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleDismiss();
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dismissedAt, handleDismiss]);
-
   if (dismissedAt !== null) return null;
 
   const step = STEPS[stepIndex];
   if (!step) return null;
   const hint = step.hint?.(viewMode) ?? null;
 
+  // Wave 45-F — Dialog primitive owns the focus trap, initial focus, return
+  // focus, and Esc handler. Tour content stays in this component.
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="onboarding-tour-title"
-      className="onboarding-tour"
-      tabIndex={-1}
+    <Dialog
+      open={dismissedAt === null}
+      onDismiss={handleDismiss}
+      titleId="onboarding-tour-title"
+      className="onboarding-tour__panel"
     >
-      <div className="onboarding-tour__panel">
-        <h2 id="onboarding-tour-title">{step.title}</h2>
-        <p>{step.body}</p>
-        {hint !== null && (
-          <p className="onboarding-tour__hint" role="note">
-            {hint}
-          </p>
-        )}
-        <p className="onboarding-tour__progress" aria-label={`step ${stepIndex + 1} of ${total}`}>
-          Step {stepIndex + 1} of {total}
+      <h2 id="onboarding-tour-title">{step.title}</h2>
+      <p>{step.body}</p>
+      {hint !== null && (
+        <p className="onboarding-tour__hint" role="note">
+          {hint}
         </p>
-        <div className="onboarding-tour__actions">
+      )}
+      <p className="onboarding-tour__progress" aria-label={`step ${stepIndex + 1} of ${total}`}>
+        Step {stepIndex + 1} of {total}
+      </p>
+      <div className="onboarding-tour__actions">
+        <button
+          type="button"
+          tabIndex={0}
+          onClick={handleDismiss}
+          aria-label="skip onboarding tour"
+        >
+          Skip
+        </button>
+        <button
+          type="button"
+          tabIndex={0}
+          onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+          disabled={isFirst}
+        >
+          Back
+        </button>
+        {isLast ? (
           <button
             type="button"
             tabIndex={0}
             onClick={handleDismiss}
-            aria-label="skip onboarding tour"
+            aria-label="finish onboarding tour"
           >
-            Skip
+            Done
           </button>
+        ) : (
           <button
             type="button"
             tabIndex={0}
-            onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-            disabled={isFirst}
+            onClick={() => setStepIndex((i) => Math.min(total - 1, i + 1))}
           >
-            Back
+            Next
           </button>
-          {isLast ? (
-            <button
-              type="button"
-              tabIndex={0}
-              onClick={handleDismiss}
-              aria-label="finish onboarding tour"
-            >
-              Done
-            </button>
-          ) : (
-            <button
-              type="button"
-              tabIndex={0}
-              onClick={() => setStepIndex((i) => Math.min(total - 1, i + 1))}
-            >
-              Next
-            </button>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+    </Dialog>
   );
 }
