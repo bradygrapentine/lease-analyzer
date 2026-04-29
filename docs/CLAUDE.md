@@ -203,9 +203,14 @@ shape.
 
 ## Deferred / explicitly out of scope
 
-- Full WCAG 2.1 AA audit. (Wave 28-F shipped a fix-as-found pass:
-  axe-core scans on accordion + severity table, `landmark-unique`
-  fix in `SectionGroup`. A full external AA audit remains deferred.)
+- A formal external WCAG 2.1 AA review by an outside auditor.
+  (Wave 28-F shipped fix-as-found axe scans on accordion + severity
+  table plus a `landmark-unique` fix in `SectionGroup`. Wave 41
+  completed the systematic in-house pass: a story-driven axe sweep
+  in `src/ui/__tests__/all-stories.a11y.test.tsx` covers every
+  Storybook story, the Lighthouse accessibility score is 1.00
+  (gate ≥ 0.95), and the one violation surfaced — a heading-order
+  skip in `SectionGroup` — is fixed.)
 - Cloud sync / accounts / telemetry.
 - Pre-commit hooks via `lint-staged` (CI is authoritative).
 
