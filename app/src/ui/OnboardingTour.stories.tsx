@@ -7,7 +7,6 @@ const meta = {
   component: OnboardingTour,
   args: {
     onDismiss: () => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onboarding dismissed');
     },
   },

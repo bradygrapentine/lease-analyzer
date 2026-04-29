@@ -6,11 +6,9 @@ const meta = {
   component: SigningKeyPanel,
   args: {
     onCreateKey: (pp: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] createSigningKey with passphrase length', pp.length);
     },
     onExportPublicKey: (pk: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] export public key', pk);
     },
   },

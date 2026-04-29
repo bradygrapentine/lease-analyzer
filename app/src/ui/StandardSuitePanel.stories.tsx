@@ -26,7 +26,6 @@ const meta = {
   component: StandardSuitePanel,
   args: {
     onDelete: (id: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onDelete', id);
     },
   },

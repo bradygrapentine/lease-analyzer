@@ -39,11 +39,9 @@ const meta = {
   component: CounterOfferPanel,
   args: {
     onSave: (ruleId: string, name: string, text: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onSave', ruleId, name, text);
     },
     onDelete: (id: string) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onDelete', id);
     },
   },
@@ -86,7 +84,6 @@ export const WithApplyHandler: Story = {
     finding: finding(),
     counters: [co({ id: 'c1', name: 'Strike auto-renewal' })],
     onApply: (counter: CounterOffer) => {
-      // eslint-disable-next-line no-console
       console.log('[stories] onApply', counter);
     },
   },

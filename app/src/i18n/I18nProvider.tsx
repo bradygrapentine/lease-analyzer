@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import {
-  enMessages,
-  formatMessage,
-  type MessageKey,
-  type Messages,
-} from './messages';
+import { enMessages, formatMessage, type MessageKey, type Messages } from './messages';
 import { es } from './locales/es';
 import {
   I18nContext,
@@ -79,8 +74,9 @@ export function I18nProvider({ children, initialLocale }: I18nProviderProps): JS
       if (typeof fromEn === 'string') return formatMessage(fromEn, params);
       if (!warnedI18nKeys.has(key)) {
         warnedI18nKeys.add(key);
-        // eslint-disable-next-line no-console
-        console.warn(`[i18n] missing message for key "${key}" in locale "${locale}" and en fallback`);
+        console.warn(
+          `[i18n] missing message for key "${key}" in locale "${locale}" and en fallback`,
+        );
       }
       return key;
     },

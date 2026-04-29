@@ -27,15 +27,12 @@ const meta = {
   args: {
     leaseName: 'Unit 4B lease.pdf',
     onBuildIcs: () => {
-      // eslint-disable-next-line no-alert
       alert('buildIcs');
     },
     onCopySummary: async () => {
-      // eslint-disable-next-line no-alert
       alert('copySummary');
     },
     onDownloadHandoff: () => {
-      // eslint-disable-next-line no-alert
       alert('downloadHandoff');
     },
   },
