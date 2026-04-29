@@ -13,6 +13,33 @@ const SEVERITY_LABEL: Record<Severity, string> = {
   info: 'Info',
 };
 
+function SevBadge({ severity }: { severity: Severity }): JSX.Element {
+  return (
+    <Badge variant="severity" severity={severity}>
+      {SEVERITY_LABEL[severity]}
+    </Badge>
+  );
+}
+
+function FlatSection({ label, rows }: { label: string; rows: Finding[] }): JSX.Element | null {
+  if (rows.length === 0) return null;
+  return (
+    <Card variant="default" className="p-3 space-y-2">
+      <h3 className="text-heading uppercase text-fg-muted">
+        {label} ({rows.length})
+      </h3>
+      <ul className="space-y-1">
+        {rows.map((f) => (
+          <li key={f.ruleId} className="flex items-center gap-2 flex-wrap">
+            <strong className="text-body text-fg-body">{f.title}</strong>
+            <SevBadge severity={f.severity} />
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 interface ComparePanelProps {
   aName: string;
   bName: string;
@@ -78,41 +105,8 @@ export function ComparePanel({
         </p>
       )}
 
-      {diff.added.length > 0 && (
-        <Card variant="default" className="p-3 space-y-2">
-          <h3 className="text-heading uppercase text-fg-muted">
-            Added ({diff.added.length})
-          </h3>
-          <ul className="space-y-1">
-            {diff.added.map((f) => (
-              <li key={f.ruleId} className="flex items-center gap-2 flex-wrap">
-                <strong className="text-body text-fg-body">{f.title}</strong>
-                <Badge variant="severity" severity={f.severity}>
-                  {SEVERITY_LABEL[f.severity]}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {diff.removed.length > 0 && (
-        <Card variant="default" className="p-3 space-y-2">
-          <h3 className="text-heading uppercase text-fg-muted">
-            Removed ({diff.removed.length})
-          </h3>
-          <ul className="space-y-1">
-            {diff.removed.map((f) => (
-              <li key={f.ruleId} className="flex items-center gap-2 flex-wrap">
-                <strong className="text-body text-fg-body">{f.title}</strong>
-                <Badge variant="severity" severity={f.severity}>
-                  {SEVERITY_LABEL[f.severity]}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      <FlatSection label="Added" rows={diff.added} />
+      <FlatSection label="Removed" rows={diff.removed} />
 
       {diff.changed.length > 0 && (
         <Card variant="default" className="p-3 space-y-2">
@@ -123,15 +117,9 @@ export function ComparePanel({
             {diff.changed.map((c) => (
               <li key={c.ruleId} className="flex items-center gap-2 flex-wrap">
                 <strong className="text-body text-fg-body">{c.to.title}</strong>
-                <Badge variant="severity" severity={c.from.severity}>
-                  {SEVERITY_LABEL[c.from.severity]}
-                </Badge>
-                <span aria-hidden="true" className="text-fg-muted">
-                  →
-                </span>
-                <Badge variant="severity" severity={c.to.severity}>
-                  {SEVERITY_LABEL[c.to.severity]}
-                </Badge>
+                <SevBadge severity={c.from.severity} />
+                <span aria-hidden="true" className="text-fg-muted">→</span>
+                <SevBadge severity={c.to.severity} />
                 {c.from.negated !== c.to.negated && (
                   <span className="text-small text-fg-muted">
                     {`negated ${c.from.negated ? 'yes→no' : 'no→yes'}`}
