@@ -210,7 +210,7 @@
       "Do honor prefers-reduced-motion; reserve motion for state transitions where it aids comprehension."
     ],
     "donts": [
-      "Don't introduce new side-stripe borders. The 3px border-l on the legacy Card primitive is the system's one heritage exception and should be migrated to the severity-bg-* background-tint pattern. New severity surfaces use background tint + icon + label, never a colored side stripe.",
+      "Don't use side-stripe borders. border-left / border-right greater than 1px as a colored accent is forbidden. Severity surfaces use background tint + icon + label via the <Card variant=\"severity-…\"> + <Badge variant=\"severity\"> pair. A policy test (no-side-stripe.policy.test.ts) blocks regressions.",
       "Don't use #000 or #fff literally. Tinted neutrals only.",
       "Don't use gradient text or background-clip: text for decoration. Emphasis is weight or size.",
       "Don't add diffuse ambient shadows, glow halos, or glassmorphism blurs. The hairline shadow-paper is the entire elevation vocabulary.",
