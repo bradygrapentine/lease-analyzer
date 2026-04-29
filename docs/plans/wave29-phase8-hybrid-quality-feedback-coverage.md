@@ -63,10 +63,10 @@ Carry-over candidates surfaced from the Wave 28 retrospective and
 - Dark-mode tokens (genuine theme; half-a-wave of its own).
 
 A separate concern flagged at planning time: **Wave 28 PRs #113–#116
-auto-merged via Mergify with red GitHub Actions status checks**
+auto-merged via ~~Mergify~~ with red GitHub Actions status checks**
 (verify, smoke, npm-audit, Lighthouse) despite green local gates.
 Investigate **before** any Wave 29 part merges — see
-`memory/project_ci_mergify_discrepancy.md`. If Wave 29 parts merge
+`memory/project_ci_~~mergify~~_discrepancy.md`. If Wave 29 parts merge
 while CI is red, regressions compound.
 
 ## §1 Scope-shaping decisions (READ BEFORE APPROVING)
@@ -125,7 +125,7 @@ while CI is red, regressions compound.
 - Hybrid-feedback consumer UI (read-only audit-mining is a future wave).
 - Real-model on by default (productization step, own wave).
 - Full WCAG 2.1 AA external audit (already deferred per `docs/CLAUDE.md`).
-- CI / Mergify investigation (separate session before Wave 29 merges).
+- CI / ~~Mergify~~ investigation (separate session before Wave 29 merges).
 
 ## §3 Execution dependency graph
 
@@ -422,8 +422,8 @@ heartbeats every ~5 min; orchestrator polls every 10 min and treats
 1. **Per-part local gate.** `npm run typecheck && npm run lint && npm test`
    green before any push. (Per global CI Discipline rule.)
 2. **CI gate.** `gh pr checks <pr>` must be green before
-   `gh pr ready` — **especially** in light of the Wave 28 Mergify
-   discrepancy. **Resolve the CI / Mergify issue before any Wave 29
+   `gh pr ready` — **especially** in light of the Wave 28 ~~Mergify~~
+   discrepancy. **Resolve the CI / ~~Mergify~~ issue before any Wave 29
    PR merges**, even if the fix is "rebaseline Lighthouse for the
    Wave 27 substrate."
 3. **Auto-merge attempt.** `gh pr merge --auto --squash` exactly
@@ -445,6 +445,6 @@ heartbeats every ~5 min; orchestrator polls every 10 min and treats
 - [ ] Branch coverage ≥ 89.5% (target 90.0%); floor bumped per §1.6.
 - [ ] Severity-bg tokens replace ad-hoc fix; button `sm`/`md` size
       tokens shipped; view-mode tablist semantics in place.
-- [ ] All five PRs CI-green at merge (no Mergify-bypass red status).
+- [ ] All five PRs CI-green at merge (no ~~Mergify~~-bypass red status).
 - [ ] No new audit `kind`s beyond `hybrid-feedback`. No CSP / bundle /
       dep changes. No IDB schema bumps.

@@ -11,9 +11,9 @@ behind it.
 
 **Architecture.** Pure decision wave. Either the workflow stays advisory
 (status quo, but documented), the workflow is deleted (with the stub dir),
-or it gets promoted to required (`gh api` + `.mergify.yml` edit).
+or it gets promoted to required (`gh api` + `.~~mergify~~.yml` edit).
 
-**Tech Stack.** GitHub Actions, Mergify, possibly `app-tauri/` stub.
+**Tech Stack.** GitHub Actions, ~~Mergify~~, possibly `app-tauri/` stub.
 
 **Base SHA.** `origin/main` at start of session. Read-only until §5.
 
@@ -51,7 +51,7 @@ Direct, single-track. Estimated 30 min – 2 hours.
 - [ ] **Decide.** One of:
   - (A) **Promote to required.** Only if the matrix has been green for
     ≥ 30 consecutive runs AND there's an active intent to ship a desktop
-    app. Edit `.mergify.yml` (queue/merge/refuse) + branch-protection
+    app. Edit `.~~mergify~~.yml` (queue/merge/refuse) + branch-protection
     contexts (via `gh api`).
   - (B) **Retire.** Delete `.github/workflows/tauri.yml`, delete the
     stub dir, remove the Tauri line from `docs/CLAUDE.md` "Deferred"
@@ -65,11 +65,11 @@ Direct, single-track. Estimated 30 min – 2 hours.
 ## §5 File changes
 
 If (A) Promote:
-- `.mergify.yml` — add three `check-success=Tauri build (...)` lines
+- `.~~mergify~~.yml` — add three `check-success=Tauri build (...)` lines
   to `queue_conditions` + `merge_conditions`, three `check-failure=...`
   lines to refuse-merge.
 - Branch-protection contexts via `gh api`.
-- Touch ≤ 1 file in repo (the Mergify yaml). The protection edit is
+- Touch ≤ 1 file in repo (the ~~Mergify~~ yaml). The protection edit is
   out-of-tree.
 
 If (B) Retire:
@@ -93,7 +93,7 @@ If (C) Hold:
 - [ ] If promoted: `gh api .../branches/main/protection/required_status_checks --jq '.contexts'`
   shows the three Tauri contexts.
 - [ ] If promoted: open a throwaway PR or wait for the next live PR;
-  confirm Mergify refuses merge if any Tauri leg is red. (Skip this
+  confirm ~~Mergify~~ refuses merge if any Tauri leg is red. (Skip this
   step if (B) or (C).)
 
 ## §7 PR

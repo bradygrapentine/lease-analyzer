@@ -664,7 +664,7 @@ blob:` envelope. Done = `scripts/check-csp.mjs` stays green
 **From this session's incidents (filed by Wave 49):**
 
 - [ ] **Underlying RTL + IntersectionObserver race fix for `AppLibraryAndPacksPane.accordion.test`.** Linked to `app/src/test/known-flakes.md` — fix-by 2026-05-29. Hypothesis: `findByRole('group', { name: /audit log actions/i })` resolves before the lazy-mounted AuditLog sub-tree commits its `role="group"` ancestor. The Wave 49 retry is a stopgap; the real fix is await-policy or eager mount.
-- [ ] **GitHub native Merge Queue revisit option.** Considered as alternative to Wave 49's "remove Mergify, drop up-to-date requirement" approach; rejected because squash-merging makes queue serialization unnecessary. File this row only as a placeholder if we ever need merge serialization (e.g. if non-squash merges return).
+- [ ] **GitHub native Merge Queue revisit option.** Considered as alternative to Wave 49's "remove ~~Mergify~~, drop up-to-date requirement" approach; rejected because squash-merging makes queue serialization unnecessary. File this row only as a placeholder if we ever need merge serialization (e.g. if non-squash merges return).
 - [ ] **Storybook 8 → 10 major bump.** Deferred from Wave 44 as too risky to bundle. Single-wave scope. Coordinate with the all-stories axe sweep.
 - [ ] **React 18 → 19 major bump.** Deferred from Wave 44. Test-suite + StrictMode behavior changes; Suspense + transitions API changes; expect 1+ wave.
 - [ ] **Type-strictness round 2 (~50 markers).** Wave 44 knocked out 10. The remainder is diffuse and low user-value; defer until paired with a feature wave that touches the same surfaces.
@@ -817,7 +817,7 @@ address — visual or product-level work, not source-color cleanup.
       verify the context name matches the actual job name (CI was
       green-by-bypass for ~4 waves while branch protection gated on
       misnamed/missing checks; see project memory
-      `project_ci_mergify_discrepancy.md`). Also consider
+      `project_ci_~~mergify~~_discrepancy.md`). Also consider
       reinstating `enforce_admins: true` once the failing-but-not-
       required checks are gone — currently disabled to allow merge
       on red rollups.

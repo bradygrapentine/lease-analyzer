@@ -243,7 +243,7 @@ this and runs in the standard Vitest suite.
 
 ## Merge protocol (project-local)
 
-Wave 49 dropped Mergify and the "Require branches to be up to date
+Wave 49 dropped ~~Mergify~~ and the "Require branches to be up to date
 before merging" branch protection rule. Squash-merging makes the
 up-to-date requirement redundant: linear history is preserved by the
 squash, not by rebasing the source branch first.
@@ -255,7 +255,7 @@ once CI is green. No rebase required.
 or `app/src/storage/`) should use `scripts/rebase-and-merge.sh`
 instead. It rebases onto `origin/main`, force-pushes with lease, then
 enables auto-merge atomically from the same client. This keeps the
-Mergify-stale-SHA failure mode (Wave 28, 45-C, 45-BE) from recurring
+~~Mergify~~-stale-SHA failure mode (Wave 28, 45-C, 45-BE) from recurring
 on the surfaces where post-merge breakage is hardest to recover.
 
 **Semantic-conflict safety net:** the post-merge `ci` workflow on

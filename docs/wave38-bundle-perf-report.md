@@ -126,7 +126,7 @@ wave drive-by.
 
 ## What ships
 
-This document. No `.mergify.yml`, vite config, source, or workflow edits.
+This document. No `.~~mergify~~.yml`, vite config, source, or workflow edits.
 
 ## Verification
 
