@@ -174,15 +174,17 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   // UploadView is lazy-loaded; wait for its chunk before grabbing the input.
   const input = (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement;
   await userEvent.upload(input, file);
-  // "auto-renewal" now also appears in the SeverityOverridesPanel row; use
-  // `findAllByText` so we pass as soon as the findings panel renders.
-  await waitFor(() => expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0));
-  // Wait for the findings aside to render so click/scroll assertions downstream
-  // find their targets.
+  // Wait for the findings aside to render first — that's the surface that
+  // surfaces rule titles. After Wave 53-B-3a moved SeverityOverridesPanel
+  // off Current, FindingsPanel is the only "auto-renewal" source on
+  // Current. CI is slower than local; bump the timeout to 5s.
   await waitFor(
     () => expect(screen.getByRole('complementary', { name: /findings/i })).toBeInTheDocument(),
     { timeout: 5000 },
   );
+  await waitFor(() => expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0), {
+    timeout: 5000,
+  });
 }
 
 describe('App', () => {
