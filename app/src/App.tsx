@@ -67,6 +67,15 @@ import { AppHeader } from './ui/AppHeader';
 import { AppCurrentPane } from './ui/AppCurrentPane';
 import { AppLibraryAndPacksPane } from './ui/AppLibraryAndPacksPane';
 import { AppSettingsPane } from './ui/AppSettingsPane';
+// UploadView + LoadingView are state-specific and bulky together (~3 KB);
+// lazy-load both to keep the app shell under budget. UploadView is the
+// idle-state landing — its chunk warms on first paint behind a no-op
+// fallback (the shell renders the slim header instantly). LoadingView's
+// chunk loads in parallel with the analyze worker.
+const UploadView = lazy(() => import('./ui/UploadView').then((m) => ({ default: m.UploadView })));
+const LoadingView = lazy(() =>
+  import('./ui/LoadingView').then((m) => ({ default: m.LoadingView })),
+);
 import { useAppCallbacks } from './App/useAppCallbacks';
 import { StandardSuitePanel } from './ui/StandardSuitePanel';
 import {
@@ -337,11 +346,12 @@ function AppContent(): JSX.Element {
       <AppHeader
         view={view}
         showRedlineToggle={status.kind === 'analyzed'}
-        onUpload={async (file) => {
-          await handleBytes(await readFileBytes(file), file.name);
-        }}
-        onTrySample={() => void onTrySample()}
         onViewChange={(next) => setView(next)}
+        fileName={status.kind === 'analyzed' ? status.fileName : null}
+        onNewLease={() => {
+          setSelected(null);
+          pipeline.reset();
+        }}
       />
 
       <div
@@ -401,10 +411,20 @@ function AppContent(): JSX.Element {
         aria-labelledby="viewmode-tab-current"
         hidden={view !== 'current'}
       >
+        {view === 'current' && status.kind === 'idle' && (
+          <Suspense fallback={null}>
+            <UploadView
+              onUpload={async (file) => {
+                await handleBytes(await readFileBytes(file), file.name);
+              }}
+              onTrySample={() => void onTrySample()}
+            />
+          </Suspense>
+        )}
         {view === 'current' && status.kind === 'loading' && (
-          <p role="status" aria-live="polite">
-            Analyzing {status.fileName}…
-          </p>
+          <Suspense fallback={null}>
+            <LoadingView fileName={status.fileName} />
+          </Suspense>
         )}
         {view === 'current' && status.kind === 'error' && (
           <p role="alert">Could not analyze this file: {status.message}</p>

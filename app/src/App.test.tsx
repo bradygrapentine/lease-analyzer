@@ -158,8 +158,14 @@ async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {
 }
 
 async function uploadLease(name = 'lease.pdf'): Promise<void> {
+  // Wave 51-B — UploadView only renders when status === 'idle'. If a
+  // lease is already loaded, click the header's "New lease" reset to
+  // return to the upload landing before grabbing the input.
+  const reset = screen.queryByRole('button', { name: /new lease/i });
+  if (reset) await userEvent.click(reset);
   const file = await makeLeaseFile(name);
-  const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
+  // UploadView is lazy-loaded; wait for its chunk before grabbing the input.
+  const input = (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement;
   await userEvent.upload(input, file);
   // "auto-renewal" now also appears in the SeverityOverridesPanel row; use
   // `findAllByText` so we pass as soon as the findings panel renders.
@@ -173,10 +179,11 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
 }
 
 describe('App', () => {
-  it('renders the upload control in idle state', () => {
+  it('renders the upload control in idle state', async () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: /leaseguard/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/upload lease/i)).toBeInTheDocument();
+    // UploadView is lazy-loaded — wait for the chunk to land before asserting.
+    await waitFor(() => expect(screen.getByLabelText(/upload lease/i)).toBeInTheDocument());
   });
 
   it('shows findings after a successful upload and analysis', async () => {
@@ -199,7 +206,7 @@ describe('App', () => {
   it('surfaces a parse error without crashing', async () => {
     render(<App />);
     const bogus = new File([new Uint8Array([1, 2, 3])], 'bad.pdf', { type: 'application/pdf' });
-    const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
+    const input = (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement;
     await userEvent.upload(input, bogus);
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });
@@ -335,8 +342,11 @@ describe('App', () => {
   it('opens a library entry and re-shows its findings', async () => {
     render(<App />);
     await uploadLease('Reopen.pdf');
+    // Wave 51-B — UploadView only mounts in idle state; click "New lease"
+    // before grabbing a fresh upload input for the second lease.
+    await userEvent.click(screen.getByRole('button', { name: /new lease/i }));
     await userEvent.upload(
-      screen.getByLabelText(/upload lease/i) as HTMLInputElement,
+      (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement,
       await makeLeaseFile('Other.pdf'),
     );
     await waitFor(() =>
@@ -368,8 +378,10 @@ describe('App', () => {
       screen.getByRole('button', { name: /export findings \(printable html\)/i }),
     );
 
+    // HTML export lazy-imports `storage/exportHtml`; userEvent doesn't
+    // await that dynamic import, so wait for the download to land.
+    await waitFor(() => expect(aClicks).toContain('Report-findings.html'));
     expect(aClicks).toContain('Report-findings.json');
-    expect(aClicks).toContain('Report-findings.html');
     createSpy.mockRestore();
   });
 
