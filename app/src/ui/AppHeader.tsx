@@ -5,8 +5,8 @@ import { OfflineDot } from './OfflineDot';
 // Aria/data inventory:
 //   role="tablist" + aria-label="view mode" (div) — Wave 29-E
 //   role="tab" + aria-selected + aria-controls on each view-mode
-//     button. aria-pressed retained for back-compat with existing
-//     toggle-pill styling and tests that probe it.
+//     button. aria-pressed is intentionally NOT set — axe's
+//     aria-allowed-attr forbids it on role="tab".
 //   aria-label="new lease" (Button — appears only when analyzed)
 //   aria-label="lease file name" (filename pill — appears only when
 //     analyzed; lets axe + screen readers identify the active doc)
@@ -47,88 +47,86 @@ export function AppHeader({
   const { t } = useI18n();
   const hasLease = Boolean(fileName);
   return (
-    <header className="bg-paper border-b border-rule px-4 py-3 flex flex-wrap items-center gap-3">
-      <h1 className="text-display font-display text-fg" style={{ marginRight: 12 }}>
-        {t('app.title')}
-      </h1>
+    <header className="bg-paper-raised border-b border-rule px-5 h-[52px] flex items-center gap-4">
+      <div className="flex items-center gap-2.5">
+        <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" className="shrink-0">
+          <rect
+            x="3"
+            y="2"
+            width="14"
+            height="18"
+            stroke="var(--color-ink)"
+            strokeWidth="1.4"
+            fill="none"
+          />
+          <path
+            d="M6 7 H14 M6 10 H12 M6 13 H14 M6 16 H10"
+            stroke="var(--color-ink)"
+            strokeWidth="1"
+          />
+          <path
+            d="M16 12 L19 15 L16 18"
+            stroke="var(--color-severity-medium)"
+            strokeWidth="1.6"
+            fill="none"
+          />
+        </svg>
+        <h1 className="font-display text-[16px] font-semibold text-fg leading-none m-0">
+          {t('app.title')}
+        </h1>
+      </div>
 
       {hasLease && fileName && (
-        <span
-          aria-label="lease file name"
-          className="font-display italic text-small text-fg-muted truncate max-w-[36ch]"
-        >
-          {fileName}
-        </span>
+        <>
+          <span aria-hidden="true" className="h-[22px] w-px bg-rule" />
+          <span
+            aria-label="lease file name"
+            className="font-display italic text-small text-fg-muted truncate max-w-[36ch] min-w-0 flex-1"
+          >
+            {fileName}
+          </span>
+        </>
       )}
 
-      <div role="tablist" aria-label="view mode" className="view-toggle flex gap-1 ml-auto">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          pressed={view === 'current'}
-          role="tab"
-          id="viewmode-tab-current"
-          aria-selected={view === 'current'}
-          aria-controls="viewmode-panel-current"
+      {!hasLease && <div className="flex-1" />}
+
+      <div
+        role="tablist"
+        aria-label="view mode"
+        className="view-toggle flex items-center gap-0 rounded-sm border border-rule bg-paper-sunken p-0.5"
+      >
+        <SegmentedTab
+          view={view}
+          target="current"
+          label={t('header.view.current')}
           onClick={() => onViewChange('current')}
-        >
-          {t('header.view.current')}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          pressed={view === 'portfolio'}
-          role="tab"
-          id="viewmode-tab-portfolio"
-          aria-selected={view === 'portfolio'}
-          aria-controls="viewmode-panel-portfolio"
+        />
+        <SegmentedTab
+          view={view}
+          target="portfolio"
+          label={t('header.view.portfolio')}
           onClick={() => onViewChange('portfolio')}
-        >
-          {t('header.view.portfolio')}
-        </Button>
+        />
         {showRedlineToggle && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            pressed={view === 'redline'}
-            role="tab"
-            id="viewmode-tab-redline"
-            aria-selected={view === 'redline'}
-            aria-controls="viewmode-panel-redline"
+          <SegmentedTab
+            view={view}
+            target="redline"
+            label={t('header.view.redline')}
             onClick={() => onViewChange('redline')}
-          >
-            {t('header.view.redline')}
-          </Button>
+          />
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          pressed={view === 'audit'}
-          role="tab"
-          id="viewmode-tab-audit"
-          aria-selected={view === 'audit'}
-          aria-controls="viewmode-panel-audit"
+        <SegmentedTab
+          view={view}
+          target="audit"
+          label={t('header.view.audit')}
           onClick={() => onViewChange('audit')}
-        >
-          {t('header.view.audit')}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          pressed={view === 'settings'}
-          role="tab"
-          id="viewmode-tab-settings"
-          aria-selected={view === 'settings'}
-          aria-controls="viewmode-panel-settings"
+        />
+        <SegmentedTab
+          view={view}
+          target="settings"
+          label={t('header.view.settings')}
           onClick={() => onViewChange('settings')}
-        >
-          {t('header.view.settings')}
-        </Button>
+        />
       </div>
 
       <OfflineDot />
@@ -139,5 +137,33 @@ export function AppHeader({
         </Button>
       )}
     </header>
+  );
+}
+
+interface SegmentedTabProps {
+  view: AppViewMode;
+  target: AppViewMode;
+  label: string;
+  onClick: () => void;
+}
+
+function SegmentedTab({ view, target, label, onClick }: SegmentedTabProps): JSX.Element {
+  const active = view === target;
+  return (
+    <button
+      type="button"
+      role="tab"
+      id={`viewmode-tab-${target}`}
+      aria-selected={active}
+      aria-controls={`viewmode-panel-${target}`}
+      onClick={onClick}
+      className={`h-7 px-3 rounded-sm font-sans text-[12.5px] tracking-[0.01em] transition-colors focus-visible:focus-ring ${
+        active
+          ? 'bg-paper-raised border border-rule text-fg font-semibold'
+          : 'border border-transparent text-fg-body hover:text-fg font-medium'
+      }`}
+    >
+      {label}
+    </button>
   );
 }
