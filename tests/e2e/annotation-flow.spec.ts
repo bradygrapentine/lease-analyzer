@@ -46,7 +46,7 @@ test.describe('Annotation persistence', () => {
     // Wave 53-B-3: Library accordion now lives under the Settings tab.
     // Switch tabs first, then expand the Library accordion.
     await page.getByRole('tab', { name: /^settings$/i }).click();
-    await page.getByRole('button', { name: /^Library\b/i }).click();
+    await page.getByRole('button', { name: /saved leases/i }).click();
 
     // The library row's "Open" button surfaces the saved lease.
     const openSample = page.getByRole('button', { name: /open sample lease\.pdf/i });

@@ -139,16 +139,15 @@ export function UploadView({ onUpload, onTrySample }: UploadViewProps): JSX.Elem
           <span>● Hash-chained audit log</span>
         </div>
 
-        {/* Wave 54-C — fill the lower-viewport gap on the idle landing
-            with a quiet privacy line. Restrained tone (DESIGN.md "One
-            Voice"), no exclamations, references the existing CSP +
-            IndexedDB facts already documented in Settings → Privacy. */}
+        {/* Wave 55 — renter-friendly privacy line. The previous Wave 54-C
+            copy was written for engineers, not renters. Same facts, plain
+            English. */}
         <p className="mt-8 font-display italic text-fg-muted leading-relaxed max-w-[60ch]">
           <span className="not-italic font-display font-semibold text-fg">
-            Local-first by construction.
+            Stays on your device.
           </span>{' '}
-          Your PDF parses on this device, stays in IndexedDB, and never crosses an origin boundary.
-          Strict CSP enforces it.
+          Your lease is read here, in this browser. Nothing is uploaded, no account is created, and
+          clearing your browser clears everything LeaseGuard saved.
         </p>
       </div>
 

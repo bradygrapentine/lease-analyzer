@@ -480,9 +480,9 @@ describe('App panel wire-ups', () => {
     await waitFor(() => {
       expect(screen.getByRole('table', { name: /audit entries/i })).toBeInTheDocument();
     });
-    await userEvent.click(screen.getByRole('button', { name: /verify chain/i }));
+    await userEvent.click(screen.getByRole('button', { name: /check the log/i }));
     await waitFor(() =>
-      expect(screen.getByTestId('audit-verification')).toHaveTextContent(/chain intact/i),
+      expect(screen.getByTestId('audit-verification')).toHaveTextContent(/log intact/i),
     );
   });
 

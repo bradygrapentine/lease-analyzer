@@ -35,7 +35,7 @@ export function SideLetterPanel({
 
   return (
     <section aria-label="side letter">
-      <h2>Side letter</h2>
+      <h2>Cover letter</h2>
       <p>
         For: <strong>{leaseName}</strong>
       </p>

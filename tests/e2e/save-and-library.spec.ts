@@ -22,7 +22,7 @@ test.describe('LeaseGuard library flow', () => {
     // includes a count badge ("Library 1") once leases exist, so
     // match by prefix not exact.
     await page.getByRole('tab', { name: /^settings$/i }).click();
-    await page.getByRole('button', { name: /^Library\b/i }).click();
+    await page.getByRole('button', { name: /saved leases/i }).click();
 
     // usePipeline auto-saves analyzed leases. The library row's "open" button
     // surfaces with the file name aria-label, e.g. "Open Sample lease.pdf".
