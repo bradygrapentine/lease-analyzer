@@ -90,15 +90,49 @@ export function AppCurrentPane({
         <ReaderPdfToggle mode={docMode} onChange={setDocMode} />
       </div>
       <div className="split flex">
-        <FindingRail
-          paragraphCount={status.result.doc.paragraphs.length}
-          findings={status.result.findings}
-          selected={selected}
-          onSelectFinding={(f) => {
-            setSelected(f);
-            setSelectedPage(f.page);
-          }}
-        />
+        <div className="flex min-w-0 gap-3">
+          <FindingRail
+            paragraphCount={status.result.doc.paragraphs.length}
+            findings={status.result.findings}
+            selected={selected}
+            onSelectFinding={(f) => {
+              setSelected(f);
+              setSelectedPage(f.page);
+            }}
+          />
+          <div className="min-w-0 flex-1">
+            {docMode === 'reader' ? (
+              <Suspense fallback={null}>
+                <MarginaliaReader
+                  doc={status.result.doc}
+                  findings={status.result.findings}
+                  selected={selected}
+                  onSelectFinding={(f) => {
+                    setSelected(f);
+                    setSelectedPage(f.page);
+                  }}
+                  fileName={status.fileName}
+                />
+              </Suspense>
+            ) : (
+              <PdfViewer
+                bytes={status.bytes}
+                pageCount={status.result.doc.pages.length}
+                selectedPage={selectedPage}
+                pages={status.result.doc.pages}
+                highlight={
+                  selected
+                    ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null)
+                    : null
+                }
+                selectedParagraph={
+                  selected ? (status.result.doc.paragraphs[selected.paragraphIndex] ?? null) : null
+                }
+                selectedFinding={selected}
+              />
+            )}
+          </div>
+        </div>
         <FindingsPanel
           findings={status.result.findings}
           onSelect={(f) => {
@@ -118,36 +152,6 @@ export function AppCurrentPane({
           }}
           onPromoteToStandard={onPromoteToStandard}
         />
-        {docMode === 'reader' ? (
-          <Suspense fallback={null}>
-            <MarginaliaReader
-              doc={status.result.doc}
-              findings={status.result.findings}
-              selected={selected}
-              onSelectFinding={(f) => {
-                setSelected(f);
-                setSelectedPage(f.page);
-              }}
-              fileName={status.fileName}
-            />
-          </Suspense>
-        ) : (
-          <PdfViewer
-            bytes={status.bytes}
-            pageCount={status.result.doc.pages.length}
-            selectedPage={selectedPage}
-            pages={status.result.doc.pages}
-            highlight={
-              selected
-                ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null)
-                : null
-            }
-            selectedParagraph={
-              selected ? (status.result.doc.paragraphs[selected.paragraphIndex] ?? null) : null
-            }
-            selectedFinding={selected}
-          />
-        )}
       </div>
       <FindingDetailModal
         open={modalOpen && selected !== null}
