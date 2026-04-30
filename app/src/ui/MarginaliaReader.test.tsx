@@ -26,7 +26,7 @@ function f(over: Partial<Finding>): Finding {
     page: 1,
     paragraphIndex: 0,
     snippet: 'auto-renew',
-    span: { start: 0, end: 10 },
+    span: { start: 16, end: 26 },
     confidence: 1,
     negated: false,
     rulePackVersion: '1.0.0',
@@ -98,5 +98,35 @@ describe('MarginaliaReader', () => {
       findings: [f({ snippet: 'nope', span: { start: 100, end: 200 } })],
     });
     expect(document.querySelector('mark[data-finding-id]')).toBeNull();
+  });
+
+  it('does not throw when an imported rule pack id contains CSS-selector metacharacters', () => {
+    // Imported packs only validate `ruleId` as non-empty string. A quote
+    // or `]` would have broken the unescaped querySelector before fix.
+    expect(() =>
+      setup({
+        selected: f({ ruleId: 'rule"with]brackets', span: { start: 0, end: 10 } }),
+        doc: doc(['The lease shall auto-renew unless cancelled.']),
+        findings: [f({ ruleId: 'rule"with]brackets', span: { start: 16, end: 26 } })],
+      }),
+    ).not.toThrow();
+  });
+
+  it('skips inline highlight for hybrid findings (LLM-classified) — only renders the margin card', () => {
+    setup({
+      doc: doc(['The lease shall auto-renew unless cancelled.']),
+      findings: [
+        f({
+          snippet: 'The lease shall auto-renew unless cancelled.',
+          span: { start: 0, end: 44 },
+          evidence: { modelId: 'm1', similarity: 0.71 },
+        }),
+      ],
+    });
+    // Hybrid finding's span/snippet covers the whole paragraph, but
+    // because `evidence` is set we must NOT fabricate an inline highlight.
+    expect(document.querySelector('mark[data-finding-id]')).toBeNull();
+    // The margin card still renders so the user sees the finding.
+    expect(screen.getByRole('button', { name: /auto-renewal/i })).toBeInTheDocument();
   });
 });

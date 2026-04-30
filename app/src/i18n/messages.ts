@@ -50,6 +50,9 @@ export const en = {
   'pack.import.failure': 'Pack import failed: {message}',
 
   // Wave 51-C — marginalia reader
+  'reader.loading': 'Loading reader…',
+  'reader.failure.message': 'The lease reader failed to load. This usually clears with a refresh.',
+  'reader.failure.retry': 'Reload',
   'reader.toggle.label': 'Document view',
   'reader.toggle.reader': 'Reader',
   'reader.toggle.pdf': 'PDF',

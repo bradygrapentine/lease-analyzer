@@ -58,9 +58,14 @@ export function MarginaliaReader({
 
   useEffect(() => {
     if (!selectedKey || !containerRef.current) return;
-    const el = containerRef.current.querySelector<HTMLElement>(
-      `[data-finding-id="${selectedKey}"]`,
-    );
+    // Escape selectedKey before splicing into a CSS selector — `ruleId`
+    // comes from imported rule packs whose only validation is "non-empty
+    // string", so it can contain quotes or `]` that break the selector.
+    const escaped =
+      typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? CSS.escape(selectedKey)
+        : selectedKey.replace(/["\\\]]/g, '\\$&');
+    const el = containerRef.current.querySelector<HTMLElement>(`[data-finding-id="${escaped}"]`);
     if (el && typeof el.scrollIntoView === 'function') {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -143,11 +148,18 @@ function truncate(s: string, max: number): string {
 }
 
 /**
- * Render paragraph text with `<mark>` highlights wrapping each finding's
- * snippet. Findings with `span` resolved against `text` carve the
- * paragraph into [text, highlight, text, …] segments. Highlights past the
- * end of the paragraph (mismatch between persisted `span` and current
- * paragraph text) are skipped.
+ * Render paragraph text with `<mark>` highlights for each finding's
+ * resolved span. Inline highlight rules — narrower than the design source
+ * to avoid fabricating evidence:
+ *
+ *   - Hybrid (LLM-classified) findings carry a paragraph-prefix snippet
+ *     (`text.slice(0,200)`) and `span = 0..200` rather than a real clause
+ *     location; we render them as margin cards only and skip the inline
+ *     highlight.
+ *   - Deterministic findings use the persisted `span` as ground truth.
+ *     `snippet` is consulted only when the span is out-of-range — and
+ *     even then we anchor the lookup at `span.start` so repeated text in
+ *     the paragraph doesn't snap the highlight to a different occurrence.
  */
 function renderParagraph(
   text: string,
@@ -158,14 +170,18 @@ function renderParagraph(
   if (paraFindings.length === 0) return text;
   const ranges = paraFindings
     .map((f) => {
-      // Prefer the `snippet` lookup so persisted findings whose `span`
-      // drifted against re-parsed text still highlight.
-      const idx = f.snippet ? text.indexOf(f.snippet) : -1;
-      if (idx >= 0 && f.snippet) {
-        return { start: idx, end: idx + f.snippet.length, finding: f };
-      }
-      if (f.span.end <= text.length && f.span.start < f.span.end) {
+      // Hybrid findings have no precise clause position — just show the
+      // margin card, no inline highlight. See Finding.evidence (Wave 23-C).
+      if (f.evidence) return null;
+      // Span as ground truth for deterministic findings.
+      if (f.span.start >= 0 && f.span.end <= text.length && f.span.start < f.span.end) {
         return { start: f.span.start, end: f.span.end, finding: f };
+      }
+      // Span drifted (re-parsed text changed) — try snippet but anchor at
+      // span.start so repeated phrases don't relocate to the first match.
+      if (f.snippet) {
+        const idx = text.indexOf(f.snippet, Math.max(0, f.span.start));
+        if (idx >= 0) return { start: idx, end: idx + f.snippet.length, finding: f };
       }
       return null;
     })

@@ -70,6 +70,7 @@ import { AppHeader } from './ui/AppHeader';
 const AppCurrentPane = lazy(() =>
   import('./ui/AppCurrentPane').then((m) => ({ default: m.AppCurrentPane })),
 );
+import { AnalyzedPaneBoundary } from './ui/AnalyzedPaneBoundary';
 import { AppLibraryAndPacksPane } from './ui/AppLibraryAndPacksPane';
 import { AppSettingsPane } from './ui/AppSettingsPane';
 // UploadView + LoadingView are state-specific and bulky together (~3 KB);
@@ -435,7 +436,7 @@ function AppContent(): JSX.Element {
           <p role="alert">Could not analyze this file: {status.message}</p>
         )}
         {view === 'current' && status.kind === 'analyzed' && (
-          <Suspense fallback={null}>
+          <AnalyzedPaneBoundary>
             <AppCurrentPane
               status={status}
               selected={selected}
@@ -480,7 +481,7 @@ function AppContent(): JSX.Element {
               }}
               setView={setView}
             />
-          </Suspense>
+          </AnalyzedPaneBoundary>
         )}
       </div>
 
