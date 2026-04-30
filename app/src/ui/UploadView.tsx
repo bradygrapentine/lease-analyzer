@@ -92,10 +92,8 @@ export function UploadView({ onUpload, onTrySample }: UploadViewProps): JSX.Elem
           }}
           onDragLeave={() => setDrag(false)}
           onDrop={onDrop}
-          className={`flex flex-wrap items-center gap-3 transition-[border-color,padding] duration-150 ${
-            drag
-              ? 'p-3 border border-dashed border-ink'
-              : 'p-0 border border-dashed border-transparent'
+          className={`flex flex-wrap items-center gap-3 rounded-sm transition-colors duration-150 px-3 py-3 border border-dashed ${
+            drag ? 'border-ink bg-paper-sunken' : 'border-rule bg-paper-raised/60'
           }`}
         >
           <label className="inline-flex items-center cursor-pointer">
@@ -137,11 +135,13 @@ export function UploadView({ onUpload, onTrySample }: UploadViewProps): JSX.Elem
         {SAMPLE_PREVIEW.map((row, i) => (
           <div
             key={i}
-            className="pl-2.5 mb-3"
-            style={{ borderLeft: `2px solid var(--color-severity-${row.severity})` }}
+            className="rounded-sm px-2.5 py-1.5 mb-2.5"
+            style={{
+              background: `color-mix(in oklab, var(--color-severity-${row.severity}) 8%, transparent)`,
+            }}
           >
             <div
-              className="uppercase tracking-wide font-semibold mb-0.5"
+              className="uppercase tracking-[0.06em] font-semibold mb-0.5 text-[10.5px]"
               style={{ color: `var(--color-severity-${row.severity})` }}
             >
               {row.label}
