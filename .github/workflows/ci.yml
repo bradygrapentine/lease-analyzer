@@ -19,6 +19,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - run: npm run build:design-fonts
+      - run: npm run check:fonts
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:coverage
