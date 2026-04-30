@@ -64,7 +64,12 @@ import {
 import { OnboardingTour } from './ui/OnboardingTour';
 import { I18nProvider } from './i18n/I18nProvider';
 import { AppHeader } from './ui/AppHeader';
-import { AppCurrentPane } from './ui/AppCurrentPane';
+// Wave 51-C — AppCurrentPane (the analyzed-view coordinator) only mounts
+// once a lease is analyzed; lazy-loading it keeps MarginaliaReader,
+// FindingRail, and ReaderPdfToggle out of the first-paint shell.
+const AppCurrentPane = lazy(() =>
+  import('./ui/AppCurrentPane').then((m) => ({ default: m.AppCurrentPane })),
+);
 import { AppLibraryAndPacksPane } from './ui/AppLibraryAndPacksPane';
 import { AppSettingsPane } from './ui/AppSettingsPane';
 // UploadView + LoadingView are state-specific and bulky together (~3 KB);
@@ -430,50 +435,52 @@ function AppContent(): JSX.Element {
           <p role="alert">Could not analyze this file: {status.message}</p>
         )}
         {view === 'current' && status.kind === 'analyzed' && (
-          <AppCurrentPane
-            status={status}
-            selected={selected}
-            selectedPage={selectedPage}
-            setSelected={setSelected}
-            setSelectedPage={setSelectedPage}
-            ocrState={ocrState}
-            ocrLanguage={ocrLanguage}
-            setOcrLanguage={setOcrLanguage}
-            ocrLanguages={ocrLanguages}
-            hasSigningKey={signingKey.publicKey !== null}
-            glossaryEntries={glossaryEntries}
-            templates={templates}
-            plainEnglishByRuleId={plainEnglishByRuleId}
-            suggestedTextByRuleId={suggestedTextByRuleId}
-            suggestedEditByRuleId={suggestedEditByRuleId}
-            redline={redline}
-            counters={counters}
-            annotationsApi={annotationsApi}
-            analyzedLeaseId={analyzedLeaseId}
-            onExportJson={onExportJson}
-            onExportSignedJson={() => void onExportSignedJson()}
-            onBuildIcs={onBuildIcs}
-            onAttemptOcr={() => {
-              setSelected(null);
-              void pipeline.ocr(ocrLanguage);
-            }}
-            onPromoteToStandard={(leaseId, paragraphIndex) => {
-              if (status.kind !== 'analyzed') return;
-              void (async (): Promise<void> => {
-                const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
-                const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
-                await promoteToStandard({
-                  name,
-                  sourceLeaseId: leaseId,
-                  sourceParagraphIndex: paragraphIndex,
-                  normalizedText: text,
-                });
-                await refreshStandardSuite();
-                void refreshAuditLog();
-              })();
-            }}
-            setView={setView}
-          />
+          <Suspense fallback={null}>
+            <AppCurrentPane
+              status={status}
+              selected={selected}
+              selectedPage={selectedPage}
+              setSelected={setSelected}
+              setSelectedPage={setSelectedPage}
+              ocrState={ocrState}
+              ocrLanguage={ocrLanguage}
+              setOcrLanguage={setOcrLanguage}
+              ocrLanguages={ocrLanguages}
+              hasSigningKey={signingKey.publicKey !== null}
+              glossaryEntries={glossaryEntries}
+              templates={templates}
+              plainEnglishByRuleId={plainEnglishByRuleId}
+              suggestedTextByRuleId={suggestedTextByRuleId}
+              suggestedEditByRuleId={suggestedEditByRuleId}
+              redline={redline}
+              counters={counters}
+              annotationsApi={annotationsApi}
+              analyzedLeaseId={analyzedLeaseId}
+              onExportJson={onExportJson}
+              onExportSignedJson={() => void onExportSignedJson()}
+              onBuildIcs={onBuildIcs}
+              onAttemptOcr={() => {
+                setSelected(null);
+                void pipeline.ocr(ocrLanguage);
+              }}
+              onPromoteToStandard={(leaseId, paragraphIndex) => {
+                if (status.kind !== 'analyzed') return;
+                void (async (): Promise<void> => {
+                  const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
+                  const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
+                  await promoteToStandard({
+                    name,
+                    sourceLeaseId: leaseId,
+                    sourceParagraphIndex: paragraphIndex,
+                    normalizedText: text,
+                  });
+                  await refreshStandardSuite();
+                  void refreshAuditLog();
+                })();
+              }}
+              setView={setView}
+            />
+          </Suspense>
         )}
       </div>
 
