@@ -170,9 +170,26 @@ export function FindingsPanel({
     for (const f of group) orderedKeys.push(findingKey(f));
   }
 
+  // Wave 51-E — display heading + count summary. "N worth a closer look"
+  // when N > 0 (visible findings, post-filter); falls back to the total
+  // when filters are active so the surface still shows authority.
+  const visibleCount = visible.length;
+  const headline =
+    visibleCount > 0
+      ? `${visibleCount} worth a closer look`
+      : `0 of ${findings.length} match the current filters`;
+  const severityCounts: Record<Severity, number> = {
+    high: 0,
+    medium: 0,
+    low: 0,
+    info: 0,
+  };
+  for (const f of findings) severityCounts[f.severity]++;
+
   return (
     <aside aria-label="findings" className="flex flex-col gap-2">
       <div className="controls px-3 pt-3 space-y-2">
+        <h2 className="font-serif text-[18px] leading-snug text-fg m-0">{headline}</h2>
         <label>
           <span className="visually-hidden">Search findings</span>
           <input
@@ -197,7 +214,7 @@ export function FindingsPanel({
               aria-label={`severity ${sev}`}
               onClick={() => toggleInSet(hiddenSeverities, sev, setHiddenSeverities)}
             >
-              {SEVERITY_LABEL[sev]}
+              {SEVERITY_LABEL[sev]} ({severityCounts[sev]})
             </Button>
           ))}
         </div>
@@ -447,7 +464,9 @@ function VirtualFindingItem(props: VirtualFindingItemProps): JSX.Element {
               <div className="text-body text-fg-body">{finding.explanation}</div>
               {(definitions && definitions.length > 0) || (glossary && glossary.length > 0) ? (
                 <span className="finding-snippet block font-mono text-mono text-fg-muted">
-                  {highlightDefinedTerms(finding.snippet, definitions ?? [], glossary)}
+                  {highlightDefinedTerms(finding.snippet, definitions ?? [], glossary, {
+                    interactive: false,
+                  })}
                 </span>
               ) : null}
               <span className="text-small text-fg-muted">Page {finding.page}</span>

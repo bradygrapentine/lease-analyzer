@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from 'react';
 import type { DefinitionEntry } from '../facts/types';
 import type { GlossaryEntry } from '../glossary/loadGlossary';
+import { GlossaryTerm } from './GlossaryTerm';
 
 /**
  * Minimal shape used internally — both DefinitionEntry (lease-defined
@@ -35,6 +36,7 @@ export function highlightDefinedTerms(
   text: string,
   entries: DefinitionEntry[],
   glossary?: GlossaryEntry[],
+  options?: { interactive?: boolean },
 ): ReactNode[] {
   if (text.length === 0) return [text];
   if (entries.length === 0 && (!glossary || glossary.length === 0)) return [text];
@@ -78,9 +80,7 @@ export function highlightDefinedTerms(
   if (hits.length === 0) return [text];
 
   // Sort by start, then by length descending so the longer overlap wins.
-  hits.sort(
-    (a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start),
-  );
+  hits.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
   const resolved: Hit[] = [];
   let cursor = -1;
   for (const h of hits) {
@@ -94,17 +94,19 @@ export function highlightDefinedTerms(
   resolved.forEach((h, i) => {
     if (h.start > pos) nodes.push(text.slice(pos, h.start));
     const slice = text.slice(h.start, h.end);
+    // Wave 51-E — `<GlossaryTerm>` replaces the prior `<dfn title>` tooltip
+    // so keyboard + screen-reader users can reach the definition. The
+    // `defined-term` / `glossary` classes are preserved for any remaining
+    // CSS hooks that depended on them.
     nodes.push(
-      createElement(
-        'dfn',
-        {
-          key: `dfn-${i}-${h.start}`,
-          title: h.entry.definition,
-          className:
-            h.source === 'glossary' ? 'defined-term glossary' : 'defined-term',
-        },
-        slice,
-      ),
+      createElement(GlossaryTerm, {
+        key: `dfn-${i}-${h.start}`,
+        term: h.entry.term,
+        definition: h.entry.definition,
+        source: h.source,
+        interactive: options?.interactive ?? true,
+        children: slice,
+      }),
     );
     pos = h.end;
   });
