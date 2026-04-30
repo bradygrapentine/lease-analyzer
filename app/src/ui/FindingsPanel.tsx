@@ -187,9 +187,16 @@ export function FindingsPanel({
   for (const f of findings) severityCounts[f.severity]++;
 
   return (
-    <aside aria-label="findings" className="flex flex-col gap-2">
-      <div className="controls px-3 pt-3 space-y-2">
-        <h2 className="font-serif text-[18px] leading-snug text-fg m-0">{headline}</h2>
+    <aside aria-label="findings" className="flex flex-col gap-3">
+      <div className="controls px-3 pt-4 space-y-3 border-b border-rule-subtle pb-3">
+        <div>
+          <h2 className="font-serif text-[22px] font-semibold leading-tight text-fg m-0">
+            {headline}
+          </h2>
+          {visibleCount > 0 && visibleCount < findings.length && (
+            <p className="mt-0.5 text-mono text-fg-faint">of {findings.length} total</p>
+          )}
+        </div>
         <label>
           <span className="visually-hidden">Search findings</span>
           <input
@@ -254,10 +261,13 @@ export function FindingsPanel({
                   aria-expanded={!isCollapsed}
                   aria-label={`toggle ${sev}`}
                   onClick={() => toggleInSet(collapsed, sev, setCollapsed)}
-                  className="flex w-full items-center justify-between text-heading uppercase font-sans text-fg-muted py-1 hover:text-fg transition-colors"
+                  className="flex w-full items-baseline justify-between border-b border-rule-subtle font-sans text-fg-muted py-1.5 hover:text-fg transition-colors"
                 >
-                  <span>
-                    {SEVERITY_LABEL[sev]} ({group.length})
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-mono uppercase tracking-[0.06em]">
+                      {SEVERITY_LABEL[sev]}
+                    </span>
+                    <span className="text-fg-faint">{group.length}</span>
                   </span>
                   <span aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span>
                 </button>
