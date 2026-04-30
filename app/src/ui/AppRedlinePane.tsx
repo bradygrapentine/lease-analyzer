@@ -26,8 +26,21 @@ export function AppRedlinePane({
   sectionForParagraph,
   safeAudit,
 }: AppRedlinePaneProps): JSX.Element {
+  const editCount = redline.redlineEdits.length;
   return (
     <>
+      <header aria-label="redline header" className="px-4 pt-4 pb-3 border-b border-rule">
+        <p className="text-mono uppercase text-fg-muted mb-1">Redline · counter-proposal</p>
+        <p className="text-heading text-fg-body">
+          {editCount === 0
+            ? 'No edits yet — start by editing a paragraph below.'
+            : `${editCount} paragraph${editCount === 1 ? '' : 's'} edited`}
+        </p>
+        <p className="text-small text-fg-muted italic mt-1">
+          Original on the left, what you&rsquo;d ask for on the right. Export as HTML or paste into
+          your reply.
+        </p>
+      </header>
       <RedlinePanel
         doc={doc}
         edits={redline.redlineEdits}
