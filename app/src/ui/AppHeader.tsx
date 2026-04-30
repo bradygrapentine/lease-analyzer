@@ -160,7 +160,7 @@ function SegmentedTab({ view, target, label, onClick }: SegmentedTabProps): JSX.
       className={`h-7 px-3 rounded-sm font-sans text-[12.5px] tracking-[0.01em] transition-colors focus-visible:focus-ring ${
         active
           ? 'bg-paper-raised border border-rule text-fg font-semibold'
-          : 'border border-transparent text-fg-muted hover:text-fg font-medium'
+          : 'border border-transparent text-fg-body hover:text-fg font-medium'
       }`}
     >
       {label}
