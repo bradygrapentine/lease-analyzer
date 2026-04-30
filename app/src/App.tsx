@@ -163,6 +163,16 @@ function AppContent(): JSX.Element {
     void loadGlossary().then((g) => setGlossaryEntries(g.entries));
   }, []);
 
+  // Wave 51-C — preload the lazy `AppCurrentPane` + `MarginaliaReader`
+  // chunks once the shell has painted. Without this, opening a saved
+  // lease post-page-reload can race the chunk download (Firefox e2e flake
+  // observed on CI). Cost: a single backgrounded `import()` after first
+  // paint; the chunks resolve in parallel with user idle time.
+  useEffect(() => {
+    void import('./ui/AppCurrentPane');
+    void import('./ui/MarginaliaReader');
+  }, []);
+
   const dismissOnboarding = useCallback(async (): Promise<void> => {
     const ts = Date.now();
     setOnboardingDismissedAtState(ts);
