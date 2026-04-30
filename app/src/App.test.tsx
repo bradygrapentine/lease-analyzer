@@ -272,10 +272,17 @@ describe('App', () => {
     });
   });
 
+  // Wave 51-A — clear-all + archive controls live under the Settings tab.
+  // Tests below switch to the Settings panel before clicking those buttons.
+  async function gotoSettings(): Promise<void> {
+    await userEvent.click(screen.getByRole('tab', { name: /settings/i }));
+  }
+
   it('clear-all wipes leases after confirmation', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
     await uploadLease('ToDelete.pdf');
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /clear all saved data/i }));
     await waitFor(async () => {
       expect((await listLeases()).length).toBe(0);
@@ -287,6 +294,7 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<App />);
     await uploadLease('Keep.pdf');
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /clear all saved data/i }));
     expect((await listLeases()).length).toBe(1);
     confirmSpy.mockRestore();
@@ -306,6 +314,7 @@ describe('App', () => {
 
     render(<App />);
     await uploadLease('ToExport.pdf');
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /export encrypted archive/i }));
     await waitFor(() => expect(clickSpy).toHaveBeenCalled());
     createSpy.mockRestore();
@@ -317,6 +326,7 @@ describe('App', () => {
     render(<App />);
     await uploadLease('NoExport.pdf');
     const before = (await listAllLeaseRecords()).length;
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /export encrypted archive/i }));
     expect((await listAllLeaseRecords()).length).toBe(before);
     promptSpy.mockRestore();
@@ -405,6 +415,8 @@ describe('App', () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('pw');
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
+    // Wave 51-A — import lives under Settings.
+    await gotoSettings();
     // Wave 45-F — FileButton hides the input from the a11y tree; the
     // button carries the accessible name. Walk to the sibling input.
     const importInput = screen.getByRole('button', { name: /import encrypted archive/i })

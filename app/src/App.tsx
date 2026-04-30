@@ -64,9 +64,9 @@ import {
 import { OnboardingTour } from './ui/OnboardingTour';
 import { I18nProvider } from './i18n/I18nProvider';
 import { AppHeader } from './ui/AppHeader';
-import { AppFooterControls } from './ui/AppFooterControls';
 import { AppCurrentPane } from './ui/AppCurrentPane';
 import { AppLibraryAndPacksPane } from './ui/AppLibraryAndPacksPane';
+import { AppSettingsPane } from './ui/AppSettingsPane';
 import { useAppCallbacks } from './App/useAppCallbacks';
 import { StandardSuitePanel } from './ui/StandardSuitePanel';
 import {
@@ -111,7 +111,7 @@ function AppContent(): JSX.Element {
   const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [auditVerification, setAuditVerification] = useState<ChainVerification | null>(null);
-  const [view, setView] = useState<'current' | 'portfolio' | 'redline'>('current');
+  const [view, setView] = useState<'current' | 'portfolio' | 'redline' | 'settings'>('current');
   const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(new Map());
   const [standardSuite, setStandardSuite] = useState<StandardClause[]>([]);
 
@@ -550,20 +550,29 @@ function AppContent(): JSX.Element {
         }}
       />
 
-      <AppFooterControls
-        onExportArchive={() => void exportEncryptedArchiveFlow()}
-        onImportArchive={(e) => void onImportArchiveFile(e)}
-        onClearAll={() => {
-          void clearAllFlow({
-            onCleared: async () => {
-              await refreshLibrary();
-              await refreshTemplates();
-              pipeline.reset();
-              setSelected(null);
-            },
-          });
-        }}
-      />
+      <div
+        role="tabpanel"
+        id="viewmode-panel-settings"
+        aria-labelledby="viewmode-tab-settings"
+        hidden={view !== 'settings'}
+      >
+        {view === 'settings' && (
+          <AppSettingsPane
+            onExportArchive={() => void exportEncryptedArchiveFlow()}
+            onImportArchive={(e) => void onImportArchiveFile(e)}
+            onClearAll={() => {
+              void clearAllFlow({
+                onCleared: async () => {
+                  await refreshLibrary();
+                  await refreshTemplates();
+                  pipeline.reset();
+                  setSelected(null);
+                },
+              });
+            }}
+          />
+        )}
+      </div>
     </main>
   );
 }

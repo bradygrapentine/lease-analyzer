@@ -1,5 +1,3 @@
-import { LocalePickerPanel } from './LocalePickerPanel';
-import { ThemeToggle } from './ThemeToggle';
 import { useI18n } from '../i18n/I18nContext';
 import { Button } from './system/Button';
 
@@ -7,17 +5,15 @@ import { Button } from './system/Button';
 //   aria-label="upload lease" (input)
 //   role="tablist" + aria-label="view mode" (div) — Wave 29-E
 //   role="tab" + aria-selected + aria-controls on each view-mode
-//     button (3 buttons). aria-pressed retained for back-compat with
-//     existing toggle-pill styling and tests that probe it.
+//     button. aria-pressed retained for back-compat with existing
+//     toggle-pill styling and tests that probe it.
 //
-// Wave 29-E switched the view-mode toggle from `role="group"` +
-// `aria-pressed` to a proper `role="tablist"`, with each button
-// `role="tab"` + `aria-selected` + `aria-controls` pointing at the
-// matching panel id rendered in `App.tsx`. Stable ids:
-//   tab:    `viewmode-tab-${view}`
-//   panel:  `viewmode-panel-${view}`
+// Wave 51-A — locale picker, theme toggle, and the privacy disclosure
+// move under the new Settings tab. The header keeps the upload control
+// + sample-lease button + view-mode tablist; Wave 51-B will further
+// slim it once the marginalia upload landing lands.
 
-export type AppViewMode = 'current' | 'portfolio' | 'redline';
+export type AppViewMode = 'current' | 'portfolio' | 'redline' | 'settings';
 
 interface AppHeaderProps {
   view: AppViewMode;
@@ -40,22 +36,6 @@ export function AppHeader({
       <div className="flex items-baseline gap-3">
         <h1 className="text-display font-display text-fg">{t('app.title')}</h1>
         <p className="text-small text-fg-muted">{t('app.tagline')}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <LocalePickerPanel />
-        <ThemeToggle />
-        <details className="privacy text-small text-fg-muted">
-          <summary className="cursor-pointer">{t('header.privacy.summary')}</summary>
-          <ul className="mt-1 ml-4 space-y-0.5 list-disc text-fg-muted">
-            <li>The PDF is parsed entirely in your browser via pdf.js.</li>
-            <li>All storage is in IndexedDB on this device. No account, no sync.</li>
-            <li>
-              A strict Content-Security-Policy (<code>default-src &apos;self&apos;</code>) blocks this
-              page from loading scripts, fonts, or data from any other origin.
-            </li>
-            <li>LeaseGuard is not legal advice. Findings are heuristic pattern matches.</li>
-          </ul>
-        </details>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="inline-flex items-center gap-1 text-body text-fg-body cursor-pointer">
@@ -117,6 +97,19 @@ export function AppHeader({
               {t('header.view.redline')}
             </Button>
           )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            pressed={view === 'settings'}
+            role="tab"
+            id="viewmode-tab-settings"
+            aria-selected={view === 'settings'}
+            aria-controls="viewmode-panel-settings"
+            onClick={() => onViewChange('settings')}
+          >
+            {t('header.view.settings')}
+          </Button>
         </div>
       </div>
     </header>

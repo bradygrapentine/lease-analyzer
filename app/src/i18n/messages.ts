@@ -24,6 +24,11 @@ export const en = {
   'header.view.current': 'Current lease',
   'header.view.portfolio': 'Portfolio',
   'header.view.redline': 'Redline',
+  'header.view.settings': 'Settings',
+  'settings.section.preferences': 'Preferences',
+  'settings.section.privacy': 'Privacy',
+  'settings.section.libraryAndPacks': 'Library & rule packs',
+  'settings.section.dataManagement': 'Data management',
 
   // Locale picker
   'locale.picker.label': 'Language',
