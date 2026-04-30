@@ -50,4 +50,14 @@ describe('UploadView', () => {
     await userEvent.click(screen.getByRole('button', { name: /try a sample lease/i }));
     expect(onTrySample).toHaveBeenCalledTimes(1);
   });
+
+  it('Choose PDF button clicks the hidden file input', async () => {
+    // Wave 54-B — the visible affordance triggers the now-hidden input
+    // via ref. Spy on the input's click() to verify the wiring.
+    renderView();
+    const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
+    const clickSpy = vi.spyOn(input, 'click');
+    await userEvent.click(screen.getByRole('button', { name: /choose pdf/i }));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
 });
