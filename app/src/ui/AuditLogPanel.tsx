@@ -75,43 +75,59 @@ export function AuditLogPanel({
           <em>No audit entries yet.</em>
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table
-            aria-label="audit entries"
-            className="w-full text-small text-fg-body border-collapse"
-          >
-            <thead>
-              <tr className="border-b border-rule">
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
-                  #
-                </th>
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
-                  Time
-                </th>
-                <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
-                  Kind
-                </th>
-                <th scope="col" className="text-left py-1 text-fg-muted font-sans">
-                  Payload
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e) => (
-                <tr key={e.seq} className="even:bg-paper-sunken border-b border-rule-subtle">
-                  <td className="py-1 pr-3">{e.seq}</td>
-                  <td className="py-1 pr-3">{e.timestamp}</td>
-                  <td className="py-1 pr-3">{e.kind}</td>
-                  <td className="py-1">
-                    <code className="font-mono text-mono text-fg-body">
-                      {summarizePayload(e.payload)}
-                    </code>
-                  </td>
+        <>
+          <div className="overflow-x-auto">
+            <table
+              aria-label="audit entries"
+              className="w-full text-small text-fg-body border-collapse"
+            >
+              <thead>
+                <tr className="border-b border-rule">
+                  <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                    #
+                  </th>
+                  <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                    Time
+                  </th>
+                  <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
+                    Kind
+                  </th>
+                  <th scope="col" className="text-left py-1 text-fg-muted font-sans">
+                    Payload
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {entries.map((e) => (
+                  <tr key={e.seq} className="even:bg-paper-sunken border-b border-rule-subtle">
+                    <td className="py-1 pr-3">{e.seq}</td>
+                    <td className="py-1 pr-3">{e.timestamp}</td>
+                    <td className="py-1 pr-3">{e.kind}</td>
+                    <td className="py-1">
+                      <code className="font-mono text-mono text-fg-body">
+                        {summarizePayload(e.payload)}
+                      </code>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div
+            aria-label="audit chain footer"
+            className="pt-3 border-t border-rule font-mono text-mono text-fg-muted leading-relaxed"
+          >
+            <div>
+              ● {entries.length} entr{entries.length === 1 ? 'y' : 'ies'} · chain head{' '}
+              <span className="text-fg-body">
+                {shortHash(entries[entries.length - 1]?.entryHash)}
+              </span>
+            </div>
+            <div>
+              ● Tamper-evident hash chain · entries verify against the previous entry&rsquo;s hash
+            </div>
+          </div>
+        </>
       )}
     </Section>
   );
@@ -121,6 +137,12 @@ export function AuditLogPanel({
  * Keep the row compact. We intentionally truncate: the full payload is in
  * the downloaded JSON, the table is for at-a-glance scanning.
  */
+function shortHash(hash: string | undefined): string {
+  if (!hash) return '—';
+  if (hash.length <= 16) return hash;
+  return `${hash.slice(0, 8)}…${hash.slice(-8)}`;
+}
+
 function summarizePayload(payload: Record<string, unknown>): string {
   const keys = Object.keys(payload);
   if (keys.length === 0) return '{}';

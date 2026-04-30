@@ -10,10 +10,7 @@
 //
 import { useEffect, useMemo, useState } from 'react';
 import type { LeaseMetadata } from '../storage/storage';
-import {
-  listLeasesFiltered,
-  type ListLeasesFilter,
-} from '../storage/listLeasesFiltered';
+import { listLeasesFiltered, type ListLeasesFilter } from '../storage/listLeasesFiltered';
 import type { Finding, Severity } from '../rules/types';
 import { PortfolioRollupsPanel } from './PortfolioRollupsPanel';
 import { aggregateFindings } from '../portfolio/ruleRollups';
@@ -80,9 +77,7 @@ export function PortfolioPanel({
 
   const baseVisible = filter && filtered ? filtered : leases;
   const restrictIds = drillIds ?? filterLeaseIds ?? null;
-  const visible = restrictIds
-    ? baseVisible.filter((l) => restrictIds.includes(l.id))
-    : baseVisible;
+  const visible = restrictIds ? baseVisible.filter((l) => restrictIds.includes(l.id)) : baseVisible;
 
   // Rollups computed from the unrestricted base set so users can always
   // see the cross-portfolio picture even after drilling through.
@@ -108,13 +103,23 @@ export function PortfolioPanel({
 
   const columns = rankRuleColumns(visible, findingsByLease);
 
+  const totals = severityTotals(visible, findingsByLease);
+
   return (
     <Section label="portfolio" className="space-y-3 px-4 py-4">
-      <h2 className="text-heading uppercase text-fg-muted">Portfolio</h2>
-      <PortfolioRollupsPanel
-        rollups={rollups}
-        onDrillThrough={(ids) => setDrillIds(ids)}
-      />
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <h2 className="text-heading uppercase text-fg-muted">Portfolio</h2>
+        <div
+          aria-label="portfolio totals"
+          className="flex gap-5 items-baseline pl-5 border-l border-rule font-sans text-small"
+        >
+          <SeverityTotal label="High" count={totals.high} severity="high" />
+          <SeverityTotal label="Medium" count={totals.medium} severity="medium" />
+          <SeverityTotal label="Low" count={totals.low} severity="low" />
+          <SeverityTotal label="Info" count={totals.info} severity="info" />
+        </div>
+      </div>
+      <PortfolioRollupsPanel rollups={rollups} onDrillThrough={(ids) => setDrillIds(ids)} />
       {drillIds !== null && (
         <p>
           <Button type="button" variant="ghost" size="sm" onClick={() => setDrillIds(null)}>
@@ -126,11 +131,19 @@ export function PortfolioPanel({
         <table aria-label="portfolio" className="text-small text-fg-body border-collapse">
           <thead>
             <tr className="border-b border-rule">
-              <th scope="col" data-sticky="true" className="portfolio-sticky text-left py-1 pr-4 text-fg-muted font-sans">
+              <th
+                scope="col"
+                data-sticky="true"
+                className="portfolio-sticky text-left py-1 pr-4 text-fg-muted font-sans"
+              >
                 Lease
               </th>
               {columns.map((c) => (
-                <th key={c.ruleId} scope="col" className="text-left py-1 pr-3 text-fg-muted font-mono text-mono">
+                <th
+                  key={c.ruleId}
+                  scope="col"
+                  className="text-left py-1 pr-3 text-fg-muted font-mono text-mono"
+                >
                   {c.ruleId}
                 </th>
               ))}
@@ -141,8 +154,16 @@ export function PortfolioPanel({
               const findings = findingsByLease.get(lease.id) ?? [];
               const bestBySeverity = bestSeverityByRule(findings);
               return (
-                <tr key={lease.id} aria-label={lease.name} className="even:bg-paper-sunken border-b border-rule-subtle">
-                  <th scope="row" data-sticky="true" className="portfolio-sticky py-2 pr-4 text-left align-top font-normal">
+                <tr
+                  key={lease.id}
+                  aria-label={lease.name}
+                  className="even:bg-paper-sunken border-b border-rule-subtle"
+                >
+                  <th
+                    scope="row"
+                    data-sticky="true"
+                    className="portfolio-sticky py-2 pr-4 text-left align-top font-normal"
+                  >
                     <button
                       type="button"
                       onClick={() => onOpenLease(lease.id)}
@@ -161,7 +182,11 @@ export function PortfolioPanel({
                     const sev = bestBySeverity.get(c.ruleId);
                     return (
                       <td key={c.ruleId} className="py-2 pr-3 align-top">
-                        {sev ? <SeverityBadge severity={sev} /> : <span className="text-fg-muted">—</span>}
+                        {sev ? (
+                          <SeverityBadge severity={sev} />
+                        ) : (
+                          <span className="text-fg-muted">—</span>
+                        )}
                       </td>
                     );
                   })}
@@ -175,6 +200,42 @@ export function PortfolioPanel({
   );
 }
 
+function SeverityTotal({
+  label,
+  count,
+  severity,
+}: {
+  label: string;
+  count: number;
+  severity: Severity;
+}): JSX.Element {
+  const COLOR: Record<Severity, string> = {
+    high: 'text-severity-high',
+    medium: 'text-severity-medium',
+    low: 'text-severity-low',
+    info: 'text-severity-info',
+  };
+  return (
+    <span className="flex flex-col gap-0.5">
+      <span className="text-mono text-fg-muted uppercase">{label}</span>
+      <span className={`text-heading font-semibold ${COLOR[severity]}`}>{count}</span>
+    </span>
+  );
+}
+
+function severityTotals(
+  leases: LeaseMetadata[],
+  findingsByLease: Map<string, Finding[]>,
+): Record<Severity, number> {
+  const t: Record<Severity, number> = { high: 0, medium: 0, low: 0, info: 0 };
+  for (const lease of leases) {
+    for (const f of findingsByLease.get(lease.id) ?? []) {
+      t[f.severity]++;
+    }
+  }
+  return t;
+}
+
 function SeverityBadge({ severity }: { severity: Severity }): JSX.Element {
   const COLOR: Record<Severity, string> = {
     high: 'bg-severity-high/10 text-severity-high border-severity-high/30',
@@ -183,7 +244,10 @@ function SeverityBadge({ severity }: { severity: Severity }): JSX.Element {
     info: 'bg-severity-info/10 text-severity-info border-severity-info/30',
   };
   return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border text-small font-sans ${COLOR[severity]}`} data-severity={severity}>
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border text-small font-sans ${COLOR[severity]}`}
+      data-severity={severity}
+    >
       {severity}
     </span>
   );
