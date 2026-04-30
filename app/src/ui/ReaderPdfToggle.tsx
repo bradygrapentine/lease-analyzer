@@ -18,7 +18,7 @@ export function ReaderPdfToggle({ mode, onChange }: Props): JSX.Element {
     <div
       role="tablist"
       aria-label={t('reader.toggle.label')}
-      className="inline-flex items-center gap-1 rounded-sm border border-rule bg-paper-sunken p-1 text-mono text-fg-muted"
+      className="inline-flex items-center gap-1 rounded-sm border border-rule bg-paper-sunken p-1 text-mono"
     >
       <button
         type="button"
@@ -27,7 +27,7 @@ export function ReaderPdfToggle({ mode, onChange }: Props): JSX.Element {
         onClick={() => onChange('reader')}
         className={
           'px-3 py-1 rounded-sm text-mono uppercase tracking-wider transition-colors ' +
-          (mode === 'reader' ? 'bg-paper text-fg' : 'hover:text-fg')
+          (mode === 'reader' ? 'bg-paper text-fg' : 'text-fg-body hover:text-fg')
         }
       >
         {t('reader.toggle.reader')}
@@ -39,7 +39,7 @@ export function ReaderPdfToggle({ mode, onChange }: Props): JSX.Element {
         onClick={() => onChange('pdf')}
         className={
           'px-3 py-1 rounded-sm text-mono uppercase tracking-wider transition-colors ' +
-          (mode === 'pdf' ? 'bg-paper text-fg' : 'hover:text-fg')
+          (mode === 'pdf' ? 'bg-paper text-fg' : 'text-fg-body hover:text-fg')
         }
       >
         {t('reader.toggle.pdf')}
