@@ -734,6 +734,135 @@ address — visual or product-level work, not source-color cleanup.
       would convert "claimed" to "verified". Pair with the deferred
       Wave 28-F follow-up.
 
+## Phase 20 — Marginalia design integration
+
+Source: `claude_design_handoff_leaseguard/` — a Claude Design handoff that
+proposes a richer information architecture and a new "marginalia"
+reading mode on top of the existing Marginalia token system already
+in `app/src/index.css`. Tokens, type system, and severity palette are
+already aligned, so this phase is IA + new components, not a retheme.
+
+Decisions (settled 2026-04-29):
+
+- **Reading surface**: marginalia reader is the default; the existing
+  PdfViewer sits behind an in-tab toggle on Current. Both share the
+  same selected-finding state.
+- **Settings home**: new 5th tab "Settings" absorbs
+  `AppLibraryAndPacksPane`, the privacy disclosure, locale picker, and
+  theme toggle.
+- **Header**: slim to wordmark + filename + tab pills + offline-dot +
+  "New lease". Drop privacy / locale / theme / the verbose upload
+  chrome (relocated as above).
+- **Finding detail**: scholarly-footnote modal replaces the inline
+  `SelectedFindingCard`.
+- **No tweaks panel**: the handoff's `TweaksPanel` is a Claude Design
+  artifact for live preview only and ships nothing.
+- **Redline buttons** route to existing signed-JSON / HTML exports —
+  no new redline-PDF export path.
+- **Glossary**: handoff popover style.
+- **Portfolio**: real data via `listAllLeaseRecords()`; sample list dropped.
+- **Landing + loader**: adopt the annotated headline upload view and
+  the staged loader ticker.
+
+### Reading surface
+
+- [ ] New `MarginaliaReader` component — renders
+      `LeaseDocument.paragraphs` as serif body text with inline `<mark>`
+      highlights for finding excerpts and a right-margin column of
+      finding cards (severity-coded left border, plain-English snippet,
+      paragraph reference). Source: `document-pane.jsx`. Default view
+      on the Current tab; PdfViewer reachable behind an in-tab toggle.
+- [ ] In-tab "Reader / PDF" toggle on Current — shared selected-finding
+      state, shared scroll-into-view contract for the active highlight,
+      keyboard parity (`/` focus search, ↑/↓/Enter through findings).
+- [ ] New `FindingRail` component — 28px vertical column, one cell per
+      paragraph, colored by max severity, click-to-jump. Source:
+      `app-main.jsx` `FindingRail`. Pure derived state from
+      `findings + paragraphs`.
+- [ ] Marginalia paragraph numbering + heading detection re-use of
+      existing `paragraphs[].kind` (`title` / `h2` / `meta` / body).
+      Verify parser already emits these kinds; backfill `meta` if not.
+- [ ] Glossary tooltip — restyle the existing `highlightDefinedTerms`
+      output to use the handoff's `GlossaryTip` popover (dark inverted
+      card, term + definition, hover/focus). Source: `document-pane.jsx`.
+
+### Findings panel + detail
+
+- [ ] New `FindingDetailModal` — scholarly-footnote two-pane modal
+      (clause-as-page on the left, footnote with title / plain English /
+      "why it matters" / suggested edit / apply buttons on the right,
+      prev/next nav). Source: `findings-panel.jsx` `FindingDetail`.
+      Replaces the inline `SelectedFindingCard`; preserves
+      apply-suggestion + save-as-counter + promote-to-standard hooks.
+- [ ] Restyle `FindingsPanel` header — large "N worth a closer look"
+      display + severity chips with counts inline. Preserve existing
+      category filters, collapsible severity sections, hybrid LLM badge,
+      explainer disclosure, apply-suggestion + promote-to-standard
+      affordances, and the search/`/`-focus contract.
+
+### Header + landing
+
+- [ ] Slim `AppHeader` — wordmark + filename + tab pills +
+      offline-on-device indicator + "New lease" reset. Privacy
+      `<details>`, locale picker, theme toggle, and the upload control
+      relocate to the Settings tab; the empty-state `UploadView`
+      carries the upload affordance for first-run.
+- [ ] New `UploadView` empty state — "Most leases are *fine.* Three
+      clauses are *not.*" headline, drop-zone row, "what you'll see"
+      sample column, footer chips (local-first / 10 rules / Ed25519 /
+      audit log). Source: `app-shell.jsx`.
+- [ ] New `LoadingView` staged ticker — "Reading PDF…",
+      "Reconstructing paragraphs…", etc. Drive stages off
+      `usePipeline` lifecycle events instead of a `setTimeout` chain.
+
+### Portfolio + redline + audit
+
+- [ ] Restyle `PortfolioPanel` to the card-grid layout — status badge,
+      mini severity heatmap (one cell per finding), totals strip in the
+      header. Wire to existing `listAllLeaseRecords()`; do not ship the
+      handoff's hard-coded sample list.
+- [ ] Restyle `AppRedlinePane` — side-by-side diff with apply-all /
+      clear-all / per-finding chip toggles. The handoff's "Export PDF"
+      button routes to the existing signed-JSON / HTML export paths;
+      no new redline-PDF export.
+- [ ] Restyle `AuditLogPanel` — mono-font 4-column table
+      (time / verb / object / hash) + Merkle-root / public-key footer.
+      Preserve verify-chain + download buttons.
+
+### Settings tab (5th view)
+
+- [ ] Add `'settings'` to `AppViewMode`; add a 5th tab pill in the slim
+      header; mount a new `AppSettingsPane` under
+      `viewmode-panel-settings`.
+- [ ] Move `AppLibraryAndPacksPane` (library, pack manager,
+      marketplace, jurisdiction picker, severity overrides, custom
+      rule builder, clause templates, standard suite, signing key,
+      encrypted archive, share review, bulk import) under the
+      Settings tab.
+- [ ] Move privacy `<details>`, `LocalePickerPanel`, and `ThemeToggle`
+      under the Settings tab. Theme toggle stays the dark-mode entry
+      point.
+- [ ] Footer "About / Privacy / Settings" link routes to Settings; the
+      old `AppFooterControls` (encrypted archive + clear-all) folds
+      into the Settings tab too.
+
+### Migration hygiene
+
+- [ ] Ensure new components follow the four-file convention
+      (component / test / story / wire-up) per `docs/CLAUDE.md`.
+- [ ] No-side-stripe policy still passes (handoff uses 2px
+      borderLeft on margin notes — update the policy's allow-list or
+      switch to a 1px hairline + tinted background, per DESIGN.md
+      Hairline rule).
+- [ ] All new severity surfaces use `<Card variant="severity-…">` +
+      leading `<Badge variant="severity">`; no ad-hoc
+      `border-l-${color}` shortcuts.
+- [ ] axe + Lighthouse a11y gates remain green; new components covered
+      by `src/ui/__tests__/all-stories.a11y.test.tsx`.
+- [ ] Once IA settles, archive `claude_design_handoff_leaseguard/`
+      (move under `docs/design-archives/` or delete) so it stops
+      shadowing the live code.
+
 ## Cross-cutting tech debt
 
 - [x] Extract a `usePipeline` hook — App's `handleBytes` was the

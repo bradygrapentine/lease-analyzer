@@ -27,6 +27,17 @@ describe('AppHeader', () => {
     expect(screen.getByRole('button', { name: /try a sample lease/i })).toBeInTheDocument();
     // Wave 29-E — view-mode shell is now a tablist.
     expect(screen.getByRole('tablist', { name: /view mode/i })).toBeInTheDocument();
+    // Wave 51-A — Settings tab joins Current + Portfolio (Redline gates on showRedlineToggle).
+    expect(screen.getByRole('tab', { name: /current lease/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /portfolio/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /settings/i })).toBeInTheDocument();
+  });
+
+  it('marks the Settings tab active when view=settings', () => {
+    renderHeader({ view: 'settings' });
+    const settings = screen.getByRole('tab', { name: /settings/i });
+    expect(settings).toHaveAttribute('aria-selected', 'true');
+    expect(settings).toHaveAttribute('aria-controls', 'viewmode-panel-settings');
   });
 
   it('marks the active view-mode tab with aria-selected=true', () => {
