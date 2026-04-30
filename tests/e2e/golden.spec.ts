@@ -30,6 +30,8 @@ test.describe('LeaseGuard happy path', () => {
     // also renders a dialog in this state.
     await findingButtons.first().click();
     await expect(page.getByRole('dialog').last()).toBeVisible();
+    // Modal `inert`-locks the rest of the page; dismiss before tab click.
+    await page.keyboard.press('Escape');
 
     // Portfolio toggle → portfolio section renders.
     await page.getByRole('tab', { name: /^portfolio$/i }).click();
