@@ -32,14 +32,15 @@ afterAll(() => {
 afterEach(async () => {
   cleanup();
   // Drain any in-flight `refresh` IDB reads from the just-unmounted hook
-  // before the next test's `beforeEach` nulls the cached db promise.
+  // before we close the cached db handle — otherwise a concurrent getAll()
+  // races the close and rejects with InvalidStateError.
   await new Promise<void>((r) => setTimeout(r, 0));
   await new Promise<void>((r) => setTimeout(r, 0));
+  await _resetSigningDbForTests();
 });
 
 beforeEach(async () => {
-  _resetSigningDbForTests();
-  await new Promise<void>((r) => setTimeout(r, 0));
+  await _resetSigningDbForTests();
   await new Promise<void>((resolve) => {
     const req = indexedDB.deleteDatabase('leaseguard-signing');
     req.onsuccess = (): void => resolve();

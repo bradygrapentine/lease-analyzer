@@ -62,14 +62,22 @@ export interface KeyRecord {
 
 let dbPromise: Promise<IDBPDatabase<SigningSchema>> | null = null;
 
-export function _resetSigningDbForTests(): void {
+export async function _resetSigningDbForTests(): Promise<void> {
   // Close the cached handle so fake-indexeddb's deleteDatabase isn't blocked.
-  if (dbPromise) {
-    void dbPromise.then((db) => {
-      db.close();
-    });
-  }
+  // Await the close so any in-flight reads on the previous handle settle
+  // before the next test reopens — otherwise a concurrent getAll() can race
+  // the close and reject with InvalidStateError as an unhandled rejection.
+  const prev = dbPromise;
   dbPromise = null;
+  if (prev) {
+    try {
+      const db = await prev;
+      db.close();
+    } catch {
+      // Swallow open failures from the previous test — the handle is being
+      // discarded anyway.
+    }
+  }
 }
 
 async function openSigningDb(): Promise<IDBPDatabase<SigningSchema>> {
@@ -93,9 +101,7 @@ async function openSigningDb(): Promise<IDBPDatabase<SigningSchema>> {
   return dbPromise;
 }
 
-async function migrateV1ToV2IfNeeded(
-  db: IDBPDatabase<SigningSchema>,
-): Promise<void> {
+async function migrateV1ToV2IfNeeded(db: IDBPDatabase<SigningSchema>): Promise<void> {
   const legacy = await db.get(STORE, V1_KEY_ID);
   if (!legacy) return;
   const migrated: StoredKeypair = {
@@ -182,9 +188,7 @@ export async function createSigningKey(passphrase: string): Promise<void> {
   await db.put(STORE, record);
 }
 
-export async function rotateKey(
-  passphrase: string,
-): Promise<{ id: string; publicKey: string }> {
+export async function rotateKey(passphrase: string): Promise<{ id: string; publicKey: string }> {
   const db = await openSigningDb();
   const all = await getAll(db);
   const prev = findActive(all);
@@ -204,10 +208,7 @@ export async function rotateKey(
   return { id: record.id, publicKey: record.publicKeyB64 };
 }
 
-async function buildKeyRecord(
-  passphrase: string,
-  id: string,
-): Promise<StoredKeypair> {
+async function buildKeyRecord(passphrase: string, id: string): Promise<StoredKeypair> {
   const kp = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
     'sign',
     'verify',
@@ -277,16 +278,10 @@ async function signWithRecord(
   } catch {
     throw new WrongPassphraseError();
   }
-  const privKey = await crypto.subtle.importKey(
-    'pkcs8',
-    privPkcs8,
-    { name: 'Ed25519' },
-    false,
-    ['sign'],
-  );
-  const sig = new Uint8Array(
-    await crypto.subtle.sign('Ed25519', privKey, payload as BufferSource),
-  );
+  const privKey = await crypto.subtle.importKey('pkcs8', privPkcs8, { name: 'Ed25519' }, false, [
+    'sign',
+  ]);
+  const sig = new Uint8Array(await crypto.subtle.sign('Ed25519', privKey, payload as BufferSource));
   return {
     signature: bytesToBase64(sig),
     publicKey: record.publicKeyB64,

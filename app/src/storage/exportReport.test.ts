@@ -1,9 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import {
-  exportFindingsJson,
-  signExport,
-  verifySignedExport,
-} from './exportReport';
+import { exportFindingsJson, signExport, verifySignedExport } from './exportReport';
 import type { LeaseDocument } from '../parser/types';
 import type { Finding } from '../rules/types';
 import {
@@ -13,8 +9,7 @@ import {
 } from '../security/signingKeys';
 
 async function wipeSigningDb(): Promise<void> {
-  _resetSigningDbForTests();
-  await Promise.resolve();
+  await _resetSigningDbForTests();
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase(SIGNING_DB_NAME);
     req.onsuccess = () => resolve();
@@ -81,17 +76,13 @@ describe('exportFindingsJson', () => {
   });
 
   it('handles empty findings', () => {
-    const parsed = JSON.parse(
-      exportFindingsJson({ name: 'X', doc: doc(), findings: [] }),
-    );
+    const parsed = JSON.parse(exportFindingsJson({ name: 'X', doc: doc(), findings: [] }));
     expect(parsed.findings).toEqual([]);
     expect(parsed.rulePackVersion).toBe(null);
   });
 
   it('includes inputHash=null by default', () => {
-    const parsed = JSON.parse(
-      exportFindingsJson({ name: 'X', doc: doc(), findings: [] }),
-    );
+    const parsed = JSON.parse(exportFindingsJson({ name: 'X', doc: doc(), findings: [] }));
     expect(parsed.inputHash).toBeNull();
   });
 
@@ -147,8 +138,7 @@ describe('signExport / verifySignedExport', () => {
     const parsed = JSON.parse(signed);
     // Flip one byte in the signature by swapping the first base64 char.
     const sig = parsed.signature.signature as string;
-    parsed.signature.signature =
-      (sig.startsWith('A') ? 'B' : 'A') + sig.slice(1);
+    parsed.signature.signature = (sig.startsWith('A') ? 'B' : 'A') + sig.slice(1);
     const bad = JSON.stringify(parsed, null, 2);
     expect(await verifySignedExport(bad)).toBe(false);
   });
