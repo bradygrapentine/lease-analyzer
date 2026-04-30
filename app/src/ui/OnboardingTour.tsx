@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Dialog } from './system/Dialog';
+import { Button } from './system/Button';
 
 export type OnboardingViewMode = 'current' | 'portfolio' | 'redline' | 'settings';
 
@@ -85,53 +86,71 @@ export function OnboardingTour({
       open={dismissedAt === null}
       onDismiss={handleDismiss}
       titleId="onboarding-tour-title"
-      className="onboarding-tour__panel"
+      className="!p-7"
     >
-      <h2 id="onboarding-tour-title">{step.title}</h2>
-      <p>{step.body}</p>
+      <p className="text-mono uppercase tracking-[0.08em] text-fg-faint mb-2">
+        Welcome to LeaseGuard
+      </p>
+      <h2
+        id="onboarding-tour-title"
+        className="font-serif text-[24px] font-semibold leading-snug text-fg m-0 mb-3"
+      >
+        {step.title}
+      </h2>
+      <p className="font-serif text-[15px] leading-[1.7] text-fg-body m-0 mb-3">{step.body}</p>
       {hint !== null && (
-        <p className="onboarding-tour__hint" role="note">
+        <p
+          role="note"
+          className="font-serif italic text-fg-muted m-0 mb-4 border-l border-rule pl-3"
+        >
           {hint}
         </p>
       )}
-      <p className="onboarding-tour__progress" aria-label={`step ${stepIndex + 1} of ${total}`}>
-        Step {stepIndex + 1} of {total}
-      </p>
-      <div className="onboarding-tour__actions">
-        <button
-          type="button"
-          tabIndex={0}
-          onClick={handleDismiss}
-          aria-label="skip onboarding tour"
+      <div className="mt-5 flex items-center justify-between border-t border-rule-subtle pt-4">
+        <p
+          aria-label={`step ${stepIndex + 1} of ${total}`}
+          className="text-mono uppercase tracking-[0.08em] text-fg-faint m-0"
         >
-          Skip
-        </button>
-        <button
-          type="button"
-          tabIndex={0}
-          onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-          disabled={isFirst}
-        >
-          Back
-        </button>
-        {isLast ? (
-          <button
+          Step {stepIndex + 1} of {total}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
             type="button"
-            tabIndex={0}
+            variant="ghost"
+            size="sm"
             onClick={handleDismiss}
-            aria-label="finish onboarding tour"
+            aria-label="skip onboarding tour"
           >
-            Done
-          </button>
-        ) : (
-          <button
+            Skip
+          </Button>
+          <Button
             type="button"
-            tabIndex={0}
-            onClick={() => setStepIndex((i) => Math.min(total - 1, i + 1))}
+            variant="subtle"
+            size="sm"
+            onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+            disabled={isFirst}
           >
-            Next
-          </button>
-        )}
+            Back
+          </Button>
+          {isLast ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleDismiss}
+              aria-label="finish onboarding tour"
+            >
+              Done
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setStepIndex((i) => Math.min(total - 1, i + 1))}
+            >
+              Next
+            </Button>
+          )}
+        </div>
       </div>
     </Dialog>
   );

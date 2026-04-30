@@ -19,3 +19,4 @@ app/public/classifier/*
 !app/public/classifier/.gitkeep
 .superpowers/
 logs_ci_verify/
+.impeccable-live.json
