@@ -60,6 +60,9 @@ export function PortfolioPanel({
 }: PortfolioPanelProps): JSX.Element {
   const [filtered, setFiltered] = useState<LeaseMetadata[] | null>(null);
   const [drillIds, setDrillIds] = useState<string[] | null>(null);
+  // Wave 53-E — cards-first portfolio per the handoff. Practitioners can
+  // fall back to the dense matrix when scanning many rules at once.
+  const [viewMode, setViewMode] = useState<'cards' | 'matrix'>('cards');
 
   useEffect(() => {
     if (!filter) {
@@ -109,14 +112,17 @@ export function PortfolioPanel({
     <Section label="portfolio" className="space-y-3 px-4 py-4">
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <h2 className="text-heading uppercase text-fg-muted">Portfolio</h2>
-        <div
-          aria-label="portfolio totals"
-          className="flex gap-5 items-baseline pl-5 border-l border-rule font-sans text-small"
-        >
-          <SeverityTotal label="High" count={totals.high} severity="high" />
-          <SeverityTotal label="Medium" count={totals.medium} severity="medium" />
-          <SeverityTotal label="Low" count={totals.low} severity="low" />
-          <SeverityTotal label="Info" count={totals.info} severity="info" />
+        <div className="flex items-center gap-3">
+          <ViewToggle value={viewMode} onChange={setViewMode} />
+          <div
+            aria-label="portfolio totals"
+            className="flex gap-5 items-baseline pl-5 border-l border-rule font-sans text-small"
+          >
+            <SeverityTotal label="High" count={totals.high} severity="high" />
+            <SeverityTotal label="Medium" count={totals.medium} severity="medium" />
+            <SeverityTotal label="Low" count={totals.low} severity="low" />
+            <SeverityTotal label="Info" count={totals.info} severity="info" />
+          </div>
         </div>
       </div>
       <PortfolioRollupsPanel rollups={rollups} onDrillThrough={(ids) => setDrillIds(ids)} />
@@ -127,78 +133,225 @@ export function PortfolioPanel({
           </Button>
         </p>
       )}
-      <div className="portfolio-scroll overflow-x-auto">
-        <table aria-label="portfolio" className="text-small text-fg-body border-collapse">
-          <thead>
-            <tr className="border-b border-rule">
-              <th
-                scope="col"
-                data-sticky="true"
-                className="portfolio-sticky text-left py-2 pr-4 text-mono uppercase tracking-[0.06em] text-fg-muted font-sans"
-              >
-                Lease
-              </th>
-              {columns.map((c) => (
+      {viewMode === 'cards' ? (
+        <ul
+          aria-label="portfolio cards"
+          className="grid gap-3"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))' }}
+        >
+          {visible.map((lease) => (
+            <PortfolioCard
+              key={lease.id}
+              lease={lease}
+              findings={findingsByLease.get(lease.id) ?? []}
+              onOpen={() => onOpenLease(lease.id)}
+            />
+          ))}
+        </ul>
+      ) : (
+        <div className="portfolio-scroll overflow-x-auto">
+          <table aria-label="portfolio" className="text-small text-fg-body border-collapse">
+            <thead>
+              <tr className="border-b border-rule">
                 <th
-                  key={c.ruleId}
                   scope="col"
-                  className="text-left py-2 pr-3 text-fg-muted font-mono text-mono whitespace-nowrap"
+                  data-sticky="true"
+                  className="portfolio-sticky text-left py-2 pr-4 text-mono uppercase tracking-[0.06em] text-fg-muted font-sans"
                 >
-                  {c.ruleId}
+                  Lease
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((lease) => {
-              const findings = findingsByLease.get(lease.id) ?? [];
-              const bestBySeverity = bestSeverityByRule(findings);
-              return (
-                <tr
-                  key={lease.id}
-                  aria-label={lease.name}
-                  className="even:bg-paper-sunken border-b border-rule-subtle"
-                >
+                {columns.map((c) => (
                   <th
-                    scope="row"
-                    data-sticky="true"
-                    className="portfolio-sticky py-2 pr-4 text-left align-top font-normal"
+                    key={c.ruleId}
+                    scope="col"
+                    className="text-left py-2 pr-3 text-fg-muted font-mono text-mono whitespace-nowrap"
                   >
-                    <button
-                      type="button"
-                      onClick={() => onOpenLease(lease.id)}
-                      aria-label={`Open ${lease.name}`}
-                      className="font-serif text-[14.5px] text-fg hover:text-ink hover:underline underline-offset-2 text-left"
-                    >
-                      {lease.name}
-                    </button>
-                    <small className="block mt-0.5 text-mono text-fg-faint">
-                      {lease.pageCount} pages
-                      {' · '}
-                      {new Date(lease.createdAt).toLocaleDateString()}
-                    </small>
+                    {c.ruleId}
                   </th>
-                  {columns.map((c) => {
-                    const sev = bestBySeverity.get(c.ruleId);
-                    return (
-                      <td key={c.ruleId} className="py-2 pr-3 align-top">
-                        {sev ? (
-                          <SeverityBadge severity={sev} />
-                        ) : (
-                          <span className="text-fg-muted">—</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((lease) => {
+                const findings = findingsByLease.get(lease.id) ?? [];
+                const bestBySeverity = bestSeverityByRule(findings);
+                return (
+                  <tr
+                    key={lease.id}
+                    aria-label={lease.name}
+                    className="even:bg-paper-sunken border-b border-rule-subtle"
+                  >
+                    <th
+                      scope="row"
+                      data-sticky="true"
+                      className="portfolio-sticky py-2 pr-4 text-left align-top font-normal"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onOpenLease(lease.id)}
+                        aria-label={`Open ${lease.name}`}
+                        className="font-serif text-[14.5px] text-fg hover:text-ink hover:underline underline-offset-2 text-left"
+                      >
+                        {lease.name}
+                      </button>
+                      <small className="block mt-0.5 text-mono text-fg-faint">
+                        {lease.pageCount} pages
+                        {' · '}
+                        {new Date(lease.createdAt).toLocaleDateString()}
+                      </small>
+                    </th>
+                    {columns.map((c) => {
+                      const sev = bestBySeverity.get(c.ruleId);
+                      return (
+                        <td key={c.ruleId} className="py-2 pr-3 align-top">
+                          {sev ? (
+                            <SeverityBadge severity={sev} />
+                          ) : (
+                            <span className="text-fg-muted">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Section>
   );
 }
+
+function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: 'cards' | 'matrix';
+  onChange: (next: 'cards' | 'matrix') => void;
+}): JSX.Element {
+  return (
+    <div
+      role="tablist"
+      aria-label="portfolio view"
+      className="flex items-center gap-0 rounded-sm border border-rule bg-paper-sunken p-0.5"
+    >
+      {(['cards', 'matrix'] as const).map((target) => {
+        const active = value === target;
+        return (
+          <button
+            key={target}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(target)}
+            className={`h-7 px-3 rounded-sm font-sans text-[12.5px] tracking-[0.01em] transition-colors focus-visible:focus-ring ${
+              active
+                ? 'bg-paper-raised border border-rule text-fg font-semibold'
+                : 'border border-transparent text-fg-body hover:text-fg font-medium'
+            }`}
+          >
+            {target === 'cards' ? 'Cards' : 'Matrix'}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PortfolioCard({
+  lease,
+  findings,
+  onOpen,
+}: {
+  lease: LeaseMetadata;
+  findings: Finding[];
+  onOpen: () => void;
+}): JSX.Element {
+  const counts: Record<Severity, number> = { high: 0, medium: 0, low: 0, info: 0 };
+  for (const f of findings) counts[f.severity]++;
+  // Worst severity present drives the corner badge; falls through info → none.
+  const worst: Severity | null =
+    counts.high > 0
+      ? 'high'
+      : counts.medium > 0
+        ? 'medium'
+        : counts.low > 0
+          ? 'low'
+          : counts.info > 0
+            ? 'info'
+            : null;
+  // Heatmap row: one cell per finding (cap at 24 so a noisy lease doesn't blow up the card)
+  // colored by per-finding severity. The cap signals "and more" via opacity drop.
+  const cells = findings.slice(0, 24);
+  const overflow = findings.length - cells.length;
+  return (
+    <li className="rounded-sm border border-rule bg-paper-raised p-4 flex flex-col gap-3 hover:bg-paper-sunken transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {worst && (
+            <span
+              data-severity={worst}
+              className={`inline-flex items-center px-1.5 py-0.5 rounded-sm border text-mono uppercase tracking-[0.04em] mb-1 ${SEV_BADGE_CLASS[worst]}`}
+            >
+              {worst}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onOpen}
+            aria-label={`Open ${lease.name}`}
+            className="block font-serif text-[15px] text-fg leading-snug text-left hover:text-ink hover:underline underline-offset-2 truncate w-full"
+          >
+            {lease.name}
+          </button>
+        </div>
+        <span className="text-mono text-fg-faint shrink-0 mt-0.5">
+          {new Date(lease.createdAt).toLocaleDateString()}
+        </span>
+      </div>
+      <p className="font-serif italic text-small text-fg-muted leading-snug m-0">
+        {lease.pageCount} page{lease.pageCount === 1 ? '' : 's'}
+        {' · '}
+        {findings.length} finding{findings.length === 1 ? '' : 's'}
+      </p>
+      {findings.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <div aria-hidden="true" className="flex items-center gap-[2px] flex-wrap">
+            {cells.map((f, i) => (
+              <span
+                key={i}
+                data-severity={f.severity}
+                className={`h-2 w-3 rounded-sm ${SEV_HEAT_CLASS[f.severity]}`}
+              />
+            ))}
+            {overflow > 0 && <span className="text-mono text-fg-muted ml-1">+{overflow}</span>}
+          </div>
+          <p aria-label={`${lease.name} severity totals`} className="text-mono text-fg-muted m-0">
+            {counts.high > 0 && <span className="mr-2">{counts.high} high</span>}
+            {counts.medium > 0 && <span className="mr-2">{counts.medium} med</span>}
+            {counts.low > 0 && <span className="mr-2">{counts.low} low</span>}
+            {counts.info > 0 && <span>{counts.info} info</span>}
+          </p>
+        </div>
+      )}
+    </li>
+  );
+}
+
+const SEV_BADGE_CLASS: Record<Severity, string> = {
+  high: 'bg-severity-high/10 text-severity-high border-severity-high/30',
+  medium: 'bg-severity-medium/10 text-severity-medium border-severity-medium/30',
+  low: 'bg-severity-low/10 text-severity-low border-severity-low/30',
+  info: 'bg-severity-info/10 text-severity-info border-severity-info/30',
+};
+
+const SEV_HEAT_CLASS: Record<Severity, string> = {
+  high: 'bg-severity-high',
+  medium: 'bg-severity-medium',
+  low: 'bg-severity-low',
+  info: 'bg-severity-info',
+};
 
 function SeverityTotal({
   label,
