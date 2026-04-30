@@ -227,6 +227,12 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   );
 }
 
+// Wave 53-B-3 — pack manager / library / governance panels live under the
+// Settings tab now. Tests that reach into them switch first.
+async function gotoSettings(): Promise<void> {
+  await userEvent.click(screen.getByRole('tab', { name: /^settings$/i }));
+}
+
 describe('App panel wire-ups', () => {
   it('hides the LeaseFacts panel when the synthetic lease has no extractable facts', async () => {
     // Distill: LeaseFactsPanel renders nothing when isEmpty. The minimal
@@ -291,6 +297,7 @@ describe('App panel wire-ups', () => {
 
   it('PackManagerPanel imports, toggles, and deletes a pack', async () => {
     render(<App />);
+    await gotoSettings();
     const pack = {
       schema: 'leaseguard.rulepack.v1',
       id: 'custom-pack',
@@ -339,7 +346,10 @@ describe('App panel wire-ups', () => {
     expect(
       screen.queryByRole('button', { name: /export findings \(signed json\)/i }),
     ).not.toBeInTheDocument();
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /create key/i }));
+    // Signed-export button lives on Current; switch back to verify it appears.
+    await userEvent.click(screen.getByRole('tab', { name: /^current lease$/i }));
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /export findings \(signed json\)/i }),
@@ -390,6 +400,7 @@ describe('App panel wire-ups', () => {
   it('JurisdictionPickerPanel toggles and re-runs analysis', async () => {
     render(<App />);
     await uploadLease('JurisLease.pdf');
+    await gotoSettings();
     const cb = await screen.findByRole('checkbox', { name: /jurisdiction US-CA/i });
     await userEvent.click(cb);
     // Selection persists via packStorage.
@@ -408,6 +419,7 @@ describe('App panel wire-ups', () => {
   it('SeverityOverridesPanel persists overrides and triggers reanalyze', async () => {
     render(<App />);
     await uploadLease('OverrideLease.pdf');
+    await gotoSettings();
     const select = await screen.findByRole('combobox', {
       name: /override severity for auto-renewal/i,
     });
@@ -427,6 +439,7 @@ describe('App panel wire-ups', () => {
 
   it('PackDiffPanel renders a diff from an uploaded pack file', async () => {
     render(<App />);
+    await gotoSettings();
     const pack = {
       schema: 'leaseguard.rulepack.v1',
       id: 'diff-pack',
@@ -475,6 +488,7 @@ describe('App panel wire-ups', () => {
 
   it('BulkImportPanel imports multiple PDFs into the library', async () => {
     render(<App />);
+    await gotoSettings();
     // Two distinct lease fixtures — bulk-import dedups by content hash.
     const bytesA = await makePdf([
       {
@@ -530,6 +544,7 @@ describe('App panel wire-ups', () => {
   it('CustomRuleBuilderPanel saves a rule as an installed pack and re-analyzes', async () => {
     render(<App />);
     await uploadLease('Custom.pdf');
+    await gotoSettings();
     // Fill the form through the builder.
     await userEvent.type(screen.getByLabelText(/rule id/i), 'banana-clause');
     await userEvent.type(screen.getByLabelText(/^title$/i), 'Banana clause');
@@ -688,6 +703,7 @@ describe('App panel wire-ups', () => {
 
   it('PackManagerPanel imports a signed envelope and shows Verified badge', async () => {
     render(<App />);
+    await gotoSettings();
     const pack = {
       schema: 'leaseguard.rulepack.v1' as const,
       id: 'signed-pack',
@@ -800,6 +816,7 @@ describe('App panel wire-ups', () => {
 
   it('PackManagerPanel reports "Invalid signature" on a tampered envelope', async () => {
     render(<App />);
+    await gotoSettings();
     const pack = {
       schema: 'leaseguard.rulepack.v1' as const,
       id: 'tampered-pack',
@@ -888,6 +905,7 @@ describe('App panel wire-ups', () => {
     });
 
     render(<App />);
+    await gotoSettings();
     // Wait for refreshLibrary to populate the picker with both leases.
     await waitFor(() => {
       const sel = screen.getByLabelText(/lease A/i) as HTMLSelectElement;

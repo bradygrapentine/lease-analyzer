@@ -498,85 +498,6 @@ function AppContent(): JSX.Element {
         )}
       </div>
 
-      <AppLibraryAndPacksPane
-        library={library}
-        standardId={standardId}
-        templates={templates}
-        packs={packs}
-        marketplace={{
-          loadManifest: loadCuratedManifest,
-          onInstall: async (entry: CuratedPackEntry) => {
-            const res = await fetch(entry.path);
-            if (!res.ok) throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
-            const text = await res.text();
-            const parsed: unknown = JSON.parse(text);
-            let signature: 'verified' | 'invalid' = 'verified';
-            if (
-              parsed !== null &&
-              typeof parsed === 'object' &&
-              'algorithm' in parsed &&
-              'payload' in parsed &&
-              'signature' in parsed
-            ) {
-              const v = await verifySignedPack(parsed);
-              signature = v.ok ? 'verified' : 'invalid';
-            }
-            const file = new File([text], `${entry.id}.lgpack.json`, {
-              type: 'application/json',
-            });
-            await packs.importPackFile(file);
-            return { ok: true, signature };
-          },
-          onPreviewDiff: async (entry: CuratedPackEntry) => {
-            const res = await fetch(entry.path);
-            if (!res.ok) throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
-            const parsed: unknown = await res.json();
-            let candidate: unknown = parsed;
-            if (
-              parsed !== null &&
-              typeof parsed === 'object' &&
-              'algorithm' in parsed &&
-              'payload' in parsed &&
-              'signature' in parsed
-            ) {
-              const v = await verifySignedPack(parsed);
-              if (v.ok && v.pack) candidate = v.pack;
-              else throw new Error(`Invalid signed pack: ${v.reason ?? 'unknown'}`);
-            }
-            const result = validatePackFile(candidate);
-            if (!result.ok) throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
-            const d = diffPack(packs.activeRules, result.pack);
-            return {
-              added: d.added.map((r) => r.id),
-              removed: d.removed.map((r) => r.id),
-              changed: d.changed.map((c) => c.ruleId),
-            };
-          },
-        }}
-        jurisdictionOptions={JURISDICTION_OPTIONS}
-        severityOverridesPanelRows={packs.activeRules.map((r) => ({
-          id: r.id,
-          title: r.title,
-          severity: severityToOverrideSeverity(r.severity),
-        }))}
-        severityOverridesPanelMap={overridesToPanel(packs.severityOverrides)}
-        severityOverridesPanelOnChange={(ruleId, sev) =>
-          void packs.setSeverityOverride(ruleId, sev)
-        }
-        customRuleBuilderDoc={status.kind === 'analyzed' ? status.result.doc : null}
-        auditEntries={auditEntries}
-        signingKey={signingKey}
-        comparison={comparison}
-        onOpenLibrary={(id) => void onOpenLibrary(id)}
-        onDeleteLibrary={(id) => void onDeleteLibrary(id)}
-        onSetStandard={(id) => void setStandardId(id).then(refreshLibrary)}
-        onRenameLibrary={(id, name) => void renameLease(id, name).then(refreshLibrary)}
-        onCompare={(a, b) => void onCompare(a, b)}
-        onSaveTemplate={(input) => void saveTemplate(input).then(refreshTemplates)}
-        onUpdateTemplate={(id, patch) => void updateTemplate(id, patch).then(refreshTemplates)}
-        onDeleteTemplate={(id) => void deleteTemplate(id).then(refreshTemplates)}
-      />
-
       <div
         role="tabpanel"
         id="viewmode-panel-audit"
@@ -611,20 +532,102 @@ function AppContent(): JSX.Element {
         hidden={view !== 'settings'}
       >
         {view === 'settings' && (
-          <AppSettingsPane
-            onExportArchive={() => void exportEncryptedArchiveFlow()}
-            onImportArchive={(e) => void onImportArchiveFile(e)}
-            onClearAll={() => {
-              void clearAllFlow({
-                onCleared: async () => {
-                  await refreshLibrary();
-                  await refreshTemplates();
-                  pipeline.reset();
-                  setSelected(null);
+          <>
+            <AppSettingsPane
+              onExportArchive={() => void exportEncryptedArchiveFlow()}
+              onImportArchive={(e) => void onImportArchiveFile(e)}
+              onClearAll={() => {
+                void clearAllFlow({
+                  onCleared: async () => {
+                    await refreshLibrary();
+                    await refreshTemplates();
+                    pipeline.reset();
+                    setSelected(null);
+                  },
+                });
+              }}
+            />
+            <AppLibraryAndPacksPane
+              library={library}
+              standardId={standardId}
+              templates={templates}
+              packs={packs}
+              marketplace={{
+                loadManifest: loadCuratedManifest,
+                onInstall: async (entry: CuratedPackEntry) => {
+                  const res = await fetch(entry.path);
+                  if (!res.ok) throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
+                  const text = await res.text();
+                  const parsed: unknown = JSON.parse(text);
+                  let signature: 'verified' | 'invalid' = 'verified';
+                  if (
+                    parsed !== null &&
+                    typeof parsed === 'object' &&
+                    'algorithm' in parsed &&
+                    'payload' in parsed &&
+                    'signature' in parsed
+                  ) {
+                    const v = await verifySignedPack(parsed);
+                    signature = v.ok ? 'verified' : 'invalid';
+                  }
+                  const file = new File([text], `${entry.id}.lgpack.json`, {
+                    type: 'application/json',
+                  });
+                  await packs.importPackFile(file);
+                  return { ok: true, signature };
                 },
-              });
-            }}
-          />
+                onPreviewDiff: async (entry: CuratedPackEntry) => {
+                  const res = await fetch(entry.path);
+                  if (!res.ok) throw new Error(`Failed to load curated pack: HTTP ${res.status}`);
+                  const parsed: unknown = await res.json();
+                  let candidate: unknown = parsed;
+                  if (
+                    parsed !== null &&
+                    typeof parsed === 'object' &&
+                    'algorithm' in parsed &&
+                    'payload' in parsed &&
+                    'signature' in parsed
+                  ) {
+                    const v = await verifySignedPack(parsed);
+                    if (v.ok && v.pack) candidate = v.pack;
+                    else throw new Error(`Invalid signed pack: ${v.reason ?? 'unknown'}`);
+                  }
+                  const result = validatePackFile(candidate);
+                  if (!result.ok) throw new Error(`Invalid pack: ${result.errors.join('; ')}`);
+                  const d = diffPack(packs.activeRules, result.pack);
+                  return {
+                    added: d.added.map((r) => r.id),
+                    removed: d.removed.map((r) => r.id),
+                    changed: d.changed.map((c) => c.ruleId),
+                  };
+                },
+              }}
+              jurisdictionOptions={JURISDICTION_OPTIONS}
+              severityOverridesPanelRows={packs.activeRules.map((r) => ({
+                id: r.id,
+                title: r.title,
+                severity: severityToOverrideSeverity(r.severity),
+              }))}
+              severityOverridesPanelMap={overridesToPanel(packs.severityOverrides)}
+              severityOverridesPanelOnChange={(ruleId, sev) =>
+                void packs.setSeverityOverride(ruleId, sev)
+              }
+              customRuleBuilderDoc={status.kind === 'analyzed' ? status.result.doc : null}
+              auditEntries={auditEntries}
+              signingKey={signingKey}
+              comparison={comparison}
+              onOpenLibrary={(id) => void onOpenLibrary(id)}
+              onDeleteLibrary={(id) => void onDeleteLibrary(id)}
+              onSetStandard={(id) => void setStandardId(id).then(refreshLibrary)}
+              onRenameLibrary={(id, name) => void renameLease(id, name).then(refreshLibrary)}
+              onCompare={(a, b) => void onCompare(a, b)}
+              onSaveTemplate={(input) => void saveTemplate(input).then(refreshTemplates)}
+              onUpdateTemplate={(id, patch) =>
+                void updateTemplate(id, patch).then(refreshTemplates)
+              }
+              onDeleteTemplate={(id) => void deleteTemplate(id).then(refreshTemplates)}
+            />
+          </>
         )}
       </div>
     </main>
