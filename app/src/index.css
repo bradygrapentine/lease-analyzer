@@ -42,6 +42,8 @@
 
   /* Single accent */
   --color-ink: #1f3a4d;
+  /* Wave 53-A — hover step (handoff `--ink-90`). 10% lighter than ink. */
+  --color-ink-90: #233f54;
 
   /* Severity (functional color, never the sole signal) */
   --color-severity-high: #b1442d;
@@ -108,6 +110,13 @@
   /* Single shadow */
   --shadow-paper: 0 1px 0 rgba(42, 35, 22, 0.05);
 
+  /* Wave 53-A — document rhythm tokens. Drive paragraph spacing and
+     line-height in the marginalia reader so future density variants
+     can override at the @theme level. Defaults match the handoff's
+     `data-density="default"` row in styles.css. */
+  --para-pad: 12px;
+  --line-h: 1.65;
+
   /* PDF highlight overlay — semi-transparent by design; no opaque hex form exists */
   --color-highlight: rgba(255, 235, 59, 0.35);
   --color-highlight-border: rgba(255, 193, 7, 0.9);
@@ -147,6 +156,8 @@
 
   /* Single accent — lifted steel blue */
   --color-ink: #7ba9c4;
+  /* Wave 53-A — hover step on dark. Slightly brighter (closer to white). */
+  --color-ink-90: #8db5cd;
 
   /* Severity (functional color, never the sole signal) — brightened
      for legibility on dark surfaces. severity-bg / severity-border

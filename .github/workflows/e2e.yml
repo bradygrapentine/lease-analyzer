@@ -35,6 +35,9 @@ jobs:
           restore-keys: ms-playwright-${{ runner.os }}-${{ matrix.browser }}-
       - name: Install ${{ matrix.browser }} + system deps
         run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Fetch design fonts
+        working-directory: app
+        run: npm run build:design-fonts
       - name: Build app
         working-directory: app
         run: npm run build

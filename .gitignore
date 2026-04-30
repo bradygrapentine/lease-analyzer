@@ -20,3 +20,4 @@ app/public/classifier/*
 .superpowers/
 logs_ci_verify/
 .impeccable-live.json
+docs/design_handoff_leaseguard/

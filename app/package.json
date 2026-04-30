@@ -23,6 +23,7 @@
     "postinstall": "node scripts/build-tesseract-assets.mjs",
     "check:budget": "node scripts/check-bundle-budget.mjs",
     "check:csp": "node scripts/check-csp.mjs",
+    "check:fonts": "node scripts/check-fonts.mjs",
     "audit:prod": "node scripts/audit-prod.mjs",
     "hybrid:stats": "node scripts/hybrid-stats-report.mjs",
     "lhci": "lhci autorun",
