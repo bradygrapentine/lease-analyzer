@@ -26,8 +26,11 @@ test.describe('Annotation persistence', () => {
     const findingButtons = findings.locator('button.finding-btn');
     await expect(findingButtons.first()).toBeVisible({ timeout: 15_000 });
 
-    // Click the first deterministic finding and write a note.
+    // Click the first deterministic finding. Wave 51-D opens
+    // FindingDetailModal which `inert`s the rest of the page; dismiss it
+    // before reaching the annotation form in SupportingContext.
     await findingButtons.first().click();
+    await page.keyboard.press('Escape');
     const noteText = `wave-26 e2e ${Date.now()}`;
     const addNoteForm = page.getByRole('form', { name: /add note/i });
     await expect(addNoteForm).toBeVisible();
@@ -57,6 +60,8 @@ test.describe('Annotation persistence', () => {
     const findingButtonsAfter = findingsAfter.locator('button.finding-btn');
     await expect(findingButtonsAfter.first()).toBeVisible({ timeout: 10_000 });
     await findingButtonsAfter.first().click();
+    // Dismiss the FindingDetailModal so the annotations region is reachable.
+    await page.keyboard.press('Escape');
 
     const annotationsAfter = page.getByRole('region', { name: /annotations/i });
     await expect(annotationsAfter.getByText(noteText)).toBeVisible({ timeout: 5_000 });

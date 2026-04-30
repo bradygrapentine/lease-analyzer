@@ -11,10 +11,10 @@ import { SupportingContext } from './AppCurrentPane/SupportingContext';
 import { extractLeaseFacts } from '../facts/extractFacts';
 import { needsOcr } from '../compare/needsOcr';
 import { exportFindingsAsHtml } from '../App/appHelpers';
-import { SelectedFindingCard } from './AppCurrentPane/SelectedFindingCard';
 import type { AppCurrentPaneProps } from './AppCurrentPane/types';
 import { FindingRail } from './FindingRail';
 import { ReaderPdfToggle, type ReaderPdfMode } from './ReaderPdfToggle';
+import { FindingDetailModal } from './FindingDetailModal';
 
 // Wave 51-C — MarginaliaReader is the new default reading surface but
 // includes glossary + paragraph rendering bulk; lazy-load to keep the app
@@ -59,6 +59,10 @@ export function AppCurrentPane({
   // extractable text to render in that case, so showing the PDF first
   // is the only trustworthy representation until OCR runs.
   const [docMode, setDocMode] = useState<ReaderPdfMode>(ocr ? 'pdf' : 'reader');
+  // FindingDetailModal opens on finding select; Esc/close hides the modal
+  // but preserves `selected` so the annotation form + supporting context
+  // (which key off the selected finding) remain wired and reachable.
+  const [modalOpen, setModalOpen] = useState(false);
   return (
     <div className="results">
       <ResultsHeader
@@ -100,6 +104,7 @@ export function AppCurrentPane({
           onSelect={(f) => {
             setSelected(f);
             setSelectedPage(f.page);
+            setModalOpen(true);
           }}
           definitions={leaseFacts.definitions}
           glossary={glossaryEntries}
@@ -144,7 +149,31 @@ export function AppCurrentPane({
           />
         )}
       </div>
-      {selected && <SelectedFindingCard finding={selected} />}
+      <FindingDetailModal
+        open={modalOpen && selected !== null}
+        doc={status.result.doc}
+        finding={selected}
+        allFindings={status.result.findings}
+        onSelect={(f) => {
+          setSelected(f);
+          setSelectedPage(f.page);
+        }}
+        onClose={() => setModalOpen(false)}
+        suggestedTextByRuleId={suggestedTextByRuleId}
+        plainEnglishByRuleId={plainEnglishByRuleId}
+        onApplySuggestion={(finding, paragraphIndex, suggestedText) => {
+          if (!status.leaseId) return;
+          void redline
+            .applySuggestion({ finding, paragraphIndex, suggestedText, doc: status.result.doc })
+            .then(() => setView('redline'));
+        }}
+        onAddToCounters={(finding) => {
+          const text = suggestedTextByRuleId?.[finding.ruleId] ?? '';
+          if (!text) return;
+          void counters.save(finding.ruleId, finding.title, text);
+        }}
+      />
+
       <SupportingContext
         status={status}
         selected={selected}
