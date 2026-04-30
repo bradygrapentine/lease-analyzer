@@ -105,7 +105,7 @@ export function FindingDetailModal({
           <span>{t('finding.modal.from', { paragraph: String(finding.paragraphIndex + 1) })}</span>
           <span>{t('finding.modal.page', { page: String(finding.page) })}</span>
         </div>
-        <p className="font-serif text-[14.5px] leading-relaxed text-fg-body m-0">
+        <p className="font-serif text-[15px] leading-[1.7] text-fg-body m-0">
           {renderClause(clauseText, finding)}
         </p>
       </section>
@@ -122,9 +122,9 @@ export function FindingDetailModal({
               ¹
             </span>
             <span
-              className="rounded-sm px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-wider"
+              className="rounded-sm px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.08em]"
               style={{
-                background: `color-mix(in oklab, ${SEVERITY_VAR[finding.severity]} 18%, var(--color-paper))`,
+                background: `color-mix(in oklab, ${SEVERITY_VAR[finding.severity]} 26%, var(--color-paper))`,
                 color: SEVERITY_VAR[finding.severity],
               }}
             >
@@ -146,7 +146,10 @@ export function FindingDetailModal({
           </button>
         </div>
 
-        <h2 id="finding-detail-title" className="font-serif text-[22px] leading-snug text-fg mb-3">
+        <h2
+          id="finding-detail-title"
+          className="font-serif text-[24px] font-semibold leading-snug text-fg mb-3"
+        >
           {finding.title}
         </h2>
         <p
@@ -174,7 +177,7 @@ export function FindingDetailModal({
                   setAppliedKey(key);
                 }}
                 disabled={applied || !onApplySuggestion}
-                className="rounded-sm border border-rule bg-paper-raised px-3 py-1 text-mono uppercase tracking-wider text-fg hover:bg-paper-sunken disabled:opacity-60"
+                className="rounded-sm bg-ink px-3 py-1.5 text-mono uppercase tracking-[0.06em] text-paper hover:bg-ink/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {applied ? t('finding.modal.applied') : t('finding.modal.apply')}
               </button>
