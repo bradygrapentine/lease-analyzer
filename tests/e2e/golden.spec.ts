@@ -23,11 +23,13 @@ test.describe('LeaseGuard happy path', () => {
     const findingButtons = findings.locator('button.finding-btn');
     await expect(findingButtons.first()).toBeVisible({ timeout: 15_000 });
 
-    // Click the first finding → the "selected finding" detail panel mounts
-    // and the PDF viewer focuses the matching span. Asserting the detail
-    // article is the smallest stable signal the click wired through.
+    // Click the first finding → the FindingDetailModal mounts (Wave 51-D
+    // promoted the inline article landmark to a real `role="dialog"`).
+    // Asserting the dialog is the smallest stable signal the click
+    // wired through. Filter to the post-onboarding modal — OnboardingTour
+    // also renders a dialog in this state.
     await findingButtons.first().click();
-    await expect(page.getByRole('article', { name: /selected finding/i })).toBeVisible();
+    await expect(page.getByRole('dialog').last()).toBeVisible();
 
     // Portfolio toggle → portfolio section renders.
     await page.getByRole('tab', { name: /^portfolio$/i }).click();
