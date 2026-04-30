@@ -486,14 +486,15 @@ describe('App', () => {
 
     // useReanalyzeOnRulesChange picks up the override change and re-runs
     // analyze. After it completes, the auto-renewal finding should be in
-    // the High section (whose heading carries the count "(N)" with N > 0).
+    // the High section. Wave 51-E added a severity-chip filter row at
+    // the top whose label also contains "High (N)" — getAllByText now
+    // returns ≥1 match (chip + section heading); assert each carries a
+    // non-zero count.
     const findings = screen.getByRole('complementary', { name: /findings/i });
     await waitFor(() => {
-      expect(within(findings).getByText(/^High \(\d+\)$/)).toBeInTheDocument();
+      const matches = within(findings).getAllByText(/^High \(\d+\)$/);
+      expect(matches.length).toBeGreaterThan(0);
+      for (const el of matches) expect(el.textContent).toMatch(/[1-9]/);
     });
-    // And it should NOT still be in the Medium section under that title.
-    // (Other medium-severity findings — like jury-trial — may still be
-    // medium; we only assert the high-section gain, not the medium loss.)
-    expect(within(findings).getByText(/^High \(\d+\)$/).textContent).toMatch(/[1-9]/);
   });
 });
