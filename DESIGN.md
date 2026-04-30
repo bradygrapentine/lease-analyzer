@@ -360,6 +360,30 @@ description-below pattern.
 - **Mobile:** the rail collapses to a single-row tab strip; tap
   targets stay at 44px.
 
+### Marginalia Reader
+
+The default reading surface on the Current tab as of Wave 51. The
+PdfViewer is reachable behind a one-click `ReaderPdfToggle`; both
+share the selected-finding state.
+
+- **`MarginaliaReader`:** serif body text (`LeaseDocument.paragraphs`)
+  with inline `<mark>` highlights for finding excerpts and a margin
+  column of finding cards. Hybrid (LLM-classified) findings render in
+  the margin without an inline highlight — their `evidence.span` is a
+  paragraph-prefix, not ground truth.
+- **`FindingRail`:** 28px vertical heatmap to the left of the reader,
+  one cell per paragraph, colored by max severity, click-to-jump.
+- **`FindingDetailModal`:** scholarly-footnote two-pane modal (clause
+  on the left, footnote on the right with title / plain English / why
+  it matters / suggested edit / Apply / Counter-offer). Replaces the
+  inline `SelectedFindingCard`. Reuses `Dialog` (focus trap, Esc,
+  return-focus, `inert` siblings).
+- **Glossary popover:** `GlossaryTerm` renders a focusable trigger
+  with a `role="tooltip"` popover that opens on hover OR focus and
+  closes on Esc. When nested inside an outer button (e.g.
+  `FindingsPanel`'s `.finding-btn` snippet), the trigger downgrades
+  to a non-focusable `<span>` to avoid `nested-interactive`.
+
 ### PDF Highlight Layer
 
 - **Fill:** `rgba(255, 235, 59, 0.35)` (light mode) / `rgba(255, 235,
