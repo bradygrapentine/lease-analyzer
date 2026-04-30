@@ -1,6 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { AppLibraryAndPacksPane } from './AppLibraryAndPacksPane';
 import { I18nProvider } from '../i18n/I18nProvider';
 
@@ -70,7 +69,6 @@ function defaults(over: Partial<React.ComponentProps<typeof AppLibraryAndPacksPa
     severityOverridesPanelOnChange: vi.fn(),
     customRuleBuilderDoc: null,
     auditEntries: [],
-    auditVerification: null,
     signingKey: fakeSigning,
     comparison: null,
     onOpenLibrary: vi.fn(),
@@ -81,9 +79,6 @@ function defaults(over: Partial<React.ComponentProps<typeof AppLibraryAndPacksPa
     onSaveTemplate: vi.fn(),
     onUpdateTemplate: vi.fn(),
     onDeleteTemplate: vi.fn(),
-    onRefreshAuditLog: vi.fn(),
-    onVerifyAuditChain: vi.fn(),
-    onDownloadAuditLog: vi.fn(),
     ...over,
   };
   return render(
@@ -99,16 +94,12 @@ describe('AppLibraryAndPacksPane', () => {
     expandAllSectionsViaStorage();
   });
 
-  it('renders the library / templates / pack-manager / audit-log panels', async () => {
+  it('renders the library / templates / pack-manager panels', () => {
     defaults();
     expect(screen.getByRole('heading', { name: /my leases/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /diff rule pack/i })).toBeInTheDocument();
-    // Wave 28 Part C: SectionGroup wrappers also expose role="region";
-    // AuditLogPanel renders its own region with the same accessible name,
-    // so we assert at least one match. Wave 33-B made AuditLogPanel lazy,
-    // so the audit-log region resolves async on first paint.
-    const regions = await screen.findAllByRole('region', { name: /audit log/i });
-    expect(regions.length).toBeGreaterThanOrEqual(1);
+    // Wave 53-B-1: audit log moved to AppAuditPane (top-level view);
+    // covered there now.
   });
 
   it('hides the ComparePanel when comparison is null', () => {
@@ -116,13 +107,6 @@ describe('AppLibraryAndPacksPane', () => {
     expect(screen.queryByRole('region', { name: /^compare$/i })).toBeNull();
   });
 
-  it('fires onRefreshAuditLog when the audit-log refresh button is clicked', async () => {
-    const onRefreshAuditLog = vi.fn();
-    defaults({ onRefreshAuditLog });
-    // Wave 33-B: AuditLogPanel is lazy; await its render before
-    // querying its refresh button.
-    const refreshBtn = await screen.findByRole('button', { name: /^refresh$/i });
-    await userEvent.click(refreshBtn);
-    expect(onRefreshAuditLog).toHaveBeenCalledTimes(1);
-  });
+  // Wave 53-B-1: AuditLogPanel moved to AppAuditPane (top-level view);
+  // covered by AppAuditPane tests now.
 });

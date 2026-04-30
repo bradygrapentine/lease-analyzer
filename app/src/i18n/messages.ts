@@ -24,6 +24,7 @@ export const en = {
   'header.view.current': 'Current lease',
   'header.view.portfolio': 'Portfolio',
   'header.view.redline': 'Redline',
+  'header.view.audit': 'Audit',
   'header.view.settings': 'Settings',
   'settings.section.preferences': 'Preferences',
   'settings.section.privacy': 'Privacy',

@@ -461,7 +461,9 @@ describe('App panel wire-ups', () => {
   it('AuditLogPanel populates entries after an analyze and verifies the chain', async () => {
     render(<App />);
     await uploadLease('Auditing.pdf');
-    // At least the analyze start/complete entries should appear.
+    // Wave 53-B-1: audit log is now a top-level view (peer of Current /
+    // Portfolio / Redline). Switch to it before reaching for the table.
+    await userEvent.click(screen.getByRole('tab', { name: /^audit$/i }));
     await waitFor(() => {
       expect(screen.getByRole('table', { name: /audit entries/i })).toBeInTheDocument();
     });

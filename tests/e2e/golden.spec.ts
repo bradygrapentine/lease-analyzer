@@ -37,13 +37,9 @@ test.describe('LeaseGuard happy path', () => {
     await page.getByRole('tab', { name: /^portfolio$/i }).click();
     await expect(page.getByRole('region', { name: /portfolio/i }).first()).toBeVisible();
 
-    // Back to current view so the audit log is rendered alongside.
-    await page.getByRole('tab', { name: /^current lease$/i }).click();
-
-    // Audit log lives inside the bottom-pane "Governance" disclosure, which
-    // Wave 30-B made default-closed. Expand it before reaching for the
-    // audit log region.
-    await page.getByRole('button', { name: /^Governance\b/i }).click();
+    // Wave 53-B-1: audit log is now its own top-level view (peer of
+    // Current / Portfolio / Redline). Click the Audit tab directly.
+    await page.getByRole('tab', { name: /^audit$/i }).click();
 
     // Audit log: section always exists; assert ≥ 1 entry from the analyze + save
     // events the sample-lease flow already produced. The panel renders a

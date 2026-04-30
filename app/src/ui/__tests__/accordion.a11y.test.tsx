@@ -50,7 +50,6 @@ function renderPane(over: Partial<ComponentProps<typeof AppLibraryAndPacksPane>>
     severityOverridesPanelOnChange: vi.fn(),
     customRuleBuilderDoc: null,
     auditEntries: [],
-    auditVerification: null,
     signingKey: fakeSigning,
     comparison: null,
     onOpenLibrary: vi.fn(),
@@ -61,9 +60,6 @@ function renderPane(over: Partial<ComponentProps<typeof AppLibraryAndPacksPane>>
     onSaveTemplate: vi.fn(),
     onUpdateTemplate: vi.fn(),
     onDeleteTemplate: vi.fn(),
-    onRefreshAuditLog: vi.fn(),
-    onVerifyAuditChain: vi.fn(),
-    onDownloadAuditLog: vi.fn(),
     ...over,
   };
   return render(

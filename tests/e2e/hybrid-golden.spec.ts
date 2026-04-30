@@ -97,10 +97,9 @@ test.describe('Phase 18 real-model golden', () => {
     const findings = page.getByRole('complementary', { name: /findings/i });
     await expect(findings).toBeVisible();
 
-    // Audit log lives inside the bottom-pane "Governance" disclosure,
-    // which Wave 30-B made default-closed. Expand it before reaching for
-    // the Refresh button.
-    await page.getByRole('button', { name: /^Governance\b/i }).click();
+    // Wave 53-B-1: audit log is its own top-level view; click the
+    // Audit tab to reach the Refresh button.
+    await page.getByRole('tab', { name: /^audit$/i }).click();
 
     // First proof the classifier actually ran: an `llm-classify` audit
     // entry. Audit log isn't virtualized so this is the stable signal

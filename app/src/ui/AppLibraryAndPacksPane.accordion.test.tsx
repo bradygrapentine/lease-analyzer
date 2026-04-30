@@ -67,7 +67,6 @@ function renderPane(over: Partial<React.ComponentProps<typeof AppLibraryAndPacks
     severityOverridesPanelOnChange: vi.fn(),
     customRuleBuilderDoc: null,
     auditEntries: [],
-    auditVerification: null,
     signingKey: fakeSigning,
     comparison: null,
     onOpenLibrary: vi.fn(),
@@ -78,9 +77,6 @@ function renderPane(over: Partial<React.ComponentProps<typeof AppLibraryAndPacks
     onSaveTemplate: vi.fn(),
     onUpdateTemplate: vi.fn(),
     onDeleteTemplate: vi.fn(),
-    onRefreshAuditLog: vi.fn(),
-    onVerifyAuditChain: vi.fn(),
-    onDownloadAuditLog: vi.fn(),
     ...over,
   };
   return render(
@@ -132,22 +128,20 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
     expect(screen.getByRole('heading', { name: /my leases/i })).toBeInTheDocument();
   });
 
-  // Quarantined as a known flake; see app/src/test/known-flakes.md.
-  it(
-    'governance group expands on header click — AuditLog enters the DOM',
-    { retry: 2 },
-    async () => {
-      renderPane();
-      // AuditLogPanel renders <div role="group" aria-label="audit log actions">.
-      expect(screen.queryByRole('group', { name: /audit log actions/i })).toBeNull();
-      await userEvent.click(screen.getByRole('button', { name: /governance/i }));
-      expect(screen.getByRole('button', { name: /governance/i })).toHaveAttribute(
-        'aria-expanded',
-        'true',
-      );
-      expect(screen.getByRole('group', { name: /audit log actions/i })).toBeInTheDocument();
-    },
-  );
+  // Wave 53-B-1: AuditLog moved to AppAuditPane (top-level view); the
+  // governance group still expands but no longer contains the audit
+  // log. Verify expansion via the SeverityOverrides panel instead,
+  // which is the next-most-prominent governance affordance.
+  it('governance group expands on header click', async () => {
+    renderPane();
+    expect(screen.queryByRole('region', { name: /severity overrides/i })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /governance/i }));
+    expect(screen.getByRole('button', { name: /governance/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByRole('region', { name: /severity overrides/i })).toBeInTheDocument();
+  });
 
   it('toggling a group is reversible and persists to localStorage', async () => {
     renderPane();

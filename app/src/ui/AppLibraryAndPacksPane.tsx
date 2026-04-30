@@ -37,12 +37,8 @@ import { JurisdictionPickerPanel } from './JurisdictionPickerPanel';
 import { SeverityOverridesPanel } from './SeverityOverridesPanel';
 import { PackDiffPanel } from './PackDiffPanel';
 import { BulkImportPanel } from './BulkImportPanel';
-// Wave 33-B — AuditLogPanel renders inside the `governance` SectionGroup
-// which is `defaultOpen: false`. Lazy-load to keep the audit-log code
-// path (and its dependencies) out of the eager shell.
-const AuditLogPanel = lazy(() =>
-  import('./AuditLogPanel').then((m) => ({ default: m.AuditLogPanel })),
-);
+// Wave 53-B-1 — AuditLogPanel moved out to AppAuditPane (top-level
+// view). The lazy import + governance-section mount was removed.
 import { SigningKeyPanel } from './SigningKeyPanel';
 import { ComparePanel } from './ComparePanel';
 import { Section } from './system/Section';
@@ -55,7 +51,6 @@ import type { Finding } from '../rules/types';
 import type { LeaseDocument } from '../parser/types';
 import type { UseSigningKeyApi } from '../App/useSigningKey';
 import type { UsePackManagerApi } from '../App/usePackManager';
-import type { ChainVerification } from '../audit/auditLog';
 import type { AuditEntry } from '../audit/auditLog';
 
 interface AppLibraryAndPacksPaneProps {
@@ -73,8 +68,8 @@ interface AppLibraryAndPacksPaneProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   severityOverridesPanelOnChange: (ruleId: string, sev: any) => void;
   customRuleBuilderDoc: LeaseDocument | null;
+  /** Read by HybridPrecisionDisclosure to surface llm-classify entries. */
   auditEntries: AuditEntry[];
-  auditVerification: ChainVerification | null;
   signingKey: UseSigningKeyApi;
   comparison: { a: LeaseRecord; b: LeaseRecord } | null;
   onOpenLibrary: (id: string) => void;
@@ -85,9 +80,6 @@ interface AppLibraryAndPacksPaneProps {
   onSaveTemplate: (input: { name: string; text: string }) => void;
   onUpdateTemplate: (id: string, patch: { name?: string; text?: string }) => void;
   onDeleteTemplate: (id: string) => void;
-  onRefreshAuditLog: () => void;
-  onVerifyAuditChain: () => void;
-  onDownloadAuditLog: (entries: AuditEntry[], verification: ChainVerification | null) => void;
 }
 
 export function AppLibraryAndPacksPane({
@@ -102,7 +94,6 @@ export function AppLibraryAndPacksPane({
   severityOverridesPanelOnChange,
   customRuleBuilderDoc,
   auditEntries,
-  auditVerification,
   signingKey,
   comparison,
   onOpenLibrary,
@@ -113,9 +104,6 @@ export function AppLibraryAndPacksPane({
   onSaveTemplate,
   onUpdateTemplate,
   onDeleteTemplate,
-  onRefreshAuditLog,
-  onVerifyAuditChain,
-  onDownloadAuditLog,
 }: AppLibraryAndPacksPaneProps): JSX.Element {
   const groupById = (k: string) => SECTION_GROUPS.find((g) => g.id === k)!;
   const thisLease = groupById('bottom-pane-this-lease');
@@ -234,15 +222,6 @@ export function AppLibraryAndPacksPane({
             overrides={severityOverridesPanelMap}
             onChange={severityOverridesPanelOnChange}
           />
-          <Suspense fallback={null}>
-            <AuditLogPanel
-              entries={auditEntries}
-              verification={auditVerification}
-              onRefresh={onRefreshAuditLog}
-              onVerify={onVerifyAuditChain}
-              onDownload={() => onDownloadAuditLog(auditEntries, auditVerification)}
-            />
-          </Suspense>
           <SigningKeyPanel
             state={{ publicKey: signingKey.publicKey }}
             onCreateKey={(pp) => void signingKey.createKey(pp)}
