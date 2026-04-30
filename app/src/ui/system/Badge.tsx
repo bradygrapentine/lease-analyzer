@@ -21,53 +21,52 @@ const SEVERITY_CLASSES: Record<Severity, string> = {
   info: 'bg-[var(--color-severity-bg-info)] text-fg border border-[var(--color-severity-border-info)]',
 };
 
+// Wave 53-C — distinct glyph family per handoff (docs/design_handoff_leaseguard
+// /app-shell.jsx :: SeverityIcon). Each severity gets a different SHAPE so the
+// icon is legible without color: triangle / diamond / circle / square.
+// 16px inline SVG, aria-hidden — the visible label carries the meaning;
+// stroke = currentColor so the icon inherits the badge text-fg.
 function SeverityIcon({ severity }: { severity: Severity }): JSX.Element {
-  // 16px inline SVG, aria-hidden — the visible label carries the meaning.
-  // Glyph per severity: high=triangle-exclamation, medium=circle-exclamation,
-  // low=circle-dot, info=circle-i. Stroke is currentColor so the icon
-  // inherits the text-fg foreground.
   const common = {
     width: 16,
     height: 16,
     viewBox: '0 0 16 16',
     fill: 'none' as const,
     stroke: 'currentColor',
-    strokeWidth: 1.5,
-    strokeLinecap: 'round' as const,
+    strokeWidth: 1.4,
     strokeLinejoin: 'round' as const,
     'aria-hidden': true,
     focusable: false,
   };
   switch (severity) {
     case 'high':
+      // Triangle (warn).
       return (
         <svg {...common}>
-          <path d="M8 1.75 14.5 13.5h-13z" />
-          <path d="M8 6.25v3.5" />
-          <circle cx="8" cy="11.5" r="0.5" fill="currentColor" stroke="none" />
+          <path d="M8 2 L14.5 13.5 H1.5 Z" />
+          <path d="M8 6.5 V9.5 M8 11.3 V11.6" strokeLinecap="round" />
         </svg>
       );
     case 'medium':
+      // Diamond with center dot.
       return (
         <svg {...common}>
-          <circle cx="8" cy="8" r="6.25" />
-          <path d="M8 4.75v3.5" />
-          <circle cx="8" cy="10.5" r="0.5" fill="currentColor" stroke="none" />
+          <path d="M8 1.5 L14.5 8 L8 14.5 L1.5 8 Z" />
+          <circle cx="8" cy="8" r="1" fill="currentColor" stroke="none" />
         </svg>
       );
     case 'low':
+      // Circle outline.
       return (
         <svg {...common}>
-          <circle cx="8" cy="8" r="6.25" />
-          <circle cx="8" cy="8" r="1.75" fill="currentColor" stroke="none" />
+          <circle cx="8" cy="8" r="5.5" />
         </svg>
       );
     case 'info':
+      // Square.
       return (
         <svg {...common}>
-          <circle cx="8" cy="8" r="6.25" />
-          <circle cx="8" cy="5" r="0.5" fill="currentColor" stroke="none" />
-          <path d="M8 7.25v4" />
+          <rect x="2.5" y="2.5" width="11" height="11" />
         </svg>
       );
   }
