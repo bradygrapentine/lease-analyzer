@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Dialog } from './system/Dialog';
 import { Button } from './system/Button';
 
-export type OnboardingViewMode = 'current' | 'portfolio' | 'redline' | 'settings';
+export type OnboardingViewMode = 'current' | 'portfolio' | 'redline' | 'audit' | 'settings';
 
 interface OnboardingTourProps {
   /** Existing dismissal timestamp; if non-null, the tour renders nothing. */

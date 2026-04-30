@@ -25,7 +25,7 @@ import { OfflineDot } from './OfflineDot';
 // UploadView; tests that uploaded a *second* lease after analysis
 // click "New lease" first.
 
-export type AppViewMode = 'current' | 'portfolio' | 'redline' | 'settings';
+export type AppViewMode = 'current' | 'portfolio' | 'redline' | 'audit' | 'settings';
 
 interface AppHeaderProps {
   view: AppViewMode;
@@ -103,6 +103,19 @@ export function AppHeader({
             {t('header.view.redline')}
           </Button>
         )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          pressed={view === 'audit'}
+          role="tab"
+          id="viewmode-tab-audit"
+          aria-selected={view === 'audit'}
+          aria-controls="viewmode-panel-audit"
+          onClick={() => onViewChange('audit')}
+        >
+          {t('header.view.audit')}
+        </Button>
         <Button
           type="button"
           variant="ghost"

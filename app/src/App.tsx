@@ -73,6 +73,7 @@ const AppCurrentPane = lazy(() =>
 import { AnalyzedPaneBoundary } from './ui/AnalyzedPaneBoundary';
 import { AppLibraryAndPacksPane } from './ui/AppLibraryAndPacksPane';
 import { AppSettingsPane } from './ui/AppSettingsPane';
+import { AppAuditPane } from './ui/AppAuditPane';
 // UploadView + LoadingView are state-specific and bulky together (~3 KB);
 // lazy-load both to keep the app shell under budget. UploadView is the
 // idle-state landing — its chunk warms on first paint behind a no-op
@@ -126,7 +127,9 @@ function AppContent(): JSX.Element {
   const [templates, setTemplates] = useState<ClauseTemplate[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [auditVerification, setAuditVerification] = useState<ChainVerification | null>(null);
-  const [view, setView] = useState<'current' | 'portfolio' | 'redline' | 'settings'>('current');
+  const [view, setView] = useState<'current' | 'portfolio' | 'redline' | 'audit' | 'settings'>(
+    'current',
+  );
   const [portfolioFindings, setPortfolioFindings] = useState<Map<string, Finding[]>>(new Map());
   const [standardSuite, setStandardSuite] = useState<StandardClause[]>([]);
 
@@ -562,7 +565,6 @@ function AppContent(): JSX.Element {
         }
         customRuleBuilderDoc={status.kind === 'analyzed' ? status.result.doc : null}
         auditEntries={auditEntries}
-        auditVerification={auditVerification}
         signingKey={signingKey}
         comparison={comparison}
         onOpenLibrary={(id) => void onOpenLibrary(id)}
@@ -573,20 +575,34 @@ function AppContent(): JSX.Element {
         onSaveTemplate={(input) => void saveTemplate(input).then(refreshTemplates)}
         onUpdateTemplate={(id, patch) => void updateTemplate(id, patch).then(refreshTemplates)}
         onDeleteTemplate={(id) => void deleteTemplate(id).then(refreshTemplates)}
-        onRefreshAuditLog={() => void refreshAuditLog()}
-        onVerifyAuditChain={() => {
-          void (async (): Promise<void> => {
-            setAuditVerification(await verifyAuditChain());
-          })();
-        }}
-        onDownloadAuditLog={(entries, verification) => {
-          const json = buildAuditLogJson(entries, verification);
-          downloadAuditLogBlob(
-            json,
-            `leaseguard-audit-${new Date().toISOString().slice(0, 10)}.json`,
-          );
-        }}
       />
+
+      <div
+        role="tabpanel"
+        id="viewmode-panel-audit"
+        aria-labelledby="viewmode-tab-audit"
+        hidden={view !== 'audit'}
+      >
+        {view === 'audit' && (
+          <AppAuditPane
+            entries={auditEntries}
+            verification={auditVerification}
+            onRefresh={() => void refreshAuditLog()}
+            onVerify={() => {
+              void (async (): Promise<void> => {
+                setAuditVerification(await verifyAuditChain());
+              })();
+            }}
+            onDownload={(entries, verification) => {
+              const json = buildAuditLogJson(entries, verification);
+              downloadAuditLogBlob(
+                json,
+                `leaseguard-audit-${new Date().toISOString().slice(0, 10)}.json`,
+              );
+            }}
+          />
+        )}
+      </div>
 
       <div
         role="tabpanel"

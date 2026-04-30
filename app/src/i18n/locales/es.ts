@@ -17,6 +17,7 @@ export const es: Partial<Messages> = {
   'header.view.current': 'Contrato actual',
   'header.view.portfolio': 'Cartera',
   'header.view.redline': 'Edición',
+  'header.view.audit': 'Auditoría',
   'header.view.settings': 'Configuración',
   'settings.section.preferences': 'Preferencias',
   'settings.section.privacy': 'Privacidad',
