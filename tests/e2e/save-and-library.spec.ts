@@ -39,8 +39,11 @@ test.describe('LeaseGuard library flow', () => {
     // on the severity-group heading instead, which is always rendered
     // and includes the finding count.
     await openSample.click();
-    // The h2 wraps a button whose aria-label is "toggle high" — match by
-    // visible text instead, which carries the rendered count "High (N)".
-    await expect(findings.getByText(/^High \(\d+\)$/)).toBeVisible({ timeout: 10_000 });
+    // Wave 51-E added a severity-chip filter row whose label also reads
+    // "High (N)", so plain getByText now resolves two elements. Match
+    // the section heading specifically via the toggle button's aria-label.
+    await expect(
+      findings.getByRole('button', { name: /toggle high/i }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 });
