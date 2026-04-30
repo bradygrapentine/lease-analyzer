@@ -77,10 +77,16 @@ Each target gets:
 
 ## §4 Closeout
 
-- [ ] All six PRs merged.
-- [ ] Lighthouse a11y still ≥ 0.95.
-- [ ] axe story sweep still 0 serious/critical.
-- [ ] No new tokens added to `index.css`.
-- [ ] DESIGN.md updated only if a *named* component visual changed in
-      a way the prose would mislead a future agent. Don't refresh for
-      cosmetics.
+- [x] All six PRs merged. PRs #194, #195, #196, #198, #199 landed
+      directly; #197 landed after one IDB-flake rerun. Plus this
+      closeout PR.
+- [x] Lighthouse a11y still ≥ 0.95. Each Wave 52 PR's CI ran the
+      Lighthouse gate (a11y ≥ 95, best-practices ≥ 90, PWA-installable)
+      and passed. No main-branch regressions — last 4 post-merge `ci`
+      runs all green.
+- [x] axe story sweep still 0 serious/critical. 158/158
+      `all-stories.a11y.test.tsx` pass on main.
+- [x] No new tokens added to `index.css`. Diff-clean since Wave 45-A.
+- [x] DESIGN.md updated only if needed. None of the six PRs changed
+      a named component in a way that would mislead the §5 prose;
+      the polish was rhythm/typeset/sizing, not architecture. Skipped.
