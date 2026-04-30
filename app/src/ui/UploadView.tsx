@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from 'react';
+import { useRef, useState, type DragEvent } from 'react';
 import { Button } from './system/Button';
 import { useI18n } from '../i18n/I18nContext';
 
@@ -54,6 +54,13 @@ const SAMPLE_PREVIEW: ReadonlyArray<{
 export function UploadView({ onUpload, onTrySample }: UploadViewProps): JSX.Element {
   const { t } = useI18n();
   const [drag, setDrag] = useState(false);
+  // Wave 54-B — the visible affordance is the styled "Choose PDF" Button;
+  // the underlying <input type="file"> stays in the DOM (so existing
+  // findByLabelText("upload lease") test probes keep working) but is
+  // hidden from layout via display:none. This kills the dark-mode native
+  // "Choose File / No file chosen" platform leak that surfaced in the
+  // post-Wave-52 polish walk.
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function onDrop(e: DragEvent<HTMLDivElement>): void {
     e.preventDefault();
@@ -96,21 +103,28 @@ export function UploadView({ onUpload, onTrySample }: UploadViewProps): JSX.Elem
             drag ? 'border-ink bg-paper-sunken' : 'border-rule bg-paper-raised/60'
           }`}
         >
-          <label className="inline-flex items-center cursor-pointer">
-            <span className="visually-hidden">{t('header.upload.label')}</span>
-            <input
-              type="file"
-              accept="application/pdf"
-              aria-label="upload lease"
-              className="text-small"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                await onUpload(file);
-              }}
-            />
-          </label>
-          <Button type="button" variant="default" size="sm" onClick={() => void onTrySample()}>
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+          >
+            Choose PDF
+          </Button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/pdf"
+            aria-label="upload lease"
+            tabIndex={-1}
+            style={{ display: 'none' }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              await onUpload(file);
+            }}
+          />
+          <Button type="button" variant="ghost" size="sm" onClick={() => void onTrySample()}>
             {t('header.trySample')}
           </Button>
           <span className="font-display italic text-small text-fg-muted">
