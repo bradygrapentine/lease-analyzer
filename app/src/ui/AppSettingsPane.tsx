@@ -80,7 +80,15 @@ export function AppSettingsPane({
           >
             Import encrypted archive
           </FileButton>
-          <Button variant="ghost" size="sm" onClick={onClearAll}>
+          {/* Wave 54-A — DESIGN.md reserves Negative Red for the LABEL of
+              irrecoverable actions, not the button surface. Keep the Subtle
+              shell; tint the label only. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearAll}
+            className="text-[var(--color-negative)] hover:text-[var(--color-negative)]"
+          >
             {t('footer.clearAll')}
           </Button>
         </div>
