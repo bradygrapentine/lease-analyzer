@@ -183,6 +183,18 @@ describe('AppCurrentPane', () => {
     expect(screen.getByText(/looks scanned/i)).toBeInTheDocument();
   });
 
+  it('defaults the document toggle to PDF mode when the lease needs OCR', () => {
+    const status = makeStatus();
+    status.result.doc = {
+      pages: [{ pageNumber: 1, width: 612, height: 792, items: [] }],
+      paragraphs: [],
+      sections: [],
+      raw: '',
+    };
+    defaults({ status });
+    expect(screen.getByRole('tab', { name: /^pdf$/i })).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('renders the selected-finding article when a finding is selected', () => {
     const finding = {
       ruleId: 'r1',

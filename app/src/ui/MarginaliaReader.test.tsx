@@ -112,6 +112,15 @@ describe('MarginaliaReader', () => {
     ).not.toThrow();
   });
 
+  it('exposes a paragraph anchor (data-paragraph-index) for fallback scrolling', () => {
+    setup({
+      doc: doc(['First paragraph.', 'Second paragraph.']),
+      findings: [],
+    });
+    expect(document.querySelector('[data-paragraph-index="0"]')).not.toBeNull();
+    expect(document.querySelector('[data-paragraph-index="1"]')).not.toBeNull();
+  });
+
   it('skips inline highlight for hybrid findings (LLM-classified) — only renders the margin card', () => {
     setup({
       doc: doc(['The lease shall auto-renew unless cancelled.']),

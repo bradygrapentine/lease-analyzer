@@ -55,7 +55,10 @@ export function AppCurrentPane({
   const leaseFacts = useMemo(() => extractLeaseFacts(status.result.doc), [status]);
   // Per-session document-view mode. Marginalia reader is default; PDF is one
   // click away. State stays in component memory — see plan §1.9.
-  const [docMode, setDocMode] = useState<ReaderPdfMode>('reader');
+  // Scanned / OCR-poor leases default to PDF — the reader has no
+  // extractable text to render in that case, so showing the PDF first
+  // is the only trustworthy representation until OCR runs.
+  const [docMode, setDocMode] = useState<ReaderPdfMode>(ocr ? 'pdf' : 'reader');
   return (
     <div className="results">
       <ResultsHeader

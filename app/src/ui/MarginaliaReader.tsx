@@ -55,21 +55,34 @@ export function MarginaliaReader({
   }, [findings]);
 
   const selectedKey = selected ? findingKey(selected) : null;
+  const selectedParaIndex = selected ? selected.paragraphIndex : null;
 
   useEffect(() => {
-    if (!selectedKey || !containerRef.current) return;
-    // Escape selectedKey before splicing into a CSS selector — `ruleId`
-    // comes from imported rule packs whose only validation is "non-empty
-    // string", so it can contain quotes or `]` that break the selector.
-    const escaped =
+    if (!containerRef.current) return;
+    // Escape user-controlled values before splicing into a CSS selector —
+    // `ruleId` comes from imported rule packs whose only validation is
+    // "non-empty string".
+    const cssEscape = (s: string): string =>
       typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-        ? CSS.escape(selectedKey)
-        : selectedKey.replace(/["\\\]]/g, '\\$&');
-    const el = containerRef.current.querySelector<HTMLElement>(`[data-finding-id="${escaped}"]`);
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        ? CSS.escape(s)
+        : s.replace(/["\\\]]/g, '\\$&');
+    let target: HTMLElement | null = null;
+    if (selectedKey) {
+      target = containerRef.current.querySelector<HTMLElement>(
+        `[data-finding-id="${cssEscape(selectedKey)}"]`,
+      );
     }
-  }, [selectedKey]);
+    // Fall back to the paragraph anchor when no inline `<mark>` exists —
+    // hybrid (LLM-classified) findings render only a margin card.
+    if (!target && selectedParaIndex != null) {
+      target = containerRef.current.querySelector<HTMLElement>(
+        `[data-paragraph-index="${selectedParaIndex}"]`,
+      );
+    }
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [selectedKey, selectedParaIndex]);
 
   return (
     <div
@@ -92,7 +105,7 @@ export function MarginaliaReader({
           const paraFindings = findingsByPara.get(idx) ?? [];
           return (
             <div key={idx} className="contents">
-              <div className="relative">
+              <div className="relative" data-paragraph-index={idx}>
                 <div
                   className="mono absolute -left-8 top-1 select-none text-[10px] tracking-wider text-fg-faint"
                   aria-hidden="true"
