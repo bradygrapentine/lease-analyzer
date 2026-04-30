@@ -17,10 +17,11 @@ test.describe('LeaseGuard library flow', () => {
     const findingButtons = findings.locator('button.finding-btn');
     await expect(findingButtons.first()).toBeVisible({ timeout: 15_000 });
 
-    // Wave 30-B: bottom-pane accordions default closed. Expand "Library"
-    // before reaching for the saved-lease row. The button's accessible
-    // name includes a count badge ("Library 1") once leases exist, so
+    // Wave 53-B-3: Library accordion now lives under the Settings tab.
+    // Switch tabs first, then expand. The button's accessible name
+    // includes a count badge ("Library 1") once leases exist, so
     // match by prefix not exact.
+    await page.getByRole('tab', { name: /^settings$/i }).click();
     await page.getByRole('button', { name: /^Library\b/i }).click();
 
     // usePipeline auto-saves analyzed leases. The library row's "open" button
@@ -39,6 +40,9 @@ test.describe('LeaseGuard library flow', () => {
     // on the severity-group heading instead, which is always rendered
     // and includes the finding count.
     await openSample.click();
+    // Findings live on the Current tab; switch back to verify the reopen
+    // rehydrated them.
+    await page.getByRole('tab', { name: /^current lease$/i }).click();
     // Wave 51-E added a severity-chip filter row whose label also reads
     // "High (N)", so plain getByText now resolves two elements. Match
     // the section heading specifically via the toggle button's aria-label.

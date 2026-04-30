@@ -43,16 +43,17 @@ test.describe('Annotation persistence', () => {
     // Reload — the in-memory React state goes away; IDB persists.
     await page.reload();
 
-    // Wave 30-B: bottom-pane accordions default closed. Expand "Library"
-    // before reaching for the saved-lease row. The button's accessible
-    // name includes a count badge ("Library 1") once leases exist, so
-    // match by prefix not exact.
+    // Wave 53-B-3: Library accordion now lives under the Settings tab.
+    // Switch tabs first, then expand the Library accordion.
+    await page.getByRole('tab', { name: /^settings$/i }).click();
     await page.getByRole('button', { name: /^Library\b/i }).click();
 
     // The library row's "Open" button surfaces the saved lease.
     const openSample = page.getByRole('button', { name: /open sample lease\.pdf/i });
     await expect(openSample).toBeVisible({ timeout: 10_000 });
     await openSample.click();
+    // Findings + annotations live on the Current tab; switch back.
+    await page.getByRole('tab', { name: /^current lease$/i }).click();
 
     // Findings panel re-renders from the saved record. Click the same
     // finding to re-set paragraphIndex; the note should still be there.

@@ -163,6 +163,13 @@ async function uploadLease(name = 'lease.pdf'): Promise<void> {
   // return to the upload landing before grabbing the input.
   const reset = screen.queryByRole('button', { name: /new lease/i });
   if (reset) await userEvent.click(reset);
+  // Wave 53-B-3 — UploadView only renders on the Current tab. If a prior
+  // step moved the user into Settings (etc.), switch back so the upload
+  // input mounts.
+  const currentTab = screen.queryByRole('tab', { name: /^current lease$/i });
+  if (currentTab && currentTab.getAttribute('aria-selected') !== 'true') {
+    await userEvent.click(currentTab);
+  }
   const file = await makeLeaseFile(name);
   // UploadView is lazy-loaded; wait for its chunk before grabbing the input.
   const input = (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement;
@@ -198,6 +205,7 @@ describe('App', () => {
   it('saves to the library after analysis and shows it in My Leases', async () => {
     render(<App />);
     await uploadLease();
+    await gotoSettings();
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /open lease\.pdf/i })).toBeInTheDocument();
     });
@@ -228,11 +236,15 @@ describe('App', () => {
     const bytes = await makePdf([
       { blocks: [{ text: 'This lease shall auto-renew annually.', x: 72, y: 72 }] },
     ]);
+    // Wave 53-B-3 — return a fresh Response per fetch call. mockResolvedValue
+    // hands back the same Response object whose body can only be read once,
+    // and the App may issue background fetches before the sample-lease
+    // click that would otherwise drain it.
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(bytes as BlobPart, { status: 200 }));
+      .mockImplementation(async () => new Response(bytes as BlobPart, { status: 200 }));
     render(<App />);
-    await userEvent.click(screen.getByRole('button', { name: /try a sample lease/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /try a sample lease/i }));
     await waitFor(() => expect(screen.getAllByText(/auto-renewal/i).length).toBeGreaterThan(0));
     fetchMock.mockRestore();
   });
@@ -251,6 +263,7 @@ describe('App', () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Renamed.pdf');
     render(<App />);
     await uploadLease('Original.pdf');
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /rename original\.pdf/i }));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /open renamed\.pdf/i })).toBeInTheDocument();
@@ -261,6 +274,7 @@ describe('App', () => {
   it('deletes a library entry', async () => {
     render(<App />);
     await uploadLease('Gone.pdf');
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /delete gone\.pdf/i }));
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /open gone\.pdf/i })).not.toBeInTheDocument();
@@ -270,11 +284,13 @@ describe('App', () => {
   it('set-as-standard marks the badge and triggers auto-compare on next upload', async () => {
     render(<App />);
     await uploadLease('Standard.pdf');
+    await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /set standard\.pdf as standard/i }));
     await waitFor(async () => {
       expect(await getStandardId()).toBeTruthy();
     });
     await uploadLease('New.pdf');
+    await gotoSettings();
     await waitFor(() => {
       expect(screen.getByRole('region', { name: /compare/i })).toBeInTheDocument();
     });
@@ -350,6 +366,7 @@ describe('App', () => {
       (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement,
       await makeLeaseFile('Other.pdf'),
     );
+    await gotoSettings();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /open reopen\.pdf/i })).toBeInTheDocument(),
     );
@@ -475,6 +492,7 @@ describe('App', () => {
   it('severity-override flow: change a rule severity → reanalyze fires and findings re-render', async () => {
     render(<App />);
     await uploadLease();
+    await gotoSettings();
 
     // Auto-renewal is medium-severity by default. Bump to high via the
     // SeverityOverridesPanel.
@@ -483,6 +501,9 @@ describe('App', () => {
     // Rule severities use info / warn / error (the display layer maps
     // these to Info / Medium / High in FindingsPanel).
     await userEvent.selectOptions(select, 'error');
+
+    // FindingsPanel is on Current; switch back to verify the re-render.
+    await userEvent.click(screen.getByRole('tab', { name: /^current lease$/i }));
 
     // useReanalyzeOnRulesChange picks up the override change and re-runs
     // analyze. After it completes, the auto-renewal finding should be in
