@@ -60,6 +60,8 @@ describe('AppRedlinePane', () => {
         redline={makeRedline()}
         versionHistory={makeVersionHistory()}
         sideLetter={makeSideLetter()}
+        findings={[]}
+        suggestedTextByRuleId={{}}
         sectionForParagraph={() => undefined}
         safeAudit={vi.fn(() => Promise.resolve())}
       />,
@@ -79,6 +81,8 @@ describe('AppRedlinePane', () => {
         redline={makeRedline()}
         versionHistory={makeVersionHistory()}
         sideLetter={sideLetter}
+        findings={[]}
+        suggestedTextByRuleId={{}}
         sectionForParagraph={() => undefined}
         safeAudit={safeAudit}
       />,

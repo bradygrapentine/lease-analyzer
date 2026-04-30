@@ -417,6 +417,8 @@ function AppContent(): JSX.Element {
               redline={redline}
               versionHistory={versionHistory}
               sideLetter={sideLetter}
+              findings={status.result.findings}
+              suggestedTextByRuleId={suggestedTextByRuleId}
               sectionForParagraph={sectionForParagraph}
               safeAudit={safeAudit}
             />
