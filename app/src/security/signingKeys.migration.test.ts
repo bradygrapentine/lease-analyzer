@@ -16,8 +16,7 @@ const V1_STORE = 'keypair';
 const V1_KEY_ID = 'active';
 
 async function wipe(): Promise<void> {
-  _resetSigningDbForTests();
-  await Promise.resolve();
+  await _resetSigningDbForTests();
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase(SIGNING_DB_NAME);
     req.onsuccess = () => resolve();
@@ -70,7 +69,7 @@ describe('signingKeys: v1 -> v2 migration (Wave 8 Part D)', () => {
   it('preserves the existing keypair as a single key in the v2 layout, defaulted to id "k0"', async () => {
     const { publicKeyB64 } = await seedV1Record();
     // Force the module to re-open the db so its v2 upgrade path runs.
-    _resetSigningDbForTests();
+    await _resetSigningDbForTests();
 
     const all = await listKeys();
     expect(all).toHaveLength(1);

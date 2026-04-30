@@ -181,7 +181,7 @@ beforeEach(async () => {
   _resetPacksDbForTests();
   _resetAnnotationsDbForTests();
   _resetCountersDbForTests();
-  _resetSigningDbForTests();
+  await _resetSigningDbForTests();
   _resetAuditDbForTests();
   _resetBulkDedupDbForTests();
   _resetRedlineDbForTests();

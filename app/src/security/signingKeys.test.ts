@@ -12,9 +12,7 @@ import { WrongPassphraseError } from '../storage/archive';
 
 // Helper to wipe the signing DB between tests so we always start clean.
 async function wipeSigningDb(): Promise<void> {
-  _resetSigningDbForTests();
-  // Give the close() microtask a tick to land.
-  await Promise.resolve();
+  await _resetSigningDbForTests();
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase(SIGNING_DB_NAME);
     req.onsuccess = () => resolve();

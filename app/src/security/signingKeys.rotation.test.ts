@@ -19,8 +19,7 @@ import {
 import { at } from '../test/assert';
 
 async function wipeSigningDb(): Promise<void> {
-  _resetSigningDbForTests();
-  await Promise.resolve();
+  await _resetSigningDbForTests();
   await new Promise<void>((resolve, reject) => {
     const req = indexedDB.deleteDatabase(SIGNING_DB_NAME);
     req.onsuccess = () => resolve();
@@ -43,12 +42,7 @@ async function verifyB64(
     ['verify'],
   );
   const sigBytes = Uint8Array.from(atob(signature), (c) => c.charCodeAt(0));
-  return crypto.subtle.verify(
-    'Ed25519',
-    pubKey,
-    sigBytes as BufferSource,
-    payload as BufferSource,
-  );
+  return crypto.subtle.verify('Ed25519', pubKey, sigBytes as BufferSource, payload as BufferSource);
 }
 
 describe('signingKeys: key rotation (Wave 8 Part D)', () => {
@@ -113,8 +107,6 @@ describe('signingKeys: key rotation (Wave 8 Part D)', () => {
     const all = await listKeys();
     expect(all).toHaveLength(3);
     // The oldest key's public key is still present and still verifies.
-    expect(await verifyB64(sigFromK1.publicKey, sigFromK1.signature, payload)).toBe(
-      true,
-    );
+    expect(await verifyB64(sigFromK1.publicKey, sigFromK1.signature, payload)).toBe(true);
   });
 });
