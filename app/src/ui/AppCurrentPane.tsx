@@ -59,6 +59,10 @@ export function AppCurrentPane({
   // extractable text to render in that case, so showing the PDF first
   // is the only trustworthy representation until OCR runs.
   const [docMode, setDocMode] = useState<ReaderPdfMode>(ocr ? 'pdf' : 'reader');
+  // FindingDetailModal opens on finding select; Esc/close hides the modal
+  // but preserves `selected` so the annotation form + supporting context
+  // (which key off the selected finding) remain wired and reachable.
+  const [modalOpen, setModalOpen] = useState(false);
   return (
     <div className="results">
       <ResultsHeader
@@ -100,6 +104,7 @@ export function AppCurrentPane({
           onSelect={(f) => {
             setSelected(f);
             setSelectedPage(f.page);
+            setModalOpen(true);
           }}
           definitions={leaseFacts.definitions}
           glossary={glossaryEntries}
@@ -145,7 +150,7 @@ export function AppCurrentPane({
         )}
       </div>
       <FindingDetailModal
-        open={selected !== null}
+        open={modalOpen && selected !== null}
         doc={status.result.doc}
         finding={selected}
         allFindings={status.result.findings}
@@ -153,7 +158,7 @@ export function AppCurrentPane({
           setSelected(f);
           setSelectedPage(f.page);
         }}
-        onClose={() => setSelected(null)}
+        onClose={() => setModalOpen(false)}
         suggestedTextByRuleId={suggestedTextByRuleId}
         plainEnglishByRuleId={plainEnglishByRuleId}
         onApplySuggestion={(finding, paragraphIndex, suggestedText) => {
