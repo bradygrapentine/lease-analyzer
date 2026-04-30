@@ -134,7 +134,7 @@ export function PortfolioPanel({
               <th
                 scope="col"
                 data-sticky="true"
-                className="portfolio-sticky text-left py-1 pr-4 text-fg-muted font-sans"
+                className="portfolio-sticky text-left py-2 pr-4 text-mono uppercase tracking-[0.06em] text-fg-muted font-sans"
               >
                 Lease
               </th>
@@ -142,7 +142,7 @@ export function PortfolioPanel({
                 <th
                   key={c.ruleId}
                   scope="col"
-                  className="text-left py-1 pr-3 text-fg-muted font-mono text-mono"
+                  className="text-left py-2 pr-3 text-fg-muted font-mono text-mono whitespace-nowrap"
                 >
                   {c.ruleId}
                 </th>
@@ -168,11 +168,11 @@ export function PortfolioPanel({
                       type="button"
                       onClick={() => onOpenLease(lease.id)}
                       aria-label={`Open ${lease.name}`}
-                      className="text-body text-ink hover:underline text-left"
+                      className="font-serif text-[14.5px] text-fg hover:text-ink hover:underline underline-offset-2 text-left"
                     >
                       {lease.name}
                     </button>
-                    <small className="block text-small text-fg-muted">
+                    <small className="block mt-0.5 text-mono text-fg-faint">
                       {lease.pageCount} pages
                       {' · '}
                       {new Date(lease.createdAt).toLocaleDateString()}
