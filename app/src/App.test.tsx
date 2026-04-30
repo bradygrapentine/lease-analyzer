@@ -211,16 +211,17 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });
 
-  it('clicking a finding shows the selected finding article', async () => {
+  it('clicking a finding opens the finding-detail modal', async () => {
     render(<App />);
     await uploadLease();
-    // Multiple buttons now match (finding + "what this means" disclosure).
-    // Pick the main finding button via its `finding-btn` className.
+    // Wave 51-D — SelectedFindingCard replaced by FindingDetailModal.
     const findings = screen.getByRole('complementary', { name: /findings/i });
     await userEvent.click(
       within(findings).getAllByRole('button', { name: /waiver of jury trial/i })[0]!,
     );
-    expect(screen.getByRole('article', { name: /selected finding/i })).toBeInTheDocument();
+    // OnboardingTour also mounts a dialog in some test environments;
+    // assert via the heading that the finding modal opened.
+    expect(screen.getByRole('heading', { name: /jury trial/i })).toBeInTheDocument();
   });
 
   it('loads a sample lease via "Try a sample lease" button', async () => {

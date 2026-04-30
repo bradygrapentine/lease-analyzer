@@ -11,10 +11,10 @@ import { SupportingContext } from './AppCurrentPane/SupportingContext';
 import { extractLeaseFacts } from '../facts/extractFacts';
 import { needsOcr } from '../compare/needsOcr';
 import { exportFindingsAsHtml } from '../App/appHelpers';
-import { SelectedFindingCard } from './AppCurrentPane/SelectedFindingCard';
 import type { AppCurrentPaneProps } from './AppCurrentPane/types';
 import { FindingRail } from './FindingRail';
 import { ReaderPdfToggle, type ReaderPdfMode } from './ReaderPdfToggle';
+import { FindingDetailModal } from './FindingDetailModal';
 
 // Wave 51-C — MarginaliaReader is the new default reading surface but
 // includes glossary + paragraph rendering bulk; lazy-load to keep the app
@@ -144,7 +144,31 @@ export function AppCurrentPane({
           />
         )}
       </div>
-      {selected && <SelectedFindingCard finding={selected} />}
+      <FindingDetailModal
+        open={selected !== null}
+        doc={status.result.doc}
+        finding={selected}
+        allFindings={status.result.findings}
+        onSelect={(f) => {
+          setSelected(f);
+          setSelectedPage(f.page);
+        }}
+        onClose={() => setSelected(null)}
+        suggestedTextByRuleId={suggestedTextByRuleId}
+        plainEnglishByRuleId={plainEnglishByRuleId}
+        onApplySuggestion={(finding, paragraphIndex, suggestedText) => {
+          if (!status.leaseId) return;
+          void redline
+            .applySuggestion({ finding, paragraphIndex, suggestedText, doc: status.result.doc })
+            .then(() => setView('redline'));
+        }}
+        onAddToCounters={(finding) => {
+          const text = suggestedTextByRuleId?.[finding.ruleId] ?? '';
+          if (!text) return;
+          void counters.save(finding.ruleId, finding.title, text);
+        }}
+      />
+
       <SupportingContext
         status={status}
         selected={selected}

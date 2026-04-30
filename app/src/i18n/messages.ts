@@ -65,6 +65,21 @@ export const en = {
   'severity.low': 'Low',
   'severity.info': 'Info',
 
+  // Wave 51-D — finding detail modal
+  'finding.modal.clause': 'Clause from the lease',
+  'finding.modal.from': 'From the lease · ¶{paragraph}',
+  'finding.modal.page': 'page {page}',
+  'finding.modal.position': '{idx} of {total}',
+  'finding.modal.close': 'Close',
+  'finding.modal.suggested': 'If you push back, ask for —',
+  'finding.modal.apply': 'Apply to redline',
+  'finding.modal.applied': 'Applied to redline',
+  'finding.modal.counter': 'Save as counter-offer',
+  'finding.modal.prev': 'Prev finding',
+  'finding.modal.next': 'Next finding',
+  'finding.modal.nav': 'Finding navigation',
+  'finding.modal.disclaimer': 'Heuristic pattern match — not legal advice.',
+
   // Footer
   'footer.archive.export': 'Export encrypted archive',
   'footer.archive.import': 'Import encrypted archive',

@@ -195,7 +195,7 @@ describe('AppCurrentPane', () => {
     expect(screen.getByRole('tab', { name: /^pdf$/i })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('renders the selected-finding article when a finding is selected', () => {
+  it('opens the finding-detail modal when a finding is selected', () => {
     const finding = {
       ruleId: 'r1',
       severity: 'medium',
@@ -213,7 +213,7 @@ describe('AppCurrentPane', () => {
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     defaults({ selected: finding as any });
-    expect(screen.getByRole('article', { name: /selected finding/i })).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /picked finding/i })).toBeInTheDocument();
   });
 
@@ -234,9 +234,9 @@ describe('AppCurrentPane', () => {
 
   // Wave 45-BE — aria inventory test. After the IA split, the four
   // landmarks listed in the AppCurrentPane header comment must still
-  // be queryable from the coordinator: role="status" (ocr-banner),
-  // aria-live="polite" (ocr-progress), role="alert" (ocr-error),
-  // aria-label="selected finding" (Card as="article").
+  // be queryable from the coordinator. Wave 51-D promoted the
+  // selected-finding article into a `role="dialog"` modal — same
+  // landmark family, accessible-name preserved.
   it('preserves the four aria landmarks across the region split', () => {
     const status = makeStatus();
     status.result.doc = {
@@ -274,8 +274,9 @@ describe('AppCurrentPane', () => {
     // aria-live="polite" instead; we exercise error here so all three
     // can co-exist with the selected-finding card landmark).
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    // aria-label="selected finding" — Card rendered as <article>
-    expect(screen.getByRole('article', { name: /selected finding/i })).toBeInTheDocument();
+    // role="dialog" — FindingDetailModal (replaces the old `<article
+    // aria-label="selected finding">` landmark).
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('preserves the aria-live="polite" progress landmark in OCR running state', () => {
