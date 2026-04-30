@@ -376,8 +376,10 @@ describe('App', () => {
       screen.getByRole('button', { name: /export findings \(printable html\)/i }),
     );
 
+    // HTML export lazy-imports `storage/exportHtml`; userEvent doesn't
+    // await that dynamic import, so wait for the download to land.
+    await waitFor(() => expect(aClicks).toContain('Report-findings.html'));
     expect(aClicks).toContain('Report-findings.json');
-    expect(aClicks).toContain('Report-findings.html');
     createSpy.mockRestore();
   });
 
