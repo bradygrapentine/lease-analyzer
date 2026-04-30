@@ -264,6 +264,30 @@ main:has(.results) > [id='viewmode-panel-current'] {
   height: 100%;
 }
 
+/* Wave 53-D — word-level redline diff. The strike + add tokens render
+   inline inside the paragraph; tinting comes from severity high (for
+   removed text) and a subtle positive ink (for added text). The
+   foreground stays --color-fg-body so the surrounding paragraph reads
+   normally. */
+.diff-strike {
+  background-color: color-mix(in oklab, var(--color-severity-high) 12%, transparent);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--color-severity-high) 70%, transparent);
+  color: var(--color-fg-body);
+  padding: 0 2px;
+  border-radius: 1px;
+}
+.diff-add {
+  background-color: color-mix(in oklab, var(--color-ink) 8%, transparent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-ink) 70%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  color: var(--color-fg);
+  padding: 0 2px;
+  border-radius: 1px;
+}
+
 /* Legacy PDF-viewer cascade — every selector from the pre-Wave-27
    index.css that targets `.pdf-*` gets prefixed with
    `.pdf-viewer-legacy ` so it can't bleed into Tailwind utilities.

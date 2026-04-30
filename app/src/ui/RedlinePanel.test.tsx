@@ -60,7 +60,7 @@ describe('RedlinePanel', () => {
   });
 
   it('renders the edited text and an "(edited)" badge when an edit exists', () => {
-    render(
+    const { container } = render(
       <RedlinePanel
         doc={docOf('alpha', 'beta')}
         edits={[mkEdit({ paragraphIndex: 1, before: 'beta', after: 'BETA!' })]}
@@ -69,8 +69,15 @@ describe('RedlinePanel', () => {
         onExportHtml={noop}
       />,
     );
-    expect(screen.getByText('BETA!')).toBeInTheDocument();
-    expect(screen.queryByText('beta')).not.toBeInTheDocument();
+    // Wave 53-D — RedlinePanel now renders a word-level diff: the original
+    // text appears inside a `.diff-strike` span and the new text inside a
+    // `.diff-add` span. Both must be present so the diff is legible.
+    const strike = container.querySelector('.diff-strike');
+    const add = container.querySelector('.diff-add');
+    expect(strike).not.toBeNull();
+    expect(strike?.textContent).toMatch(/beta/);
+    expect(add).not.toBeNull();
+    expect(add?.textContent).toMatch(/BETA!/);
     expect(screen.getByLabelText(/paragraph 2 edited badge/i)).toBeInTheDocument();
   });
 
@@ -168,9 +175,7 @@ describe('RedlinePanel', () => {
         onExportHtml={noop}
       />,
     );
-    expect(
-      screen.queryByRole('button', { name: /revert paragraph/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /revert paragraph/i })).not.toBeInTheDocument();
   });
 
   it('Export button fires onExportHtml', async () => {
@@ -184,9 +189,7 @@ describe('RedlinePanel', () => {
         onExportHtml={onExportHtml}
       />,
     );
-    await userEvent.click(
-      screen.getByRole('button', { name: /export redlined html/i }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /export redlined html/i }));
     expect(onExportHtml).toHaveBeenCalledTimes(1);
   });
 
