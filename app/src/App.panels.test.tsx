@@ -215,7 +215,8 @@ async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {
 
 async function uploadLease(name = 'lease.pdf'): Promise<void> {
   const file = await makeLeaseFile(name);
-  const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
+  // UploadView is lazy-loaded; wait for its chunk before grabbing the input.
+  const input = (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement;
   await userEvent.upload(input, file);
   // Wait until the findings <aside> mounts — rule titles also surface in the
   // SeverityOverridesPanel even before analysis finishes, so we scope to the
