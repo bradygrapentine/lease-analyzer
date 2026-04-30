@@ -91,14 +91,12 @@ export function MarginaliaReader({
       role="region"
       aria-label={t('reader.region.label')}
     >
-      <div className="mx-auto grid max-w-[920px] grid-cols-[1fr_200px] gap-x-8 px-6 pb-32 pt-8">
-        <div className="col-span-2">
-          <div className="text-mono uppercase tracking-wider text-fg-faint">
+      <div className="mx-auto grid max-w-[1080px] grid-cols-[1fr_220px] gap-x-10 px-6 pb-32 pt-10">
+        <div className="col-span-2 mb-8 border-b border-rule pb-4">
+          <h1 className="font-serif text-[26px] font-semibold leading-tight text-fg">{fileName}</h1>
+          <p className="mt-1.5 text-mono uppercase tracking-[0.08em] text-fg-faint">
             {t('reader.header.document', { count: String(doc.pages.length) })}
-          </div>
-          <div className="mt-1.5 mb-6 flex items-baseline justify-between border-b border-rule pb-3">
-            <div className="font-serif text-sm italic text-fg-muted">{fileName}</div>
-          </div>
+          </p>
         </div>
 
         {doc.paragraphs.map((p, idx) => {
@@ -112,11 +110,11 @@ export function MarginaliaReader({
                 >
                   {String(idx + 1).padStart(2, '0')}
                 </div>
-                <p className="font-serif text-base leading-relaxed text-fg-body mb-3">
+                <p className="font-serif text-base leading-[1.7] text-fg-body mb-5">
                   {renderParagraph(p.text, paraFindings, selectedKey, onSelectFinding)}
                 </p>
               </div>
-              <div>
+              <div className="border-l border-rule-subtle pl-3">
                 {paraFindings.map((f) => {
                   const key = findingKey(f);
                   const active = key === selectedKey;
@@ -125,16 +123,15 @@ export function MarginaliaReader({
                       key={key}
                       type="button"
                       onClick={() => onSelectFinding(f)}
-                      className="mb-1.5 block w-full border-l border-l-[1px] px-2.5 py-2 text-left transition-colors"
+                      className={`mb-2 block w-full rounded-sm px-2.5 py-2 text-left transition-colors ${active ? 'ring-1 ring-ink/40' : ''}`}
                       style={{
-                        borderLeftColor: SEVERITY_VAR[f.severity],
                         background: active
-                          ? `color-mix(in oklab, ${SEVERITY_VAR[f.severity]} 14%, var(--color-paper))`
-                          : 'transparent',
+                          ? `color-mix(in oklab, ${SEVERITY_VAR[f.severity]} 16%, var(--color-paper-raised))`
+                          : `color-mix(in oklab, ${SEVERITY_VAR[f.severity]} 6%, transparent)`,
                       }}
                     >
                       <div
-                        className="mb-1 flex items-center gap-1.5 text-mono text-[10.5px] uppercase tracking-wider"
+                        className="mb-1 flex items-center gap-1.5 text-mono text-[11px] uppercase tracking-[0.06em]"
                         style={{ color: SEVERITY_VAR[f.severity] }}
                       >
                         <span>{t(`severity.${f.severity}` as 'severity.high')}</span>
@@ -220,8 +217,11 @@ function renderParagraph(
         className="cursor-pointer rounded-sm px-0.5"
         style={{
           background: active
-            ? `color-mix(in oklab, ${SEVERITY_VAR[r.finding.severity]} 38%, transparent)`
+            ? `color-mix(in oklab, ${SEVERITY_VAR[r.finding.severity]} 48%, transparent)`
             : `color-mix(in oklab, ${SEVERITY_VAR[r.finding.severity]} 22%, transparent)`,
+          boxShadow: active
+            ? `inset 0 -1px 0 0 color-mix(in oklab, ${SEVERITY_VAR[r.finding.severity]} 70%, transparent)`
+            : undefined,
           color: 'inherit',
         }}
       >
