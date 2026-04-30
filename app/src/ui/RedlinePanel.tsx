@@ -11,7 +11,7 @@
 //
 import { useEffect, useRef, useState } from 'react';
 import type { LeaseDocument } from '../parser/types';
-import type { RedlineEdit } from '../redline/redline';
+import { computeParagraphDiff, type RedlineEdit } from '../redline/redline';
 import { CounterSignPanel } from './CounterSignPanel';
 import { Section } from './system/Section';
 import { Button } from './system/Button';
@@ -166,9 +166,25 @@ export function RedlinePanel({
               ) : (
                 <>
                   <p
-                    className={`font-serif text-[14.5px] leading-[1.65] ${edit ? 'text-fg-muted line-through decoration-severity-high/60' : 'text-fg-body'}`}
+                    className="font-serif text-[14.5px] leading-[1.65] text-fg-body"
+                    aria-label={edit ? `paragraph ${i + 1} redlined diff` : undefined}
                   >
-                    {displayText}
+                    {edit
+                      ? computeParagraphDiff(edit.before, edit.after).map((chunk, k) => {
+                          if (chunk.kind === 'unchanged') return <span key={k}>{chunk.text}</span>;
+                          if (chunk.kind === 'removed')
+                            return (
+                              <span key={k} className="diff-strike">
+                                {chunk.text}
+                              </span>
+                            );
+                          return (
+                            <span key={k} className="diff-add">
+                              {chunk.text}
+                            </span>
+                          );
+                        })
+                      : displayText}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
                     {edit ? (
