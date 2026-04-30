@@ -346,6 +346,11 @@ description-below pattern.
   `paper-raised`.
 - **Pairing:** every severity badge carries an icon (16px inline SVG)
   and a one-word label ("High", "Medium", "Low", "Info").
+- **Glyph family (Wave 53-C).** Each severity uses a different SHAPE
+  so the badge is legible without color: High → triangle warn,
+  Medium → diamond + center dot, Low → circle outline, Info → square.
+  Stroke is `currentColor`; icons stay `aria-hidden` since the visible
+  label carries the meaning.
 - **Anti-pattern:** plain Terracotta-on-Cream text without a background
   tint reads as decoration. Always use the badge / row-highlight token
   pair.
@@ -353,10 +358,17 @@ description-below pattern.
 ### Navigation
 
 - **Style:** the app uses panel-tabs and an in-page side rail rather
-  than a global navbar. Tabs are Ghost buttons with the pressed-toggle
-  state above; the side rail is Subtle buttons stacked.
-- **Active:** Court Slate inset ring + heavier label weight (system
-  sans 600).
+  than a global navbar. The view-mode tabs (Current lease / Portfolio /
+  Redline / Audit / Settings) live inside a segmented-tab control in
+  the 52px `AppHeader` strip — `rounded-sm border bg-paper-sunken
+  p-0.5` shell wrapping `role="tablist"` with one `role="tab"` button
+  per view. Side-rail navigation is Subtle buttons stacked.
+- **Active:** segmented tabs flip to `bg-paper-raised` + 1px rule + Ink
+  text + 600 weight. Inactive tabs use a transparent border so the
+  size doesn't shift on selection.
+- **Aria:** `aria-selected` + `aria-controls` on each tab; `aria-pressed`
+  is intentionally absent (axe `aria-allowed-attr` forbids it on
+  `role="tab"`).
 - **Mobile:** the rail collapses to a single-row tab strip; tap
   targets stay at 44px.
 
@@ -384,6 +396,58 @@ share the selected-finding state.
   `FindingsPanel`'s `.finding-btn` snippet), the trigger downgrades
   to a non-focusable `<span>` to avoid `nested-interactive`.
 
+### Redline Diff
+
+Word-level inline diff for paragraphs that carry a `RedlineEdit`.
+Replaces the prior "strike whole paragraph + show new text below"
+treatment.
+
+- **`.diff-strike`:** removed tokens. Tinted background = severity-high
+  at 12% in oklab, line-through with 70%-alpha severity-high stroke,
+  foreground stays `--color-fg-body`.
+- **`.diff-add`:** added tokens. Tinted background = ink at 8% in
+  oklab, underline with 70%-alpha ink stroke (1px, 3px offset),
+  foreground = `--color-fg`.
+- **Generation:** reuse `computeParagraphDiff(before, after)` in
+  `app/src/redline/redline.ts` (LCS over whitespace-aware tokens).
+  Render `unchanged` chunks as plain spans, `removed` as
+  `.diff-strike`, `added` as `.diff-add`.
+- **Aria:** the paragraph carries `aria-label="paragraph N redlined
+  diff"` so screen readers announce the inline diff context.
+
+### Viewport-Fill Current Layout
+
+When the analyzed-Current pane is mounted, `<main>` drops its 72rem
+centering and padding and becomes a flex column at 100dvh.
+
+- **Selector:** `main:has(.results)` — the override only applies in
+  the analyzed-Current state, so Settings / Audit / Portfolio / Redline
+  keep their centered layout.
+- **`.results`:** `flex: 1; display: flex; flex-direction: column;
+  min-height: 0; padding: 1rem 1rem 0`. The 3-column rail | document |
+  findings split absorbs remaining vertical space.
+- **Findings aside:** drops sticky positioning + viewport-based
+  max-height inside `.results`; `height: 100%` lets it scroll
+  internally.
+
+### Audit Chain Ribbon
+
+The integrity signal lives at the TOP of the audit view, not in a
+footer.
+
+- **Ribbon row:** `N entries · chain head <hash> · <verify-status
+  pill>`, all in mono on `bg-paper-sunken` inside a 1px rule. The
+  chain head fingerprint is the short hash (`abcd1234…wxyz5678`).
+  When a verification result exists, the status pill inlines into the
+  ribbon (positive = ink-on-tint, broken = severity-high).
+- **Footer:** reduced to a single explanatory line ("tamper-evident
+  hash chain — entries verify against the previous entry's hash").
+- **Row layout:** seq + timestamp = mono fg-muted (machine values),
+  kind = plain fg-body (verb), payload subject (`fileName` / `ruleId`
+  / `packId` / `leaseId` / `name`) = serif italic fg-body (the
+  object). Falls through to the JSON-summary mono code block when no
+  subject field is present.
+
 ### PDF Highlight Layer
 
 - **Fill:** `rgba(255, 235, 59, 0.35)` (light mode) / `rgba(255, 235,
@@ -396,8 +460,10 @@ share the selected-finding state.
 
 The accordion shell. `Section` is a labelled region with an optional
 `collapsible` toggle; `SectionGroup` is the persistent disclosure
-container used by the right rail and the in-page accordion shells
-(THIS LEASE / LIBRARY / GOVERNANCE).
+container used by the right rail and by the THIS LEASE / LIBRARY /
+GOVERNANCE accordions inside the **Settings tab**. (Wave 53-B-3a
+moved those accordions off the Current view; they no longer appear
+below the analyzed-lease pane.)
 
 - **Header style:** uppercase 12.5px system-sans (Walnut Muted), with
   an optional count badge after the title.

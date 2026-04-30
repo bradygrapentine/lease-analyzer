@@ -206,21 +206,24 @@ panes that didn't exist as top-level views before Part B.**
 
 ## §8 Plan body — Part F (Closeout)
 
-- [ ] All five PRs merged.
-- [ ] Lighthouse a11y still ≥ 0.95.
-- [ ] axe story sweep still 0 serious / critical.
-- [ ] DESIGN.md §5 grows entries for `SeverityIcon`, `AppAuditPane`,
-      `PortfolioCard`, and the Redline diff visual vocabulary
-      (`.diff-strike` / `.diff-add`). Update the Marginalia Reader
-      entry to match the new viewport-filling layout.
-- [ ] BACKLOG: promote the four deferred items resolved in this
-      wave (font decode, native file-chooser leak, audit panel
-      restyle, side-stripe regression check). The CSP frame-ancestors
-      meta-tag warning stays open (it's a server-header fix, not a
-      UI fix).
-- [ ] Memory entry `feedback_handoff_fidelity_complete.md` capturing
-      "Wave 53 closed the handoff gap; future polish should match
-      the handoff vocabulary, not invent net-new components."
+- [x] All PRs merged: #204 (A), #205 (B-1), #206 (B-2), #207 (B-3a),
+      #208 (B-3b), #209 (C), #210 (D), #211 (CI flake fix), #212 (E),
+      #213 (D audit ribbon), #214 (D redline bulk).
+- [x] Lighthouse a11y still ≥ 0.95 (last green run on each PR).
+- [x] axe story sweep still 0 serious / critical (158 stories swept
+      via `src/ui/__tests__/all-stories.a11y.test.tsx`, green).
+- [x] DESIGN.md §5 grows entries for severity glyph family
+      (`Badge.tsx :: SeverityIcon`), Redline Diff (`.diff-strike` /
+      `.diff-add`), Viewport-Fill Current Layout
+      (`main:has(.results)`), and the Audit Chain Ribbon. Navigation
+      and Sections & Section Groups entries updated for the
+      segmented-tab control and Settings-gated accordions.
+- [x] BACKLOG: `source-serif-4-400.woff2` decode promoted to shipped
+      (Wave 53-A). Native file-chooser leak, Wave 48 Slice 2 audit
+      vocabulary, and CSP frame-ancestors stay open — not in this
+      wave's scope.
+- [x] Memory entry `feedback_handoff_fidelity_complete.md` saved;
+      MEMORY.md index updated.
 
 ## §9 Risks
 
