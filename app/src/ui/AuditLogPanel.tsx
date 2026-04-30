@@ -26,17 +26,11 @@ export function AuditLogPanel({
 }: AuditLogPanelProps): JSX.Element {
   return (
     <Section label="audit log" className="space-y-3 px-4 py-4">
-      <h2 className="text-heading uppercase text-fg-muted">Audit log</h2>
+      <h2 className="text-heading uppercase text-fg-muted">Activity</h2>
       <p className="text-body text-fg-body">
-        Append-only, hash-chained record of significant in-app actions. Entries live in a separate
-        local database. Note: signed-export events are not currently written to this log; only
-        unsigned exports are.
-      </p>
-      <p className="text-small text-fg-muted">
-        Each entry references the hash of the entry before it. Verifying the chain re-computes those
-        hashes and confirms the log is internally consistent. This catches a stray edit that
-        doesn&rsquo;t update downstream entries; it is a local consistency check, not a
-        cryptographic proof against an attacker with full access to your browser&rsquo;s storage.
+        A running log of what LeaseGuard has done with your lease — every analysis, export, and rule
+        change. Stored on this device only. You can download it and check that nothing has been
+        altered after the fact.
       </p>
 
       {/* Wave 53-D — chain ribbon. Entries count + chain head fingerprint
@@ -48,10 +42,10 @@ export function AuditLogPanel({
           className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-sm border border-rule bg-paper-sunken px-3 py-2 font-mono text-mono text-fg-muted"
         >
           <span>
-            {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
+            {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
           </span>
           <span>
-            chain head{' '}
+            fingerprint{' '}
             <span className="text-fg-body">
               {shortHash(entries[entries.length - 1]?.entryHash)}
             </span>
@@ -64,8 +58,8 @@ export function AuditLogPanel({
               className={`rounded-sm px-1.5 py-0.5 border ${verification.ok ? 'bg-positive/10 text-positive border-positive/30' : 'bg-severity-high/10 text-severity-high border-severity-high/30'}`}
             >
               {verification.ok
-                ? `Chain intact (${entries.length} entries).`
-                : `Chain broken at seq ${verification.firstBadSeq ?? '?'}. An entry was altered or removed, so the local consistency check no longer holds for the affected range. (Signed exports verify independently of the audit log.)`}
+                ? `Log intact (${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}).`
+                : `An entry was altered after the fact (entry #${verification.firstBadSeq ?? '?'}). The activity log can no longer confirm the order of events from there onward.`}
             </span>
           )}
         </div>
@@ -76,10 +70,10 @@ export function AuditLogPanel({
           Refresh
         </Button>
         <Button type="button" variant="subtle" size="sm" onClick={onVerify}>
-          Verify chain
+          Check the log
         </Button>
         <Button type="button" variant="subtle" size="sm" onClick={onDownload}>
-          Download audit log
+          Download
         </Button>
       </div>
 
@@ -93,13 +87,13 @@ export function AuditLogPanel({
           data-testid="audit-verification"
           className={`text-small rounded-sm px-2 py-1 border ${verification.ok ? 'bg-positive/10 text-positive border-positive/30' : 'bg-severity-high/10 text-severity-high border-severity-high/30'}`}
         >
-          {verification.ok ? 'Chain intact (0 entries).' : 'Chain broken.'}
+          {verification.ok ? 'Log intact (0 entries).' : 'An entry was altered after the fact.'}
         </p>
       )}
 
       {entries.length === 0 ? (
         <p className="text-body text-fg-muted">
-          <em>No audit entries yet.</em>
+          <em>Nothing here yet — analyze a lease to start the log.</em>
         </p>
       ) : (
         <>
@@ -114,13 +108,13 @@ export function AuditLogPanel({
                     #
                   </th>
                   <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
-                    Time
+                    When
                   </th>
                   <th scope="col" className="text-left py-1 pr-3 text-fg-muted font-sans">
-                    Kind
+                    What
                   </th>
                   <th scope="col" className="text-left py-1 text-fg-muted font-sans">
-                    Payload
+                    Subject
                   </th>
                 </tr>
               </thead>
@@ -153,7 +147,8 @@ export function AuditLogPanel({
             aria-label="audit chain footer"
             className="pt-3 border-t border-rule font-mono text-mono text-fg-muted m-0"
           >
-            ● Tamper-evident hash chain — entries verify against the previous entry&rsquo;s hash.
+            ● The log links each entry to the one before it, so any after-the-fact edit shows up
+            when you check it.
           </p>
         </>
       )}

@@ -99,8 +99,8 @@ describe('Accordion axe-core sweep (Wave 28 Part F / Wave 30 Part B)', () => {
     const { container } = renderPane();
     // Wave 30 B: open the three groups (default-closed) before sweeping.
     await userEvent.click(screen.getByRole('button', { name: /this lease/i }));
-    await userEvent.click(screen.getByRole('button', { name: /^library$/i }));
-    await userEvent.click(screen.getByRole('button', { name: /governance/i }));
+    await userEvent.click(screen.getByRole('button', { name: /saved leases/i }));
+    await userEvent.click(screen.getByRole('button', { name: /advanced rule/i }));
     expect(screen.getByRole('button', { name: /this lease/i })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -114,11 +114,11 @@ describe('Accordion axe-core sweep (Wave 28 Part F / Wave 30 Part B)', () => {
       'aria-expanded',
       'false',
     );
-    expect(screen.getByRole('button', { name: /^library$/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /saved leases/i })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
-    expect(screen.getByRole('button', { name: /governance/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /advanced rule/i })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
@@ -129,8 +129,8 @@ describe('Accordion axe-core sweep (Wave 28 Part F / Wave 30 Part B)', () => {
     renderPane();
     const headers = [
       screen.getByRole('button', { name: /this lease/i }),
-      screen.getByRole('button', { name: /^library$/i }),
-      screen.getByRole('button', { name: /governance/i }),
+      screen.getByRole('button', { name: /saved leases/i }),
+      screen.getByRole('button', { name: /advanced rule/i }),
     ];
     for (const h of headers) {
       expect(h).toHaveAttribute('aria-expanded');

@@ -97,8 +97,8 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
   it('renders three SectionGroup disclosures with stable ids', () => {
     renderPane();
     expect(screen.getByRole('button', { name: /this lease/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^library$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /governance/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /saved leases/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /advanced rule/i })).toBeInTheDocument();
   });
 
   it('all three groups are closed by default on a fresh install (Wave 30 Part B)', () => {
@@ -107,11 +107,11 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
       'aria-expanded',
       'false',
     );
-    expect(screen.getByRole('button', { name: /^library$/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /saved leases/i })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
-    expect(screen.getByRole('button', { name: /governance/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /advanced rule/i })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
@@ -120,8 +120,8 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
   it('library group expands on header click — children enter the DOM', async () => {
     renderPane();
     expect(screen.queryByRole('heading', { name: /my leases/i })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: /^library$/i }));
-    expect(screen.getByRole('button', { name: /^library$/i })).toHaveAttribute(
+    await userEvent.click(screen.getByRole('button', { name: /saved leases/i }));
+    expect(screen.getByRole('button', { name: /saved leases/i })).toHaveAttribute(
       'aria-expanded',
       'true',
     );
@@ -135,8 +135,8 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
   it('governance group expands on header click', async () => {
     renderPane();
     expect(screen.queryByRole('region', { name: /severity overrides/i })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: /governance/i }));
-    expect(screen.getByRole('button', { name: /governance/i })).toHaveAttribute(
+    await userEvent.click(screen.getByRole('button', { name: /advanced rule/i }));
+    expect(screen.getByRole('button', { name: /advanced rule/i })).toHaveAttribute(
       'aria-expanded',
       'true',
     );
@@ -145,7 +145,7 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
 
   it('toggling a group is reversible and persists to localStorage', async () => {
     renderPane();
-    const lib = screen.getByRole('button', { name: /^library$/i });
+    const lib = screen.getByRole('button', { name: /saved leases/i });
     expect(lib).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(lib);
     expect(lib).toHaveAttribute('aria-expanded', 'true');
@@ -160,7 +160,7 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
   it('honors a stored preference of "1" by mounting the group expanded', () => {
     window.localStorage.setItem('lg.accordion.bottom-pane-library.open', '1');
     renderPane();
-    expect(screen.getByRole('button', { name: /^library$/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /saved leases/i })).toHaveAttribute(
       'aria-expanded',
       'true',
     );
@@ -178,7 +178,7 @@ describe('AppLibraryAndPacksPane accordion grouping (Wave 28 Part C / Wave 30 Pa
     });
     // The SectionGroup renders count via [data-section-count]; the label
     // for the library group reads "Library 2".
-    const libBtn = screen.getByRole('button', { name: /^library 2$/i });
+    const libBtn = screen.getByRole('button', { name: /saved leases.*2/i });
     expect(libBtn).toBeInTheDocument();
   });
 });

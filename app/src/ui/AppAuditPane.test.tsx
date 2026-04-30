@@ -41,7 +41,7 @@ describe('AppAuditPane', () => {
         onDownload={vi.fn()}
       />,
     );
-    expect(await screen.findByText(/no audit entries yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/nothing here yet/i)).toBeInTheDocument();
   });
 
   it('passes the current entries + verification through to onDownload', async () => {
@@ -57,7 +57,7 @@ describe('AppAuditPane', () => {
         onDownload={onDownload}
       />,
     );
-    const downloadBtn = await screen.findByRole('button', { name: /download audit log/i });
+    const downloadBtn = await screen.findByRole('button', { name: /^download$/i });
     downloadBtn.click();
     expect(onDownload).toHaveBeenCalledWith(entries, verification);
   });

@@ -34,19 +34,19 @@ export const SECTION_GROUPS: readonly SectionGroupConfig[] = [
   {
     id: 'bottom-pane-this-lease',
     key: 'this-lease',
-    title: 'This Lease',
+    title: 'This lease',
     defaultOpen: false,
   },
   {
     id: 'bottom-pane-library',
     key: 'library',
-    title: 'Library',
+    title: 'Saved leases & rules',
     defaultOpen: false,
   },
   {
     id: 'bottom-pane-governance',
     key: 'governance',
-    title: 'Governance',
+    title: 'Advanced rule settings',
     defaultOpen: false,
   },
 ];

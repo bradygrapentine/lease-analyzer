@@ -27,7 +27,7 @@ describe('AuditLogPanel', () => {
         onVerify={() => {}}
       />,
     );
-    expect(screen.getByText(/no audit entries yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing here yet/i)).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -58,9 +58,7 @@ describe('AuditLogPanel', () => {
         onVerify={() => {}}
       />,
     );
-    expect(screen.getByTestId('audit-verification')).toHaveTextContent(
-      /chain intact/i,
-    );
+    expect(screen.getByTestId('audit-verification')).toHaveTextContent(/log intact/i);
   });
 
   it('shows break status with firstBadSeq when ok=false', () => {
@@ -74,7 +72,7 @@ describe('AuditLogPanel', () => {
       />,
     );
     expect(screen.getByTestId('audit-verification')).toHaveTextContent(
-      /chain broken at seq 2/i,
+      /entry was altered after the fact \(entry #2\)/i,
     );
   });
 
@@ -93,10 +91,8 @@ describe('AuditLogPanel', () => {
       />,
     );
     await user.click(screen.getByRole('button', { name: /refresh/i }));
-    await user.click(screen.getByRole('button', { name: /verify chain/i }));
-    await user.click(
-      screen.getByRole('button', { name: /download audit log/i }),
-    );
+    await user.click(screen.getByRole('button', { name: /check the log/i }));
+    await user.click(screen.getByRole('button', { name: /^download$/i }));
     expect(onRefresh).toHaveBeenCalledTimes(1);
     expect(onVerify).toHaveBeenCalledTimes(1);
     expect(onDownload).toHaveBeenCalledTimes(1);

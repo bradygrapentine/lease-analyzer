@@ -55,17 +55,17 @@ export function AppRedlinePane({
       >
         <div className="min-w-0">
           <p className="text-mono uppercase tracking-[0.08em] text-fg-faint mb-2">
-            Redline · counter-proposal
+            What you’d ask for
           </p>
           <h2 className="font-serif text-[24px] font-semibold leading-tight text-fg m-0">
             {editCount === 0
               ? 'No edits yet'
-              : `${editCount} paragraph${editCount === 1 ? '' : 's'} edited`}
+              : `${editCount} paragraph${editCount === 1 ? '' : 's'} you’d change`}
           </h2>
           <p className="font-serif italic text-fg-muted mt-1.5 max-w-[60ch]">
             {editCount === 0
-              ? 'Start by editing any paragraph below — your changes will export as a redline document.'
-              : 'Original on the left, what you’d ask for on the right. Export as HTML or paste into your reply.'}
+              ? 'Edit any paragraph to draft what you’d ask the landlord to change. You can hand the result to them as a marked-up file.'
+              : 'The strike-throughs are what’s in the lease today; the underlined text is what you’d ask for. Download it or paste it into your reply.'}
           </p>
         </div>
         <div
