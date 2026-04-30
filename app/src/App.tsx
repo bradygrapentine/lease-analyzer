@@ -67,6 +67,8 @@ import { AppHeader } from './ui/AppHeader';
 import { AppCurrentPane } from './ui/AppCurrentPane';
 import { AppLibraryAndPacksPane } from './ui/AppLibraryAndPacksPane';
 import { AppSettingsPane } from './ui/AppSettingsPane';
+import { UploadView } from './ui/UploadView';
+import { LoadingView } from './ui/LoadingView';
 import { useAppCallbacks } from './App/useAppCallbacks';
 import { StandardSuitePanel } from './ui/StandardSuitePanel';
 import {
@@ -337,11 +339,12 @@ function AppContent(): JSX.Element {
       <AppHeader
         view={view}
         showRedlineToggle={status.kind === 'analyzed'}
-        onUpload={async (file) => {
-          await handleBytes(await readFileBytes(file), file.name);
-        }}
-        onTrySample={() => void onTrySample()}
         onViewChange={(next) => setView(next)}
+        fileName={status.kind === 'analyzed' ? status.fileName : null}
+        onNewLease={() => {
+          setSelected(null);
+          pipeline.reset();
+        }}
       />
 
       <div
@@ -401,10 +404,16 @@ function AppContent(): JSX.Element {
         aria-labelledby="viewmode-tab-current"
         hidden={view !== 'current'}
       >
+        {view === 'current' && status.kind === 'idle' && (
+          <UploadView
+            onUpload={async (file) => {
+              await handleBytes(await readFileBytes(file), file.name);
+            }}
+            onTrySample={() => void onTrySample()}
+          />
+        )}
         {view === 'current' && status.kind === 'loading' && (
-          <p role="status" aria-live="polite">
-            Analyzing {status.fileName}…
-          </p>
+          <LoadingView fileName={status.fileName} />
         )}
         {view === 'current' && status.kind === 'error' && (
           <p role="alert">Could not analyze this file: {status.message}</p>

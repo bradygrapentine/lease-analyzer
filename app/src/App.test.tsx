@@ -158,6 +158,11 @@ async function makeLeaseFile(name = 'lease.pdf'): Promise<File> {
 }
 
 async function uploadLease(name = 'lease.pdf'): Promise<void> {
+  // Wave 51-B — UploadView only renders when status === 'idle'. If a
+  // lease is already loaded, click the header's "New lease" reset to
+  // return to the upload landing before grabbing the input.
+  const reset = screen.queryByRole('button', { name: /new lease/i });
+  if (reset) await userEvent.click(reset);
   const file = await makeLeaseFile(name);
   const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
   await userEvent.upload(input, file);
@@ -335,6 +340,9 @@ describe('App', () => {
   it('opens a library entry and re-shows its findings', async () => {
     render(<App />);
     await uploadLease('Reopen.pdf');
+    // Wave 51-B — UploadView only mounts in idle state; click "New lease"
+    // before grabbing a fresh upload input for the second lease.
+    await userEvent.click(screen.getByRole('button', { name: /new lease/i }));
     await userEvent.upload(
       screen.getByLabelText(/upload lease/i) as HTMLInputElement,
       await makeLeaseFile('Other.pdf'),

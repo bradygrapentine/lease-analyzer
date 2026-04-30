@@ -17,13 +17,7 @@ function renderShell(
 ) {
   return render(
     <I18nProvider>
-      <AppHeader
-        view={view}
-        showRedlineToggle={showRedlineToggle}
-        onUpload={() => {}}
-        onTrySample={() => {}}
-        onViewChange={() => {}}
-      />
+      <AppHeader view={view} showRedlineToggle={showRedlineToggle} onViewChange={() => {}} />
       {/* Matching tabpanels with the same ids the tabs reference, so
           aria-controls resolves and axe doesn't flag a dangling ref. */}
       {view === 'current' && (

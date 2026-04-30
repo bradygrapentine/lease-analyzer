@@ -8,8 +8,6 @@ function renderHeader(props: Partial<React.ComponentProps<typeof AppHeader>> = {
   const defaults: React.ComponentProps<typeof AppHeader> = {
     view: 'current',
     showRedlineToggle: false,
-    onUpload: vi.fn(),
-    onTrySample: vi.fn(),
     onViewChange: vi.fn(),
   };
   return render(
@@ -20,17 +18,40 @@ function renderHeader(props: Partial<React.ComponentProps<typeof AppHeader>> = {
 }
 
 describe('AppHeader', () => {
-  it('renders title, upload control, sample-lease button, and view-mode tablist', () => {
+  it('renders title and the view-mode tablist', () => {
     renderHeader();
     expect(screen.getByRole('heading', { name: /leaseguard/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/upload lease/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /try a sample lease/i })).toBeInTheDocument();
     // Wave 29-E — view-mode shell is now a tablist.
     expect(screen.getByRole('tablist', { name: /view mode/i })).toBeInTheDocument();
     // Wave 51-A — Settings tab joins Current + Portfolio (Redline gates on showRedlineToggle).
     expect(screen.getByRole('tab', { name: /current lease/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /portfolio/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /settings/i })).toBeInTheDocument();
+  });
+
+  it('does not render upload / sample controls (Wave 51-B moved them to UploadView)', () => {
+    renderHeader();
+    expect(screen.queryByLabelText(/upload lease/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /try a sample lease/i })).toBeNull();
+  });
+
+  it('renders the offline-on-device indicator', () => {
+    renderHeader();
+    expect(screen.getByRole('status', { name: /offline.*on-device/i })).toBeInTheDocument();
+  });
+
+  it('hides filename + new-lease controls until a lease is loaded', () => {
+    renderHeader({ fileName: null });
+    expect(screen.queryByLabelText(/lease file name/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /new lease/i })).toBeNull();
+  });
+
+  it('renders the filename pill and a New lease reset when a lease is loaded', async () => {
+    const onNewLease = vi.fn();
+    renderHeader({ fileName: 'cortland.pdf', onNewLease });
+    expect(screen.getByLabelText(/lease file name/i)).toHaveTextContent('cortland.pdf');
+    await userEvent.click(screen.getByRole('button', { name: /new lease/i }));
+    expect(onNewLease).toHaveBeenCalledTimes(1);
   });
 
   it('marks the Settings tab active when view=settings', () => {
@@ -56,13 +77,7 @@ describe('AppHeader', () => {
     expect(screen.queryByRole('tab', { name: /redline/i })).toBeNull();
     rerender(
       <I18nProvider>
-        <AppHeader
-          view="current"
-          showRedlineToggle={true}
-          onUpload={vi.fn()}
-          onTrySample={vi.fn()}
-          onViewChange={vi.fn()}
-        />
+        <AppHeader view="current" showRedlineToggle={true} onViewChange={vi.fn()} />
       </I18nProvider>,
     );
     expect(screen.getByRole('tab', { name: /redline/i })).toBeInTheDocument();
@@ -73,22 +88,5 @@ describe('AppHeader', () => {
     renderHeader({ showRedlineToggle: true, onViewChange });
     await userEvent.click(screen.getByRole('tab', { name: /portfolio/i }));
     expect(onViewChange).toHaveBeenCalledWith('portfolio');
-  });
-
-  it('fires onTrySample when the sample-lease button is clicked', async () => {
-    const onTrySample = vi.fn();
-    renderHeader({ onTrySample });
-    await userEvent.click(screen.getByRole('button', { name: /try a sample lease/i }));
-    expect(onTrySample).toHaveBeenCalledTimes(1);
-  });
-
-  it('fires onUpload with the selected file when a PDF is chosen', async () => {
-    const onUpload = vi.fn();
-    renderHeader({ onUpload });
-    const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
-    const file = new File([new Uint8Array([1, 2, 3])], 'test.pdf', { type: 'application/pdf' });
-    await userEvent.upload(input, file);
-    expect(onUpload).toHaveBeenCalledTimes(1);
-    expect(onUpload.mock.calls[0]?.[0]).toBeInstanceOf(File);
   });
 });
