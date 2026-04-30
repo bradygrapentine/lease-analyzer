@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' http://localhost:8400; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self' blob: http://localhost:8400; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
-      data-impeccable-csp-original="ZGVmYXVsdC1zcmMgJ3NlbGYnOyBzY3JpcHQtc3JjICdzZWxmJyAnd2FzbS11bnNhZmUtZXZhbCc7IHN0eWxlLXNyYyAnc2VsZicgJ3Vuc2FmZS1pbmxpbmUnOyBpbWctc3JjICdzZWxmJyBibG9iOiBkYXRhOjsgZm9udC1zcmMgJ3NlbGYnOyBjb25uZWN0LXNyYyAnc2VsZicgYmxvYjo7IHdvcmtlci1zcmMgJ3NlbGYnIGJsb2I6OyBvYmplY3Qtc3JjICdub25lJzsgYmFzZS11cmkgJ3NlbGYnOyBmb3JtLWFjdGlvbiAnbm9uZSc7IGZyYW1lLWFuY2VzdG9ycyAnbm9uZSc="
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
     />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <title>LeaseGuard</title>
@@ -14,8 +13,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- impeccable-live-start -->
-    <script src="http://localhost:8400/live.js"></script>
-    <!-- impeccable-live-end -->
   </body>
 </html>
