@@ -49,6 +49,22 @@ export const en = {
   'pack.import.success': 'Pack imported.',
   'pack.import.failure': 'Pack import failed: {message}',
 
+  // Wave 51-C — marginalia reader
+  'reader.loading': 'Loading reader…',
+  'reader.failure.message': 'The lease reader failed to load. This usually clears with a refresh.',
+  'reader.failure.retry': 'Reload',
+  'reader.toggle.label': 'Document view',
+  'reader.toggle.reader': 'Reader',
+  'reader.toggle.pdf': 'PDF',
+  'reader.region.label': 'Lease text',
+  'reader.rail.label': 'Document severity rail',
+  'reader.rail.cell': '{severity} finding at paragraph {paragraph}',
+  'reader.header.document': 'Document · {count} pages',
+  'severity.high': 'High',
+  'severity.medium': 'Medium',
+  'severity.low': 'Low',
+  'severity.info': 'Info',
+
   // Footer
   'footer.archive.export': 'Export encrypted archive',
   'footer.archive.import': 'Import encrypted archive',

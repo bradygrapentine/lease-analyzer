@@ -2,7 +2,7 @@
 // regions (ResultsHeader / ScannedPdfNotice / FindingsPanel + PdfViewer
 // split / SelectedFindingCard / SupportingContext). Aria inventory
 // preserved verbatim and asserted by the BE-1.4 inventory test.
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { FindingsPanel } from './FindingsPanel';
 import { PdfViewer } from './PdfViewer';
 import { ResultsHeader } from './AppCurrentPane/ResultsHeader';
@@ -13,6 +13,16 @@ import { needsOcr } from '../compare/needsOcr';
 import { exportFindingsAsHtml } from '../App/appHelpers';
 import { SelectedFindingCard } from './AppCurrentPane/SelectedFindingCard';
 import type { AppCurrentPaneProps } from './AppCurrentPane/types';
+import { FindingRail } from './FindingRail';
+import { ReaderPdfToggle, type ReaderPdfMode } from './ReaderPdfToggle';
+
+// Wave 51-C — MarginaliaReader is the new default reading surface but
+// includes glossary + paragraph rendering bulk; lazy-load to keep the app
+// shell lean. PDF mode keeps the eager `PdfViewer` import (it owns the
+// pdf.js client which is already a separate chunk).
+const MarginaliaReader = lazy(() =>
+  import('./MarginaliaReader').then((m) => ({ default: m.MarginaliaReader })),
+);
 
 export function AppCurrentPane({
   status,
@@ -43,6 +53,12 @@ export function AppCurrentPane({
 }: AppCurrentPaneProps): JSX.Element {
   const ocr = needsOcr(status.result.doc);
   const leaseFacts = useMemo(() => extractLeaseFacts(status.result.doc), [status]);
+  // Per-session document-view mode. Marginalia reader is default; PDF is one
+  // click away. State stays in component memory — see plan §1.9.
+  // Scanned / OCR-poor leases default to PDF — the reader has no
+  // extractable text to render in that case, so showing the PDF first
+  // is the only trustworthy representation until OCR runs.
+  const [docMode, setDocMode] = useState<ReaderPdfMode>(ocr ? 'pdf' : 'reader');
   return (
     <div className="results">
       <ResultsHeader
@@ -66,7 +82,19 @@ export function AppCurrentPane({
         hasBytes={status.bytes !== null}
         onAttemptOcr={onAttemptOcr}
       />
-      <div className="split">
+      <div className="flex justify-end px-2 pb-1">
+        <ReaderPdfToggle mode={docMode} onChange={setDocMode} />
+      </div>
+      <div className="split flex">
+        <FindingRail
+          paragraphCount={status.result.doc.paragraphs.length}
+          findings={status.result.findings}
+          selected={selected}
+          onSelectFinding={(f) => {
+            setSelected(f);
+            setSelectedPage(f.page);
+          }}
+        />
         <FindingsPanel
           findings={status.result.findings}
           onSelect={(f) => {
@@ -85,19 +113,36 @@ export function AppCurrentPane({
           }}
           onPromoteToStandard={onPromoteToStandard}
         />
-        <PdfViewer
-          bytes={status.bytes}
-          pageCount={status.result.doc.pages.length}
-          selectedPage={selectedPage}
-          pages={status.result.doc.pages}
-          highlight={
-            selected ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null) : null
-          }
-          selectedParagraph={
-            selected ? (status.result.doc.paragraphs[selected.paragraphIndex] ?? null) : null
-          }
-          selectedFinding={selected}
-        />
+        {docMode === 'reader' ? (
+          <Suspense fallback={null}>
+            <MarginaliaReader
+              doc={status.result.doc}
+              findings={status.result.findings}
+              selected={selected}
+              onSelectFinding={(f) => {
+                setSelected(f);
+                setSelectedPage(f.page);
+              }}
+              fileName={status.fileName}
+            />
+          </Suspense>
+        ) : (
+          <PdfViewer
+            bytes={status.bytes}
+            pageCount={status.result.doc.pages.length}
+            selectedPage={selectedPage}
+            pages={status.result.doc.pages}
+            highlight={
+              selected
+                ? (status.result.doc.paragraphs[selected.paragraphIndex]?.bbox ?? null)
+                : null
+            }
+            selectedParagraph={
+              selected ? (status.result.doc.paragraphs[selected.paragraphIndex] ?? null) : null
+            }
+            selectedFinding={selected}
+          />
+        )}
       </div>
       {selected && <SelectedFindingCard finding={selected} />}
       <SupportingContext
