@@ -29,16 +29,19 @@ export function AppRedlinePane({
   const editCount = redline.redlineEdits.length;
   return (
     <>
-      <header aria-label="redline header" className="px-4 pt-4 pb-3 border-b border-rule">
-        <p className="text-mono uppercase text-fg-muted mb-1">Redline · counter-proposal</p>
-        <p className="text-heading text-fg-body">
-          {editCount === 0
-            ? 'No edits yet — start by editing a paragraph below.'
-            : `${editCount} paragraph${editCount === 1 ? '' : 's'} edited`}
+      <header aria-label="redline header" className="px-4 pt-5 pb-4 border-b border-rule">
+        <p className="text-mono uppercase tracking-[0.08em] text-fg-faint mb-2">
+          Redline · counter-proposal
         </p>
-        <p className="text-small text-fg-muted italic mt-1">
-          Original on the left, what you&rsquo;d ask for on the right. Export as HTML or paste into
-          your reply.
+        <h2 className="font-serif text-[24px] font-semibold leading-tight text-fg m-0">
+          {editCount === 0
+            ? 'No edits yet'
+            : `${editCount} paragraph${editCount === 1 ? '' : 's'} edited`}
+        </h2>
+        <p className="font-serif italic text-fg-muted mt-1.5 max-w-[60ch]">
+          {editCount === 0
+            ? 'Start by editing any paragraph below — your changes will export as a redline document.'
+            : 'Original on the left, what you’d ask for on the right. Export as HTML or paste into your reply.'}
         </p>
       </header>
       <RedlinePanel
