@@ -31,7 +31,7 @@ const STEPS: readonly Step[] = [
   {
     title: 'Findings: severity + click-to-highlight',
     body:
-      'Each finding is tagged Critical / Warning / Info and links back to ' +
+      'Each finding is tagged High / Medium / Low / Info and links back to ' +
       'the page and clause that triggered it. Click a finding to jump to the ' +
       'matching span in the PDF viewer; filter the list by category or severity.',
   },

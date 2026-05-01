@@ -27,8 +27,8 @@ describe('AppAuditPane', () => {
     );
     // AuditLogPanel is lazy; resolves async.
     expect(await screen.findByRole('table', { name: /audit entries/i })).toBeInTheDocument();
-    expect(screen.getByText('analyze')).toBeInTheDocument();
-    expect(screen.getByText('export')).toBeInTheDocument();
+    expect(screen.getByText(/analyzed lease/i)).toBeInTheDocument();
+    expect(screen.getByText(/exported findings/i)).toBeInTheDocument();
   });
 
   it('renders the empty state when no entries', async () => {

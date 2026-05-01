@@ -156,7 +156,7 @@ describe('PackManagerPanel', () => {
     expect(onImport).not.toHaveBeenCalled();
   });
 
-  it('renders a "Community" badge by default when signatureStatusByPackId is omitted', () => {
+  it('renders an "Unsigned" badge by default when signatureStatusByPackId is omitted', () => {
     render(
       <PackManagerPanel
         builtInName="Built-in"
@@ -167,7 +167,7 @@ describe('PackManagerPanel', () => {
         onDelete={() => {}}
       />,
     );
-    expect(screen.getByLabelText(/signature status: community/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/signature status: unsigned/i)).toBeInTheDocument();
   });
 
   it('renders the supplied signature badge per pack', () => {
@@ -188,7 +188,7 @@ describe('PackManagerPanel', () => {
     );
     expect(screen.getByLabelText(/signature status: verified/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/signature status: invalid signature/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/signature status: community/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/signature status: unsigned/i)).toBeInTheDocument();
   });
 
   it('renders an "unknown" badge for unknown status', () => {

@@ -127,7 +127,7 @@ export function AuditLogPanel({
                       <td className="py-1 pr-3 font-mono text-mono text-fg-muted whitespace-nowrap">
                         {e.timestamp}
                       </td>
-                      <td className="py-1 pr-3 text-fg-body">{e.kind}</td>
+                      <td className="py-1 pr-3 text-fg-body">{kindLabel(e.kind)}</td>
                       <td className="py-1">
                         {subject ? (
                           <span className="font-serif italic text-fg-body">{subject}</span>
@@ -188,4 +188,38 @@ function extractSubject(payload: Record<string, unknown>): string | null {
     if (typeof v === 'string' && v.length > 0) return v;
   }
   return null;
+}
+
+/**
+ * Wave 48 Slice 2 — render audit `kind` strings in plain English. The
+ * kind values are stable wire ids (used in the hash-chained log) so we
+ * keep them unchanged on disk; this map only governs the visible label
+ * in the Activity table. Unknown kinds fall through verbatim so future
+ * audit kinds remain visible without a code change.
+ */
+const KIND_LABELS: Readonly<Record<string, string>> = {
+  analyze: 'Analyzed lease',
+  export: 'Exported findings',
+  'signed-export': 'Exported (signed)',
+  'parse-analyze': 'Parsed and analyzed',
+  'save-lease': 'Saved lease',
+  'delete-lease': 'Deleted lease',
+  'bulk-import': 'Bulk imported',
+  'import-pack': 'Imported rule pack',
+  'pack-signature-verified': 'Pack signature verified',
+  'pack-signature-invalid': 'Pack signature invalid',
+  'custom-rule-save': 'Saved custom rule',
+  'redline-edit': 'Edited paragraph',
+  'version-save': 'Saved version',
+  'version-restore': 'Restored version',
+  'version-delete': 'Deleted version',
+  'patch-applied': 'Applied counter-sign patch',
+  'standard-promote': 'Promoted to standard',
+  'standard-delete': 'Deleted standard clause',
+  'llm-classify': 'AI classified clause',
+  'hybrid-feedback': 'Marked finding not relevant',
+};
+
+function kindLabel(kind: string): string {
+  return KIND_LABELS[kind] ?? kind;
 }
