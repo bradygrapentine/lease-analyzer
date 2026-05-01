@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge } from './system/Badge';
+import { StatusMessage } from './primitives/StatusMessage';
 
 /**
  * Wave 9 Part B — passphrase prompt + sign-and-export trigger for a
@@ -77,7 +78,7 @@ export function CounterSignPanel({
           <Badge variant="severity" severity="high">
             Sign failed
           </Badge>{' '}
-          <p role="alert">{error}</p>
+          <StatusMessage tone="error">{error}</StatusMessage>
         </>
       ) : null}
     </section>

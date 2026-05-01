@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Badge } from './system/Badge';
+import { StatusMessage } from './primitives/StatusMessage';
 
 export type OpenReviewResult =
   | { ok: true; archiveId: string; expiresAt: string }
@@ -108,16 +109,14 @@ export function OpenReviewPanel({ onOpen }: OpenReviewPanelProps): JSX.Element {
           <Badge variant="severity" severity="high">
             Error
           </Badge>{' '}
-          <p role="alert" className="error">
-            {error}
-          </p>
+          <StatusMessage tone="error">{error}</StatusMessage>
         </>
       )}
       {success && (
-        <p role="status" className="success">
+        <StatusMessage tone="success">
           Mounted in review mode (archive {success.archiveId}, expires{' '}
           {success.expiresAt}).
-        </p>
+        </StatusMessage>
       )}
       <button type="submit" disabled={busy}>
         {busy ? 'Opening…' : 'Open review'}

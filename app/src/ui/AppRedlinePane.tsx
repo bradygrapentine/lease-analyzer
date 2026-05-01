@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { RedlinePanel } from './RedlinePanel';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { SideLetterPanel } from './SideLetterPanel';
 import { Button } from './system/Button';
+import { ConfirmDialog } from './primitives/ConfirmDialog';
 import type { LeaseDocument } from '../parser/types';
 import type { Finding } from '../rules/types';
 import type { UseRedlineStateApi } from '../App/useRedlineState';
@@ -34,6 +36,7 @@ export function AppRedlinePane({
   safeAudit,
 }: AppRedlinePaneProps): JSX.Element {
   const editCount = redline.redlineEdits.length;
+  const [clearAllOpen, setClearAllOpen] = useState(false);
   const editedParagraphIndices = new Set(redline.redlineEdits.map((e) => e.paragraphIndex));
   // "Apply all" candidates: every finding that has a suggested text and
   // whose paragraph has no redline edit yet. Idempotent — re-clicking
@@ -108,19 +111,25 @@ export function AppRedlinePane({
             }
             onClick={() => {
               if (editCount === 0) return;
-              if (
-                typeof window !== 'undefined' &&
-                !window.confirm(`Clear all ${editCount} redline edits?`)
-              ) {
-                return;
-              }
-              void redline.replaceAll([]);
+              setClearAllOpen(true);
             }}
           >
             Clear all
           </Button>
         </div>
       </header>
+      <ConfirmDialog
+        open={clearAllOpen}
+        title={`Clear all ${editCount} redline edit${editCount === 1 ? '' : 's'}?`}
+        body="The strike-throughs and underlines will be removed. This cannot be undone."
+        confirmLabel="Clear all"
+        confirmTone="destructive"
+        onConfirm={() => {
+          setClearAllOpen(false);
+          void redline.replaceAll([]);
+        }}
+        onCancel={() => setClearAllOpen(false)}
+      />
       <RedlinePanel
         doc={doc}
         edits={redline.redlineEdits}

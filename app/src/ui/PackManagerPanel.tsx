@@ -14,6 +14,7 @@ import { MarketplacePanel, type MarketplacePanelProps } from './MarketplacePanel
 import { Section } from './system/Section';
 import { Button } from './system/Button';
 import { FileButton } from './system/FileButton';
+import { StatusMessage } from './primitives/StatusMessage';
 
 /**
  * Signature trust vocabulary surfaced in the panel. Intentionally a
@@ -160,17 +161,13 @@ export function PackManagerPanel({
         </FileButton>
       </div>
 
-      {status !== null && (
-        <p role="status" className="text-small text-positive">
-          {status}
-        </p>
-      )}
+      {status !== null && <StatusMessage tone="success">{status}</StatusMessage>}
       {error !== null && (
-        <p role="status" className="text-small text-severity-high">
+        <StatusMessage tone="error">
           Couldn&rsquo;t import the rule pack. {error}. Common causes: the file isn&rsquo;t a{' '}
           <code className="font-mono text-mono">.lgpack.json</code>, or the signature didn&rsquo;t
           verify.
-        </p>
+        </StatusMessage>
       )}
 
       {marketplace !== undefined && (
