@@ -51,6 +51,31 @@ export interface AuditEntry {
  */
 export const DEFAULT_KEY_ID = 'k0';
 
+/**
+ * Wave 59 Slice 3 — quota-rotation policy. When IndexedDB throws
+ * `QuotaExceededError` on append, the rotation pass drops ALL existing
+ * entries (their `prevHash` linkages reference each other and would no
+ * longer verify after a partial drop), writes a `chain-truncated` sentinel
+ * recording the dropped seq range, then retries the original put once. If
+ * quota still fails after rotation, the error propagates.
+ *
+ * Exported as a constant so tests can describe the policy in one place.
+ * The numeric value is informational — actual policy is "drop all" — but
+ * we keep the symbol so the seed-and-rotate test reads naturally and the
+ * lower bound for "enough seed entries to exercise rotation" is explicit.
+ */
+export const QUOTA_ROTATION_DROP_COUNT = 100;
+
+/**
+ * Sentinel `kind` written after a quota-rotation pass. Its `prevHash` is
+ * intentionally empty so the chain verifier treats it as a legitimate
+ * restart point: rehashing pre-truncation entries is impossible (they're
+ * gone) and we don't want a single quota event to permanently red-flag
+ * the audit log. The sentinel's payload records the dropped seq range so
+ * verifiers can still reason about completeness.
+ */
+export const CHAIN_TRUNCATED_KIND = 'chain-truncated';
+
 interface AuditSchema extends DBSchema {
   [ENTRIES]: {
     key: number;
@@ -211,9 +236,112 @@ export async function appendAuditEntry(input: AppendInput): Promise<AuditEntry> 
     typeof explicit === 'string' ? explicit : DEFAULT_KEY_ID;
   const entry: AuditEntry = { ...base, entryHash, signedByKeyId };
 
-  // 4. Write.
-  await db.put(ENTRIES, entry);
+  // 4. Write — with quota-rotation fallback. If IDB rejects with
+  // QuotaExceededError, drop the oldest QUOTA_ROTATION_DROP_COUNT entries,
+  // write a `chain-truncated` sentinel that records the dropped range, then
+  // retry the put once. The sentinel's prevHash is '' by design — it acts
+  // as a chain restart so the verifier doesn't permanently red-flag the log
+  // after a quota event. If the retry still throws (rotation didn't help),
+  // the error propagates to the caller — the previous behavior was to lose
+  // the write silently inside `safeAudit`'s catch, which let the caller
+  // think the audit landed when it didn't.
+  try {
+    await db.put(ENTRIES, entry);
+  } catch (err) {
+    if (!isQuotaExceeded(err)) throw err;
+    await rotateOnQuota(db);
+    // After rotation, the chain restarts at the sentinel (prevHash ''), so
+    // recompute this entry's seq + prevHash + entryHash relative to the
+    // new tail. The sentinel's seq is `seq` (the seq we originally claimed),
+    // so our retry seq is `seq + 1`.
+    const tail = await readChainTail(db);
+    const retrySeq = tail.lastSeq + 1;
+    const retryBase = {
+      seq: retrySeq,
+      timestamp,
+      kind: input.kind,
+      payload: input.payload,
+      prevHash: tail.prevHash,
+    };
+    const retryHash = await computeEntryHash(retryBase);
+    const retryEntry: AuditEntry = { ...retryBase, entryHash: retryHash, signedByKeyId };
+    await db.put(ENTRIES, retryEntry);
+    return retryEntry;
+  }
   return entry;
+}
+
+function isQuotaExceeded(err: unknown): boolean {
+  if (err == null || typeof err !== 'object') return false;
+  const name = (err as { name?: unknown }).name;
+  return name === 'QuotaExceededError';
+}
+
+async function readChainTail(
+  db: IDBPDatabase<AuditSchema>,
+): Promise<{ lastSeq: number; prevHash: string }> {
+  const tx = db.transaction(ENTRIES, 'readonly');
+  const cursor = await tx.objectStore(ENTRIES).openCursor(null, 'prev');
+  let lastSeq = 0;
+  let prevHash = '';
+  if (cursor) {
+    lastSeq = cursor.value.seq;
+    prevHash = cursor.value.entryHash;
+  }
+  await tx.done;
+  return { lastSeq, prevHash };
+}
+
+/**
+ * Drop ALL existing entries and append a `chain-truncated` sentinel that
+ * records the dropped seq range. The sentinel carries `prevHash = ''` so
+ * `verifyAuditChain` treats it as a legitimate chain restart.
+ *
+ * Why drop everything rather than just the oldest N? Because the prevHash
+ * chain is densely linked — if we drop entries 1..N but keep N+1..M, the
+ * survivor at seq N+1 still references the (now-deleted) entry N's hash in
+ * its prevHash field, and that linkage no longer verifies. The honest
+ * semantics for a quota event are "the chain to date is gone; here's the
+ * sentinel marking the truncation; new entries chain from the sentinel."
+ * Audit history is best-effort under quota pressure (safeAudit already
+ * swallows append failures); this trades partial-history-with-broken-links
+ * for clean-chain-with-clear-truncation-marker.
+ */
+async function rotateOnQuota(db: IDBPDatabase<AuditSchema>): Promise<void> {
+  const keys = (await db.getAllKeys(ENTRIES)).slice().sort((a, b) => a - b);
+  if (keys.length === 0) return; // Nothing to drop.
+
+  const droppedCount = keys.length;
+  const firstDroppedSeq = keys[0] ?? 0;
+  const lastDroppedSeq = keys[keys.length - 1] ?? firstDroppedSeq;
+
+  // Wipe the store in a single rw tx.
+  {
+    const tx = db.transaction(ENTRIES, 'readwrite');
+    await tx.objectStore(ENTRIES).clear();
+    await tx.done;
+  }
+
+  // Sentinel anchors at `lastDroppedSeq + 1` so seq stays strictly
+  // increasing across the truncation event.
+  const sentinelSeq = lastDroppedSeq + 1;
+  const base = {
+    seq: sentinelSeq,
+    timestamp: new Date().toISOString(),
+    kind: CHAIN_TRUNCATED_KIND,
+    payload: {
+      droppedCount,
+      firstDroppedSeq,
+      lastDroppedSeq,
+      reason: 'QuotaExceededError',
+    },
+    prevHash: '',
+  };
+  const entryHash = await computeEntryHash(base);
+  const sentinel: AuditEntry = { ...base, entryHash, signedByKeyId: DEFAULT_KEY_ID };
+  // If the sentinel write itself trips quota, surface the error. We do NOT
+  // recurse: a single rotation pass is the contract.
+  await db.put(ENTRIES, sentinel);
 }
 
 export async function listAuditEntries(): Promise<AuditEntry[]> {
@@ -239,26 +367,60 @@ export interface ChainVerification {
 /**
  * Re-hash every entry and check each `prevHash` linkage. Returns the lowest
  * seq that fails verification; returns `{ ok: true }` for an empty or intact
- * chain. A missing seq (gap) is reported at the position the gap starts.
+ * chain.
+ *
+ * Wave 59 Slice 3 — `chain-truncated` sentinels (written by the quota-
+ * rotation policy in `appendAuditEntry`) act as legitimate chain restarts:
+ * their `prevHash` is '' and the seq jumps past the dropped block, but the
+ * sentinel's own hash is intact and subsequent entries link from it
+ * normally. Strict seq-equals-index from 1 was relaxed to "strictly
+ * increasing"; the sentinel records the dropped seq range in its payload
+ * for verifiers that want to reason about completeness.
  */
 export async function verifyAuditChain(): Promise<ChainVerification> {
   const entries = await listAuditEntries();
   let expectedPrev = '';
+  let lastSeq = 0;
+  // Genesis-or-restart-allowed flag: at the start of the chain, and
+  // immediately after a `chain-truncated` sentinel, the next non-sentinel
+  // entry's seq is allowed to skip past the dropped block.
+  let allowSeqJump = true;
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
     if (!e) continue;
-    const expectedSeq = i + 1;
-    if (e.seq !== expectedSeq) {
-      return { ok: false, firstBadSeq: expectedSeq };
-    }
-    if (e.prevHash !== expectedPrev) {
-      return { ok: false, firstBadSeq: e.seq };
+    const isRestart = e.kind === CHAIN_TRUNCATED_KIND && e.prevHash === '';
+    if (isRestart) {
+      // Sentinel may also live mid-chain (post-rotation): its seq must be
+      // greater than the prior tail. After it, the next entry chains from
+      // the sentinel's hash and may also skip seq.
+      if (e.seq <= lastSeq) {
+        return { ok: false, firstBadSeq: e.seq };
+      }
+    } else if (allowSeqJump) {
+      // First real entry of the chain (or first after a sentinel): seq just
+      // needs to be > lastSeq.
+      if (e.seq <= lastSeq) {
+        return { ok: false, firstBadSeq: e.seq };
+      }
+      if (e.prevHash !== expectedPrev) {
+        return { ok: false, firstBadSeq: e.seq };
+      }
+    } else {
+      // Normal mid-chain: seq must be exactly lastSeq + 1 (gap detection).
+      if (e.seq !== lastSeq + 1) {
+        return { ok: false, firstBadSeq: lastSeq + 1 };
+      }
+      if (e.prevHash !== expectedPrev) {
+        return { ok: false, firstBadSeq: e.seq };
+      }
     }
     const rehash = await computeEntryHash(e);
     if (rehash !== e.entryHash) {
       return { ok: false, firstBadSeq: e.seq };
     }
     expectedPrev = e.entryHash;
+    lastSeq = e.seq;
+    allowSeqJump = isRestart;
   }
   return { ok: true };
 }

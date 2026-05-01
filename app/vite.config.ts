@@ -10,6 +10,20 @@ export default defineConfig({
   // the worker chunk can participate in code-splitting (iife — the Vite
   // default for workers — cannot).
   worker: { format: 'es' },
+  // Wave 59 Slice 3 — `frame-ancestors` must be an HTTP response header per
+  // W3C CSP 3; setting it via <meta http-equiv> is silently ignored. We
+  // emit it from the dev server here. Production hosting is responsible
+  // for emitting an equivalent header — see `docs/DEPLOY.md`.
+  server: {
+    headers: {
+      'Content-Security-Policy': "frame-ancestors 'none'",
+    },
+  },
+  preview: {
+    headers: {
+      'Content-Security-Policy': "frame-ancestors 'none'",
+    },
+  },
   plugins: [
     tailwindcss(),
     react(),
