@@ -139,15 +139,13 @@ export function UploadView({ onUpload, onTrySample }: UploadViewProps): JSX.Elem
           <span>● Hash-chained audit log</span>
         </div>
 
-        {/* Wave 55 — renter-friendly privacy line. The previous Wave 54-C
-            copy was written for engineers, not renters. Same facts, plain
-            English. */}
+        {/* Wave 59-Slice 2 — single restrained closing line replaces the
+            Wave 55 multi-sentence privacy block. DESIGN.md voice:
+            tool-not-product, terse. The footer chips above already
+            enumerate the local-first guarantees; this line just closes
+            the page calmly. */}
         <p className="mt-8 font-display italic text-fg-muted leading-relaxed max-w-[60ch]">
-          <span className="not-italic font-display font-semibold text-fg">
-            Stays on your device.
-          </span>{' '}
-          Your lease is read here, in this browser. Nothing is uploaded, no account is created, and
-          clearing your browser clears everything LeaseGuard saved.
+          Read locally. Nothing leaves this browser.
         </p>
       </div>
 
