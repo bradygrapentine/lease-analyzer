@@ -65,7 +65,7 @@ export function TemplatesPanel({
       ) : (
         <ul className="space-y-2">
           {templates.map((t) => (
-            <li key={t.id} className="rounded-sm border border-rule bg-paper-raised shadow-paper p-3">
+            <li key={t.id} className="list-row-raised p-3">
               {editing?.id === t.id ? (
                 <form onSubmit={onEditSubmit} aria-label={`edit ${t.name}`} className="space-y-2">
                   <Field
@@ -84,8 +84,15 @@ export function TemplatesPanel({
                     onChange={(e) => setEditing({ ...editing, text: e.target.value })}
                   />
                   <div className="flex gap-2">
-                    <Button type="submit" size="sm">Save</Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(null)}>
+                    <Button type="submit" size="sm">
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(null)}
+                    >
                       Cancel
                     </Button>
                   </div>
@@ -121,7 +128,11 @@ export function TemplatesPanel({
         </ul>
       )}
 
-      <form onSubmit={onSubmit} aria-label="add clause template" className="space-y-2 border-t border-rule pt-3">
+      <form
+        onSubmit={onSubmit}
+        aria-label="add clause template"
+        className="space-y-2 border-t border-rule pt-3"
+      >
         <h3 className="text-heading uppercase text-fg-muted">Add template</h3>
         <Field
           as="input"
@@ -138,7 +149,9 @@ export function TemplatesPanel({
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <Button type="submit" size="sm">Add template</Button>
+        <Button type="submit" size="sm">
+          Add template
+        </Button>
       </form>
     </Section>
   );
