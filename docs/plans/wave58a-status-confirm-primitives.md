@@ -1,7 +1,7 @@
 # Wave 58a — `StatusMessage` + `ConfirmDialog` primitives
 
 **Track**: Wave 48 Slice 3a (BACKLOG.md:684)
-**Status**: 📋 Planned
+**Status**: ✅ Shipped (PRs #227, #229, #230)
 **Risk**: Low (additive primitives, mechanical migrations)
 **Estimated PRs**: 3 small, sequential
 
@@ -118,7 +118,8 @@ text field. Otherwise close out without this slice.
 
 ## Closeout
 
-- Promote backlog row "Wave 48 Slice 3 — `<StatusMessage>` + `<ConfirmDialog>`
-  primitives" to `[x]` with PR refs.
-- Add a Wave 58 entry under Phase 20 closeout in BACKLOG.md.
-- File any deferred status-recipe migrations that didn't fit cleanly.
+- [x] Promote backlog row "Wave 48 Slice 3 — `<StatusMessage>` + `<ConfirmDialog>`
+  primitives" to `[x]` with PR refs (#227, #229, #230).
+- [x] Add a Wave 58a entry under Phase 20 closeout in BACKLOG.md.
+- [x] Deferred captured in PR #229 body (4 crypto-passphrase prompts,
+  `appHelpers` confirms, `SigningKeyPanel` "copy failed" composite blocks).

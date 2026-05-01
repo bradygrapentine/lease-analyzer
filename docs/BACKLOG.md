@@ -681,7 +681,7 @@ Slice 3 of `docs/audits/perf-probe-2026-04-29.md` was deferred when Wave 50 ship
 **From `docs/audits/extract-inventory-2026-04-29.md` (deferred from Wave 48 Slice 1):**
 
 - [x] **Wave 48 Slice 2 — Card density/surface variants.** Closed 2026-05-01 as **won't-do**. On inspection only 4 of the proposed 8 callsites were truly uniform (LibraryPanel, TemplatesPanel, PackManagerPanel ×2); RedlinePanel uses `border-rule-subtle` and no shadow, PortfolioPanel adds a hover state, and the "3 sunken" hits were all controls (view-toggles, audit chain ribbon, ReaderPdfToggle), not list rows. A density/surface API would either bloat Card's prop surface or paper over real per-callsite tuning. Replaced with a single `.list-row-raised` utility in `index.css` covering the 4 uniform sites — one place to retune the chrome, no Card API growth, the two tuned variants stay inline.
-- [ ] **Wave 48 Slice 3 — `<StatusMessage>` + `<ConfirmDialog>` primitives.** Consolidates 17 `<p role="status|alert">` recipes (success/error/info one-liners) and replaces 6 `window.confirm`/`window.prompt` callsites with a Dialog-based primitive. Defer crypto-passphrase migrations until a memory-zeroing pattern is specified; LibraryPanel rename is the safe first ConfirmDialog adoption.
+- [x] **Wave 48 Slice 3 — `<StatusMessage>` + `<ConfirmDialog>` primitives.** Shipped as Wave 58a across PRs #227 (StatusMessage), #229 (ConfirmDialog + 11 status migrations + AppRedlinePane clear-all), and #230 (InputDialog + LibraryPanel rename). Crypto-passphrase prompts and `appHelpers` confirms remain deferred per plan (memory-zeroing pattern + `useConfirm` plumbing cost).
 - [ ] **ComparePanel h2/h3 migration to PanelHeader** (deferred from Wave 48 Slice 1). Three Added/Removed/Changed sub-section headers were intentionally excluded to avoid re-entering the Wave 45-C Codex review loop on a freshly-stabilized panel.
 - [ ] **EvidenceQuote re-evaluation post-Wave-47.** Currently 2 callsites (`AppCurrentPane.tsx:228`, `TemplateMatchesPanel.tsx:53`); below the 3-usage threshold. Re-flag if Wave 47's `OpenReviewPanel` rewrite adds a third.
 - [ ] **`state-hover` / `state-active` token alias promotion.** Currently used as `bg-[var(--state-hover)]` 6× but not first-class entries in `DESIGN.json`. Promote to named tokens for parity with the `severity-bg-*` family. Cosmetic for the design-token export.
@@ -893,6 +893,12 @@ sessions know it's done.
 - [x] Wave 57 — housekeeping: footprint refresh, coverage ratchet
       96/90/93/96 → 97/90/93/97, plan-doc closeouts, gone-branch
       cleanup.
+- [x] Wave 58a — `<StatusMessage>` (#227), `<ConfirmDialog>` + 11 status
+      migrations + AppRedlinePane clear-all (#229), `<InputDialog>` +
+      LibraryPanel rename (#230). Crypto-passphrase prompts deferred.
+- [x] Wave 58b — vitest 1 → 4 major bump with coverage baseline reset
+      to 96/90/92/96 (#228); v3 source-map mapper shifts attributions
+      slightly under the new abstractions.
 
 ## Cross-cutting tech debt
 
