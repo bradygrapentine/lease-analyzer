@@ -656,9 +656,9 @@ The distill pass on the right-rail supporting context shipped the two highest-RO
 
 P2 visual items surfaced during the all-surfaces polish walk; deferred from the export-brand PR because they need real-browser confirmation before committing.
 
-- [ ] **Empty home state has 60% vacant viewport.** Pre-upload, the lower 60% of the viewport is blank. Reads as "broken," not "calm." Candidates: a quiet privacy dossier line, the local-first architecture diagram, or a single restrained closing line. Brand-aligned, low risk.
-- [ ] **Native file-chooser text leaks into the upload control.** Dark-mode walk shows raw "Choose File / No file chosen" platform text adjacent to the styled "Upload lease" label. Verify `FileButton` fully suppresses the native control's visual; if not, swap to a label-on-button pattern with `aria-describedby` for the file name.
-- [ ] **Bottom-strip "Clear all saved data" lacks destructive treatment.** DESIGN.md reserves Negative Red for irrecoverable errors. Apply `--color-negative` to the label inside the existing Subtle button shell, or escalate to a dedicated destructive variant on the Button primitive.
+- [x] **Empty home state has 60% vacant viewport.** Shipped Wave 59-Slice 2: replaced the Wave 55 multi-sentence privacy block with a single restrained closing line ("Read locally. Nothing leaves this browser.") under the upload control. Lowest-risk option per spec; footer chips already enumerate local-first guarantees. Test pinned in `UploadView.test.tsx`.
+- [x] **Native file-chooser text leaks into the upload control.** Verified Wave 59-Slice 2: `UploadView` uses a styled `<Button>` that triggers a `display:none` `<input>` via ref (Wave 54-B pattern); `FileButton` primitive uses the same pattern with `aria-hidden="true"` + `tabIndex={-1}`. New regression test in `UploadView.test.tsx` asserts `display:none` + `tabIndex=-1` on the upload-lease input so any future variant swap that re-exposes the native control fails fast.
+- [x] **Bottom-strip "Clear all saved data" lacks destructive treatment.** Verified Wave 59-Slice 2: `AppSettingsPane` already applies `text-[var(--color-negative)]` to the clear-all label inside a ghost shell (shipped Wave 54-A). New regression test pins the `color-negative` className so future refactors can't silently drop the destructive tint.
 
 ### Wave 50 deferrals (filed after Wave 50 perf fix shipped)
 
