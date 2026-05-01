@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Badge } from './system/Badge';
 import { StatusMessage } from './primitives/StatusMessage';
+import { MIN_PASSPHRASE_LEN } from '../security/passphrase';
 
 /**
  * Wave 9 Part B — passphrase prompt + sign-and-export trigger for a
@@ -32,7 +33,7 @@ export function CounterSignPanel({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const canSign = passphrase.trim().length > 0 && !busy;
+  const canSign = passphrase.trim().length >= MIN_PASSPHRASE_LEN && !busy;
 
   async function handleSign(): Promise<void> {
     setError(null);
@@ -62,6 +63,7 @@ export function CounterSignPanel({
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
           autoComplete="off"
+          minLength={MIN_PASSPHRASE_LEN}
         />
       </label>
       <button

@@ -54,4 +54,24 @@ describe('DeltaPanel', () => {
     expect(onGenerate.mock.calls[0]?.[0]?.baseVersionId).toBe('v1');
     expect(onGenerate.mock.calls[0]?.[0]?.targetVersionId).toBe('v2');
   });
+
+  // Wave 59 Slice 1 — passphrase strength enforcement.
+  it('marks the passphrase input with minLength=16', () => {
+    render(<DeltaPanel versions={versions} onGenerate={vi.fn()} />);
+    const input = screen.getByLabelText(/passphrase/i) as HTMLInputElement;
+    expect(input.minLength).toBe(16);
+  });
+
+  it('keeps Generate disabled until the passphrase reaches the minimum length', async () => {
+    const user = userEvent.setup();
+    render(<DeltaPanel versions={versions} onGenerate={vi.fn()} />);
+    await user.selectOptions(screen.getByLabelText(/base/i), 'v1');
+    await user.selectOptions(screen.getByLabelText(/target/i), 'v2');
+    const button = screen.getByRole('button', { name: /generate|export/i });
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), 'short-pass-1');
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), '23456');
+    expect(button).not.toBeDisabled();
+  });
 });

@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Badge } from './system/Badge';
 import { StatusMessage } from './primitives/StatusMessage';
+import { MIN_PASSPHRASE_LEN } from '../security/passphrase';
 
 export type OpenReviewResult =
   | { ok: true; archiveId: string; expiresAt: string }
@@ -103,6 +104,7 @@ export function OpenReviewPanel({ onOpen }: OpenReviewPanelProps): JSX.Element {
         value={passphrase}
         onChange={(e) => setPassphrase(e.target.value)}
         autoComplete="current-password"
+        minLength={MIN_PASSPHRASE_LEN}
       />
       {error && (
         <>
@@ -118,7 +120,7 @@ export function OpenReviewPanel({ onOpen }: OpenReviewPanelProps): JSX.Element {
           {success.expiresAt}).
         </StatusMessage>
       )}
-      <button type="submit" disabled={busy}>
+      <button type="submit" disabled={busy || passphrase.length < MIN_PASSPHRASE_LEN}>
         {busy ? 'Opening…' : 'Open review'}
       </button>
     </form>

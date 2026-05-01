@@ -69,4 +69,34 @@ describe('CounterSignPanel', () => {
     expect(screen.getAllByText(/^sign failed$/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('alert')).toHaveTextContent(/bad passphrase/);
   });
+
+  // Wave 59 Slice 1 — passphrase strength enforcement.
+  it('marks the passphrase input with minLength=16', () => {
+    render(
+      <CounterSignPanel
+        decisions={[{ editId: 'e1', accepted: true }]}
+        archiveFingerprint={'a'.repeat(64)}
+        onSign={vi.fn()}
+      />,
+    );
+    const input = screen.getByLabelText(/passphrase/i) as HTMLInputElement;
+    expect(input.minLength).toBe(16);
+  });
+
+  it('keeps Sign disabled until the passphrase reaches the minimum length', async () => {
+    const user = userEvent.setup();
+    render(
+      <CounterSignPanel
+        decisions={[{ editId: 'e1', accepted: true }]}
+        archiveFingerprint={'a'.repeat(64)}
+        onSign={vi.fn()}
+      />,
+    );
+    const button = screen.getByRole('button', { name: /sign/i });
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), 'short');
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), '-passphrase-12345');
+    expect(button).not.toBeDisabled();
+  });
 });
