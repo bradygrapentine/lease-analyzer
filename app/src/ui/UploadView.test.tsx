@@ -60,4 +60,22 @@ describe('UploadView', () => {
     await userEvent.click(screen.getByRole('button', { name: /choose pdf/i }));
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('renders a single restrained closing line under the upload control (Wave 59-Slice 2)', () => {
+    // Wave 59-Slice 2 — replaces the Wave 55 multi-sentence privacy
+    // paragraph with one terse closing line. Brand voice: tool-not-product.
+    renderView();
+    const region = screen.getByRole('region', { name: /upload/i });
+    expect(region).toHaveTextContent(/nothing leaves this browser\./i);
+  });
+
+  it('hides the native file input from layout (no platform "Choose File" leak)', () => {
+    // Wave 59-Slice 2 — the dark-mode "Choose File / No file chosen"
+    // platform leak is killed by display:none on the input. Asserted here
+    // so any future variant swap that re-exposes it fails fast.
+    renderView();
+    const input = screen.getByLabelText(/upload lease/i) as HTMLInputElement;
+    expect(input.style.display).toBe('none');
+    expect(input.tabIndex).toBe(-1);
+  });
 });

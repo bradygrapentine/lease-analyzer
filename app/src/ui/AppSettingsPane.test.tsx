@@ -52,6 +52,15 @@ describe('AppSettingsPane', () => {
     expect(onClearAll).toHaveBeenCalledTimes(1);
   });
 
+  it('clear-all button label uses --color-negative (DESIGN.md destructive treatment)', () => {
+    // Wave 59-Slice 2 — DESIGN.md reserves Negative Red for irrecoverable
+    // actions. Clear-all wipes 9 IDB databases; tint the label inside the
+    // existing ghost shell.
+    renderPane();
+    const btn = screen.getByRole('button', { name: /clear/i });
+    expect(btn.className).toMatch(/color-negative/);
+  });
+
   it('fires onImportArchive when an .lgarchive file is uploaded', async () => {
     const onImportArchive = vi.fn();
     renderPane({ onImportArchive });
