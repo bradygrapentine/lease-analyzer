@@ -3,9 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Wave 59 Slice 3 — `frame-ancestors` was stripped from this <meta>.
+      Per W3C CSP 3 §1.1.4 / §4 it is not enforced via meta and was a
+      no-op as a clickjacking defense; it must be set as an HTTP response
+      header. Dev: see `app/vite.config.ts` `server.headers`. Prod: see
+      `docs/DEPLOY.md` (production hosting must emit
+      `Content-Security-Policy: frame-ancestors 'none'`). The remaining
+      directives below are still effective via meta.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <title>LeaseGuard</title>
