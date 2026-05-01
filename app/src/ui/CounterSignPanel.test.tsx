@@ -32,8 +32,7 @@ describe('CounterSignPanel', () => {
   it('happy path: passphrase + click invokes onSign with the decisions list', async () => {
     const user = userEvent.setup();
     const onSign = vi.fn<
-      [{ passphrase: string; decisions: CounterSignDecision[] }],
-      Promise<Uint8Array>
+      (input: { passphrase: string; decisions: CounterSignDecision[] }) => Promise<Uint8Array>
     >(async () => new Uint8Array([9, 9, 9]));
     render(
       <CounterSignPanel

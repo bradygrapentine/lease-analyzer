@@ -26,8 +26,7 @@ describe('ShareReviewPanel', () => {
   it('happy path: generates a review archive when passphrase + expiry are valid', async () => {
     const user = userEvent.setup();
     const onGenerate = vi.fn<
-      [{ leaseId: string; passphrase: string; expiresAt: string }],
-      Promise<Uint8Array>
+      (input: { leaseId: string; passphrase: string; expiresAt: string }) => Promise<Uint8Array>
     >(async () => new Uint8Array([1, 2, 3]));
     render(<ShareReviewPanel lease={lease()} onGenerate={onGenerate} />);
     await user.type(screen.getByLabelText(/passphrase/i), 'a-strong-passphrase-12345');

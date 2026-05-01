@@ -2,6 +2,36 @@ import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 
 /**
+ * Default `window.matchMedia` stub.
+ *
+ * jsdom 24 does not implement `window.matchMedia`. Vitest 1.x's `vi.spyOn`
+ * was lenient and would synthesize a property when spying on `undefined`;
+ * vitest 4 tightened this and now throws "vi.spyOn() can only spy on a
+ * function. Received undefined." Tests that call
+ * `vi.spyOn(window, 'matchMedia').mockImplementation(...)` need a real
+ * function to spy on. Install a no-op default here so per-test
+ * `mockImplementation` overrides keep working unchanged. `configurable`
+ * + `writable` lets `vi.restoreAllMocks()` reset cleanly.
+ */
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList,
+  });
+}
+
+/**
  * Suppress benign `InvalidStateError` (DOMException code 11) unhandled
  * rejections from in-flight IDB operations whose db handle was nulled by
  * a test's `_reset<Db>ForTests()` teardown.

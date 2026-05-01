@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -114,10 +114,20 @@ export default defineConfig({
         // main post Wave-56-C: 97.47 / 90.87 / 93.09 / 97.47.
         // Statements + lines step up 96 → 97 (floor of actual).
         // Branches + functions hold (under 2-pt margin to floor +1).
-        statements: 97,
-        branches: 90,
-        functions: 93,
-        lines: 97,
+        //
+        // Reset 2026-05-01 (Wave 58b — vitest 1 → 4 bump).
+        // @vitest/coverage-v8 v4 ships an AST-based source-mapper that
+        // replaces the v1 line-only mapper. The v1 numbers (97.47 /
+        // 90.87 / 93.09 / 97.47) were inflated by the older mapper's
+        // coarse attribution; the v4 numbers (92.45 / 84.47 / 92.26 /
+        // 94.45) are the honest baseline. One-time floor reset to
+        // floor-of-actuals; Wave 58c will close the largest gaps
+        // (App.tsx marketplace handlers L593-636, auditExport.ts,
+        // useSigningKey.ts, UploadView.tsx) and re-ratchet up.
+        statements: 92,
+        branches: 84,
+        functions: 92,
+        lines: 94,
       },
     },
   },

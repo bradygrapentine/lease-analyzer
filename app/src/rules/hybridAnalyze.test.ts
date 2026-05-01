@@ -161,7 +161,7 @@ describe('runHybridAnalyze', () => {
 
   it('fires one llm-classify audit entry per hybrid finding when audit is supplied', async () => {
     const embedFn = vi.fn(makeStubEmbedder());
-    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+    const audit = vi.fn<(entry: { kind: string; payload: Record<string, unknown> }) => Promise<void>>(
       async () => undefined,
     );
     const findings = await runHybridAnalyze({
@@ -188,7 +188,7 @@ describe('runHybridAnalyze', () => {
 
   it('does not fire any audit entries when the flag is off', async () => {
     const embedFn = vi.fn(makeStubEmbedder());
-    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+    const audit = vi.fn<(entry: { kind: string; payload: Record<string, unknown> }) => Promise<void>>(
       async () => undefined,
     );
     await runHybridAnalyze({
@@ -203,7 +203,7 @@ describe('runHybridAnalyze', () => {
 
   it('does not fire any audit entries when zero hybrid findings are emitted', async () => {
     const embedFn = vi.fn(makeStubEmbedder());
-    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+    const audit = vi.fn<(entry: { kind: string; payload: Record<string, unknown> }) => Promise<void>>(
       async () => undefined,
     );
     await runHybridAnalyze({
@@ -219,7 +219,7 @@ describe('runHybridAnalyze', () => {
 
   it('audit payload defaults modelId to "unknown" when not supplied', async () => {
     const embedFn = vi.fn(makeStubEmbedder());
-    const audit = vi.fn<[{ kind: string; payload: Record<string, unknown> }], Promise<void>>(
+    const audit = vi.fn<(entry: { kind: string; payload: Record<string, unknown> }) => Promise<void>>(
       async () => undefined,
     );
     await runHybridAnalyze({
