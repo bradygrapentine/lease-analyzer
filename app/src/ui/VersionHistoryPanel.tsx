@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { LeaseVersion } from '../negotiation/versionHistory';
+import { ConfirmDialog } from './primitives/ConfirmDialog';
 
 export interface VersionHistoryPanelProps {
   versions: LeaseVersion[];
@@ -27,6 +28,9 @@ export function VersionHistoryPanel({
 }: VersionHistoryPanelProps): JSX.Element {
   const [label, setLabel] = useState('');
   const [note, setNote] = useState('');
+  // Wave 59 Slice 1 — destructive guard. Track which version (if any) is
+  // pending deletion so the ConfirmDialog can surface its label + edit count.
+  const [pendingDelete, setPendingDelete] = useState<LeaseVersion | null>(null);
 
   function handleCreate(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault();
@@ -70,6 +74,23 @@ export function VersionHistoryPanel({
         <button type="submit">Save version</button>
       </form>
 
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={`Delete version ${pendingDelete?.label ?? pendingDelete?.versionId ?? ''}?`}
+        body={
+          pendingDelete
+            ? `This will remove ${pendingDelete.edits.length} edit${pendingDelete.edits.length === 1 ? '' : 's'} captured in this version. This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        confirmTone="destructive"
+        onConfirm={() => {
+          if (pendingDelete) onDeleteVersion(pendingDelete.versionId);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
+
       {versions.length === 0 ? (
         <p>No versions saved yet.</p>
       ) : (
@@ -105,7 +126,7 @@ export function VersionHistoryPanel({
                 <button
                   type="button"
                   aria-label={`delete version ${v.label ?? v.versionId}`}
-                  onClick={() => onDeleteVersion(v.versionId)}
+                  onClick={() => setPendingDelete(v)}
                 >
                   Delete
                 </button>

@@ -796,8 +796,10 @@ describe('App panel wire-ups', () => {
       const entries = await listAuditEntries();
       expect(entries.some((e) => e.kind === 'version-restore')).toBe(true);
     });
-    // Delete — timeline drops back to empty.
+    // Delete — timeline drops back to empty. Wave 59 Slice 1 added a
+    // ConfirmDialog destructive guard, so we click Delete then Confirm.
     await userEvent.click(await screen.findByRole('button', { name: /delete version v1/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /^delete$/i }));
     await waitFor(async () => {
       expect((await listVersionsForLease(lease!.id)).length).toBe(0);
     });

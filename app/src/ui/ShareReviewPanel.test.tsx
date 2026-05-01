@@ -43,9 +43,11 @@ describe('ShareReviewPanel', () => {
     const onGenerate = vi.fn();
     render(<ShareReviewPanel lease={lease()} onGenerate={onGenerate} />);
     await user.type(screen.getByLabelText(/passphrase/i), 'short');
+    // Wave 59 Slice 1 — the submit button is now disabled until the
+    // passphrase clears the minimum-length gate, so the click is a no-op.
+    expect(screen.getByRole('button', { name: /generate/i })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: /generate/i }));
     expect(onGenerate).not.toHaveBeenCalled();
-    expect(screen.getByText(/passphrase/i)).toBeInTheDocument();
   });
 
   it('refuses to submit an expiry date in the past', async () => {
@@ -99,5 +101,23 @@ describe('ShareReviewPanel', () => {
     render(<ShareReviewPanel lease={lease({ signedPack: false })} onGenerate={vi.fn()} />);
     expect(screen.getByText(/signed pack required/i)).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(/requires a signed pack/i);
+  });
+
+  // Wave 59 Slice 1 — passphrase strength enforcement on the input itself.
+  it('marks the passphrase input with minLength=16', () => {
+    render(<ShareReviewPanel lease={lease()} onGenerate={vi.fn()} />);
+    const input = screen.getByLabelText(/passphrase/i) as HTMLInputElement;
+    expect(input.minLength).toBe(16);
+  });
+
+  it('disables submit until the passphrase reaches the minimum length', async () => {
+    const user = userEvent.setup();
+    render(<ShareReviewPanel lease={lease()} onGenerate={vi.fn()} />);
+    const button = screen.getByRole('button', { name: /generate/i });
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), 'short');
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), '-passphrase-12345');
+    expect(button).not.toBeDisabled();
   });
 });

@@ -39,7 +39,7 @@ describe('OpenReviewPanel', () => {
     const onOpen = vi.fn(async () => ({ ok: false as const, reason: 'wrong-passphrase' as const }));
     render(<OpenReviewPanel onOpen={onOpen} />);
     await user.upload(screen.getByLabelText(/file|archive/i) as HTMLInputElement, file());
-    await user.type(screen.getByLabelText(/passphrase/i), 'wrong-pass-123');
+    await user.type(screen.getByLabelText(/passphrase/i), 'wrong-passphrase-12345');
     await user.click(screen.getByRole('button', { name: /open/i }));
     expect(await screen.findByText(/wrong|incorrect/i)).toBeInTheDocument();
     // Wave 45-BE — error paragraph paired with "Error" badge.
@@ -82,7 +82,7 @@ describe('OpenReviewPanel', () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();
     render(<OpenReviewPanel onOpen={onOpen} />);
-    await user.type(screen.getByLabelText(/passphrase/i), 'pp');
+    await user.type(screen.getByLabelText(/passphrase/i), 'a-strong-passphrase-12345');
     await user.click(screen.getByRole('button', { name: /open/i }));
     expect(onOpen).not.toHaveBeenCalled();
     expect(await screen.findByText(/choose a .*review file/i)).toBeInTheDocument();
@@ -95,5 +95,23 @@ describe('OpenReviewPanel', () => {
     await user.upload(screen.getByLabelText(/file|archive/i) as HTMLInputElement, file());
     await user.click(screen.getByRole('button', { name: /open/i }));
     expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  // Wave 59 Slice 1 — passphrase strength enforcement.
+  it('marks the passphrase input with minLength=16', () => {
+    render(<OpenReviewPanel onOpen={vi.fn()} />);
+    const input = screen.getByLabelText(/passphrase/i) as HTMLInputElement;
+    expect(input.minLength).toBe(16);
+  });
+
+  it('disables Open until the passphrase reaches the minimum length', async () => {
+    const user = userEvent.setup();
+    render(<OpenReviewPanel onOpen={vi.fn()} />);
+    const button = screen.getByRole('button', { name: /open/i });
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), 'short');
+    expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText(/passphrase/i), '-passphrase-12345');
+    expect(button).not.toBeDisabled();
   });
 });

@@ -159,7 +159,30 @@ describe('VersionHistoryPanel', () => {
     expect(onExportVersion).toHaveBeenCalledWith('v1');
   });
 
-  it('Delete fires onDeleteVersion with the versionId', async () => {
+  it('Delete opens a confirm dialog and only fires onDeleteVersion after Confirm', async () => {
+    const onDeleteVersion = vi.fn();
+    render(
+      <VersionHistoryPanel
+        versions={[mkVersion({ versionId: 'v1', label: 'one', edits: [mkEdit(), mkEdit({ paragraphIndex: 1 })] })]}
+        currentEditCount={0}
+        onCreateVersion={noop}
+        onRestoreVersion={noop}
+        onDeleteVersion={onDeleteVersion}
+        onExportVersion={noop}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /delete version one/i }));
+    // Wave 59 Slice 1 — destructive guard. The button should not call
+    // onDeleteVersion synchronously; instead a confirm dialog appears.
+    expect(onDeleteVersion).not.toHaveBeenCalled();
+    // Dialog body names the version label + its edit count.
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/one/i);
+    expect(screen.getByRole('dialog')).toHaveTextContent(/2 edits/i);
+    await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+    expect(onDeleteVersion).toHaveBeenCalledWith('v1');
+  });
+
+  it('Delete confirm dialog Cancel does NOT call onDeleteVersion', async () => {
     const onDeleteVersion = vi.fn();
     render(
       <VersionHistoryPanel
@@ -172,7 +195,8 @@ describe('VersionHistoryPanel', () => {
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: /delete version one/i }));
-    expect(onDeleteVersion).toHaveBeenCalledWith('v1');
+    await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(onDeleteVersion).not.toHaveBeenCalled();
   });
 
   it('uses versionId as the accessible label when there is no user label', () => {

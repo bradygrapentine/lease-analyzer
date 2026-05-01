@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Badge } from './system/Badge';
 import { StatusMessage } from './primitives/StatusMessage';
+import { MIN_PASSPHRASE_LEN } from '../security/passphrase';
 
 export interface ShareReviewPanelProps {
   lease: { id: string; name: string; signedPack: boolean } | null;
@@ -10,8 +11,6 @@ export interface ShareReviewPanelProps {
     expiresAt: string;
   }) => Promise<Uint8Array>;
 }
-
-const MIN_PASSPHRASE_LEN = 16;
 
 function defaultExpiry(): string {
   return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -26,7 +25,8 @@ export function ShareReviewPanel({ lease, onGenerate }: ShareReviewPanelProps): 
   const [busy, setBusy] = useState(false);
 
   const signedPack = lease?.signedPack ?? false;
-  const disabled = !lease || !signedPack || busy;
+  const passphraseValid = passphrase.length >= MIN_PASSPHRASE_LEN;
+  const disabled = !lease || !signedPack || busy || !passphraseValid;
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -92,6 +92,7 @@ export function ShareReviewPanel({ lease, onGenerate }: ShareReviewPanelProps): 
         value={passphrase}
         onChange={(e) => setPassphrase(e.target.value)}
         autoComplete="new-password"
+        minLength={MIN_PASSPHRASE_LEN}
       />
       <label>
         Expires on

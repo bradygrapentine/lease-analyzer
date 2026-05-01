@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Badge } from './system/Badge';
 import { StatusMessage } from './primitives/StatusMessage';
+import { MIN_PASSPHRASE_LEN } from '../security/passphrase';
 
 interface VersionRow {
   id: string;
@@ -24,7 +25,10 @@ export function DeltaPanel({ versions, onGenerate }: DeltaPanelProps): JSX.Eleme
   const [error, setError] = useState<string | null>(null);
 
   const ready =
-    baseId !== '' && targetId !== '' && baseId !== targetId && passphrase.length >= 12;
+    baseId !== '' &&
+    targetId !== '' &&
+    baseId !== targetId &&
+    passphrase.length >= MIN_PASSPHRASE_LEN;
 
   async function handleGenerate(): Promise<void> {
     setError(null);
@@ -83,6 +87,7 @@ export function DeltaPanel({ versions, onGenerate }: DeltaPanelProps): JSX.Eleme
           value={passphrase}
           onChange={(e): void => setPassphrase(e.target.value)}
           autoComplete="off"
+          minLength={MIN_PASSPHRASE_LEN}
         />
       </div>
       {error && (
