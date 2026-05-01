@@ -44,8 +44,8 @@ describe('AuditLogPanel', () => {
     const rows = screen.getAllByRole('row');
     // header + 2 entries
     expect(rows).toHaveLength(3);
-    expect(screen.getByText('analyze')).toBeInTheDocument();
-    expect(screen.getByText('export')).toBeInTheDocument();
+    expect(screen.getByText(/analyzed lease/i)).toBeInTheDocument();
+    expect(screen.getByText(/exported findings/i)).toBeInTheDocument();
   });
 
   it('shows chain-intact status when verification.ok=true', () => {

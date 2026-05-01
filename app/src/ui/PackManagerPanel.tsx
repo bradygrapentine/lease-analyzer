@@ -17,11 +17,14 @@ import { FileButton } from './system/FileButton';
 
 /**
  * Signature trust vocabulary surfaced in the panel. Intentionally a
- * superset of the storage-layer statuses: "community" covers packs that
- * were imported without an envelope (storage calls those "unsigned"),
- * while "verified" and "invalid" mean exactly what they do on disk.
+ * superset of the storage-layer statuses: "community" (badge label
+ * "Unsigned" post-Wave 48 Slice 2) covers packs that were imported
+ * without an envelope (storage calls those "unsigned"), while
+ * "verified" and "invalid" mean exactly what they do on disk.
  * Anything outside this set (including missing) falls back to
- * "community" so legacy callers keep rendering.
+ * "community" so legacy callers keep rendering. The discriminant key
+ * stays `community` for storage / wire compat; only the visible label
+ * is renamed to "Unsigned".
  */
 export type PackSignatureBadge = 'verified' | 'community' | 'invalid' | 'unknown';
 
@@ -56,7 +59,7 @@ function badgeLabel(status: PackSignatureBadge): string {
       return 'Unknown';
     case 'community':
     default:
-      return 'Community';
+      return 'Unsigned';
   }
 }
 

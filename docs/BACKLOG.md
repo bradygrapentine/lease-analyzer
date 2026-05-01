@@ -131,7 +131,7 @@ and +10 MB of language data once `eng.traineddata.gz` is dropped into
       OS on every PR. Decision: closed — the CI matrix is the gate;
       code-signing / notarization tracked separately in the risk
       register (2026-04-25).
-- [ ] Onboarding tour (sample lease button exists; full walkthrough pending)
+- [x] Onboarding tour — decided 2026-05-01: the "Try a sample lease" button on UploadView is the walkthrough; the inline `OnboardingTour` modal stays as a one-time first-run primer but no separate guided tour ships. Closing this row.
 
 ## Phase 7 — Observability & hygiene
 
@@ -675,7 +675,7 @@ Slice 3 of `docs/audits/perf-probe-2026-04-29.md` was deferred when Wave 50 ship
 
 - [ ] **VersionHistoryPanel destructive-confirm.** `aria-label="delete version {label}"` + plain "Delete" button at `VersionHistoryPanel.tsx:105-110` triggers irreversible delete with no confirm. Add Dialog confirm naming the version + edit count. Severity M.
 - [ ] **`MIN_PASSPHRASE_LEN` client-side validation.** Wave 47 added "16+ characters" helper text on passphrase fields; promoting to actual client-side `pattern` / disabled-submit-until-valid is the next step. Severity L.
-- [ ] **Wave 48 Slice 2 — audit-log + onboarding vocabulary normalization** (clarify-inventory). 1H / 6M. Includes: `AuditLogPanel` kind→plain-label adapter, OnboardingTour step 2 severity vocab fix ("Critical/Warning/Info" → "High/Medium/Low/Info"), `PackManager` "Community" badge → "Unsigned" rename. Touches Wave 45-D-edited surfaces; preserve preamble verbatim.
+- [x] **Wave 48 Slice 2 — audit-log + onboarding vocabulary normalization** (clarify-inventory). Shipped 2026-05-01: `AuditLogPanel.kindLabel()` adapter renders the 19 well-known kinds in plain English (unknown kinds fall through verbatim); `OnboardingTour` severity vocab corrected to "High/Medium/Low/Info"; `PackManagerPanel` badge label renamed "Community" → "Unsigned" (discriminant key kept as `community` for storage / wire compat).
 - [ ] **Wave 48 Slice 3 — empty states + helper text + jargon plain-readings** (clarify-inventory). 1H / 6M / 8L across ~10 panels (AnnotationsPanel, LibraryPanel, JurisdictionPickerPanel, StandardSuitePanel, HybridPrecisionPanel, ClauseSimilarityPanel, RedlinePanel, ShareReviewPanel, SideLetterPanel, CustomRuleBuilderPanel intro + preview labels). Polish-pass scope; lowest per-string ROI.
 
 **From `docs/audits/extract-inventory-2026-04-29.md` (deferred from Wave 48 Slice 1):**
