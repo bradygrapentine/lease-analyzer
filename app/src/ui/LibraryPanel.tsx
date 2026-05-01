@@ -1,4 +1,5 @@
 // Wave 27-C — design pass rewrite.
+// Wave 58a Slice 3 — rename prompt migrated from window.prompt to <InputDialog>.
 // Semantic attributes preserved verbatim (e2e critical):
 //   aria-label="library"                (section, both branches)
 //   aria-label={`Open ${l.name}`}       (button — save-and-library.spec.ts + annotation-flow.spec.ts)
@@ -7,10 +8,12 @@
 //   aria-label={`Rename ${l.name}`}     (button)
 //   aria-label={`Delete ${l.name}`}     (button)
 //
+import { useState } from 'react';
 import type { LeaseMetadata } from '../storage/storage';
 import { Section } from './system/Section';
 import { Button } from './system/Button';
 import { EmptyState } from './system/EmptyState';
+import { InputDialog } from './primitives/InputDialog';
 
 interface LibraryPanelProps {
   leases: LeaseMetadata[];
@@ -29,6 +32,8 @@ export function LibraryPanel({
   onSetStandard,
   onRename,
 }: LibraryPanelProps): JSX.Element {
+  const [renameTarget, setRenameTarget] = useState<LeaseMetadata | null>(null);
+
   if (leases.length === 0) {
     return (
       <Section label="library" className="space-y-2 px-4 py-4">
@@ -80,10 +85,7 @@ export function LibraryPanel({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    const next = window.prompt('New name:', l.name)?.trim();
-                    if (next && next !== l.name) onRename(l.id, next);
-                  }}
+                  onClick={() => setRenameTarget(l)}
                   aria-label={`Rename ${l.name}`}
                 >
                   Rename
@@ -102,6 +104,21 @@ export function LibraryPanel({
           );
         })}
       </ul>
+      <InputDialog
+        open={renameTarget !== null}
+        title="Rename lease"
+        inputLabel="New name"
+        initialValue={renameTarget?.name ?? ''}
+        confirmLabel="Save"
+        onConfirm={(next) => {
+          const trimmed = next.trim();
+          if (renameTarget && trimmed && trimmed !== renameTarget.name) {
+            onRename(renameTarget.id, trimmed);
+          }
+          setRenameTarget(null);
+        }}
+        onCancel={() => setRenameTarget(null)}
+      />
     </Section>
   );
 }
