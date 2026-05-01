@@ -62,9 +62,9 @@ Three small, independent UI fixes carried over from earlier polish/critique pass
 
 ## §6 Closeout
 
-- [ ] All three slices merged.
-- [ ] BACKLOG flips for: clear-all destructive treatment, native-file-chooser leak, empty home state — each with its Wave 54 PR ref.
-- [ ] No DESIGN.md change required (no new vocabulary; reuses Negative Red token, FileButton primitive, existing serif body type).
+- [x] All three slices merged. PR #216 (clear-all Negative Red), #217 (kill native file-chooser leak), #218 (empty-home privacy line).
+- [x] BACKLOG footprint refresh (Wave 57-housekeeping) covers the residual references; Wave 54 itself touched no `## Cross-cutting tech debt` rows.
+- [x] No DESIGN.md change required (no new vocabulary; reuses Negative Red token, FileButton primitive, existing serif body type).
 
 ## §7 Risks
 

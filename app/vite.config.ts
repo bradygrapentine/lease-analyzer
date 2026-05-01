@@ -109,10 +109,15 @@ export default defineConfig({
         // for any future branch push: src/worker/handleRequest.ts
         // (71.42), src/parser/customRuleDraft.ts (79.41), and
         // src/ui/renderPdfPages.ts (77.77).
-        statements: 96,
+        //
+        // Ratcheted 2026-04-30 (Wave 57 housekeeping). Actuals on
+        // main post Wave-56-C: 97.47 / 90.87 / 93.09 / 97.47.
+        // Statements + lines step up 96 → 97 (floor of actual).
+        // Branches + functions hold (under 2-pt margin to floor +1).
+        statements: 97,
         branches: 90,
         functions: 93,
-        lines: 96,
+        lines: 97,
       },
     },
   },
