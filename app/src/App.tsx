@@ -471,7 +471,7 @@ function AppContent(): JSX.Element {
             <div className="mt-2">
               <button
                 type="button"
-                onClick={() => pipeline.reset()}
+                onClick={pipeline.reset}
                 className="h-8 px-4 rounded-sm font-sans text-[13px] tracking-[0.01em] border border-rule bg-paper-raised hover:bg-paper-sunken transition-colors focus-visible:focus-ring"
               >
                 Try another file

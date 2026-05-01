@@ -219,6 +219,12 @@ describe('App', () => {
     const input = (await screen.findByLabelText(/upload lease/i)) as HTMLInputElement;
     await userEvent.upload(input, bogus);
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    // Wave 56-B — the analysis-error region offers a recovery affordance
+    // that resets the pipeline back to the idle UploadView.
+    await userEvent.click(screen.getByRole('button', { name: /try another file/i }));
+    await waitFor(() =>
+      expect(screen.getByRole('region', { name: /upload/i })).toBeInTheDocument(),
+    );
   });
 
   it('clicking a finding opens the finding-detail modal', async () => {
