@@ -139,8 +139,17 @@ export function FindingsPanel({
 
   if (findings.length === 0) {
     return (
-      <aside aria-label="findings" className="p-4">
-        <p className="text-body text-fg-muted">No findings yet. Upload a lease to analyze.</p>
+      <aside aria-label="findings" className="px-4 py-6 motion-fade-in">
+        <p className="font-sans text-small uppercase tracking-wide text-fg-muted mb-2">
+          Nothing flagged
+        </p>
+        <h2 className="font-serif text-[22px] font-semibold leading-tight text-fg m-0">
+          This lease came back clean.
+        </h2>
+        <p className="font-display italic text-fg-body leading-relaxed mt-2 max-w-[44ch]">
+          The rules ran across every paragraph and didn’t catch anything worth pushing back on.
+          That’s a good sign — most leases have at least one or two flags.
+        </p>
       </aside>
     );
   }

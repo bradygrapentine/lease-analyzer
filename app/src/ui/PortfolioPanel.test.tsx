@@ -46,7 +46,7 @@ async function gotoMatrix(): Promise<void> {
 describe('PortfolioPanel', () => {
   it('renders an empty state when no leases supplied', () => {
     render(<PortfolioPanel leases={[]} findingsByLease={new Map()} onOpenLease={() => {}} />);
-    expect(screen.getByText(/no leases in portfolio/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing here yet/i)).toBeInTheDocument();
   });
 
   it('renders a row per lease and a column per unique rule id', async () => {

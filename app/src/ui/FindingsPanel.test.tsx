@@ -40,7 +40,7 @@ describe('FindingsPanel', () => {
 
   it('renders an empty state when no findings', () => {
     render(<FindingsPanel findings={[]} onSelect={() => {}} />);
-    expect(screen.getByText(/no findings/i)).toBeInTheDocument();
+    expect(screen.getByText(/came back clean/i)).toBeInTheDocument();
   });
 
   it('calls onSelect with the finding when a row is clicked', async () => {
