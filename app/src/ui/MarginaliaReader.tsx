@@ -91,8 +91,8 @@ export function MarginaliaReader({
       role="region"
       aria-label={t('reader.region.label')}
     >
-      <div className="mx-auto grid max-w-[1080px] grid-cols-[1fr_220px] gap-x-10 px-6 pb-32 pt-10">
-        <div className="col-span-2 mb-8 border-b border-rule pb-4">
+      <div className="mx-auto grid max-w-[1080px] grid-cols-1 md:grid-cols-[1fr_220px] gap-x-10 px-6 pb-32 pt-10">
+        <div className="md:col-span-2 mb-8 border-b border-rule pb-4">
           <h1 className="font-serif text-[26px] font-semibold leading-tight text-fg">{fileName}</h1>
           <p className="mt-1.5 text-mono uppercase tracking-[0.08em] text-fg-faint">
             {t('reader.header.document', { count: String(doc.pages.length) })}
@@ -105,7 +105,7 @@ export function MarginaliaReader({
             <div key={idx} className="contents">
               <div className="relative" data-paragraph-index={idx}>
                 <div
-                  className="mono absolute -left-8 top-1 select-none text-[10px] tracking-wider text-fg-faint"
+                  className="mono hidden md:block absolute -left-8 top-1 select-none text-[10px] tracking-wider text-fg-faint"
                   aria-hidden="true"
                 >
                   {String(idx + 1).padStart(2, '0')}
@@ -114,7 +114,7 @@ export function MarginaliaReader({
                   {renderParagraph(p.text, paraFindings, selectedKey, onSelectFinding)}
                 </p>
               </div>
-              <div className="border-l border-rule-subtle pl-3">
+              <div className="md:border-l md:border-rule-subtle md:pl-3 mb-5 md:mb-0">
                 {paraFindings.map((f) => {
                   const key = findingKey(f);
                   const active = key === selectedKey;
