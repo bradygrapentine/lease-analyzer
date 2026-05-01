@@ -97,9 +97,16 @@ export function PortfolioPanel({
 
   if (visible.length === 0) {
     return (
-      <Section label="portfolio" className="space-y-2 px-4 py-4">
-        <h2 className="text-heading uppercase text-fg-muted">Portfolio</h2>
-        <p className="text-body text-fg-muted">No leases in portfolio yet.</p>
+      <Section label="portfolio" className="space-y-3 px-4 py-6 motion-fade-in">
+        <p className="font-sans text-small uppercase tracking-wide text-fg-muted">Portfolio</p>
+        <h2 className="font-serif text-[24px] font-semibold leading-tight text-fg m-0">
+          Nothing here yet.
+        </h2>
+        <p className="font-display italic text-fg-body leading-relaxed max-w-[60ch]">
+          Every lease you analyze gets saved on this device and shows up here. You’ll see them
+          side-by-side with the same rules applied — useful for comparing two units, or your current
+          lease against a renewal.
+        </p>
       </Section>
     );
   }

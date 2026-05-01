@@ -450,7 +450,34 @@ function AppContent(): JSX.Element {
           </Suspense>
         )}
         {view === 'current' && status.kind === 'error' && (
-          <p role="alert">Could not analyze this file: {status.message}</p>
+          <section
+            role="alert"
+            aria-label="analysis error"
+            className="grid w-full max-w-[680px] mx-auto gap-3 px-6 py-12 motion-fade-in"
+          >
+            <p className="font-sans text-small uppercase tracking-wide text-severity-high">
+              Couldn’t read this lease
+            </p>
+            <h2 className="font-serif text-[24px] font-semibold leading-tight text-fg m-0">
+              Something went wrong opening that file.
+            </h2>
+            <p className="font-display italic text-fg-body leading-relaxed max-w-[60ch]">
+              {status.message}
+            </p>
+            <p className="font-display text-fg-muted leading-relaxed max-w-[60ch] mt-1">
+              Try a different PDF, or reload the page if this keeps happening. Your lease never left
+              this device — nothing was uploaded.
+            </p>
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => pipeline.reset()}
+                className="h-8 px-4 rounded-sm font-sans text-[13px] tracking-[0.01em] border border-rule bg-paper-raised hover:bg-paper-sunken transition-colors focus-visible:focus-ring"
+              >
+                Try another file
+              </button>
+            </div>
+          </section>
         )}
         {view === 'current' && status.kind === 'analyzed' && (
           <AnalyzedPaneBoundary>
