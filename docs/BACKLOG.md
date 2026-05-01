@@ -665,16 +665,16 @@ P2 visual items surfaced during the all-surfaces polish walk; deferred from the 
 Slice 3 of `docs/audits/perf-probe-2026-04-29.md` was deferred when Wave 50 shipped the high-impact pair (pdf.js worker restoration + pipeline pre-emption). The remaining findings:
 
 - [x] **`source-serif-4-400.woff2` fails to decode.** `OTS parsing error: invalid sfntVersion: 1008821359`. Body type falls back to platform serif (Iowan Old Style on macOS, Georgia elsewhere). Re-source the woff2 from upstream Source Serif 4 release; audit 500/600/italic variants too. Visual-fidelity regression DESIGN.md "Serif-for-Substance Rule" specifically rejects. **Resolved Wave 53-A (PR #204):** `npm run build:design-fonts` pulls verified woff2s from the Source Serif 4 5.2.9 release; new `npm run check:fonts` validator + CI workflow guard against silent regressions.
-- [ ] **`audit append failed QuotaExceededError`.** Audit chain hit IDB quota during typical local use; `safeAudit` swallows the failure so subsequent writes silently lose. Either rotation policy (the test file `auditLog.rotation.test.ts` suggests one is partially designed) or a dev-only reset hook. Investigate prod exposure first.
-- [ ] **Three `Uncaught (in promise)` errors during upload flow.** Likely the same IDB-teardown rejections we swallow in tests (Wave 45-BE, Wave 46) but that hit user-visible console in dev. Confirm prod-quiet vs dev-loud.
-- [ ] **CSP `frame-ancestors` via `<meta>` is a no-op.** Per W3C, must be HTTP response header. Move to Vite dev-server header config (and prod static-host header config). Until then clickjacking protection isn't enforced.
+- [x] **`audit append failed QuotaExceededError`.** Closed Wave 59 Slice 3 (PR #233). Rotation policy: on `QuotaExceededError`, `objectStore.clear()` then write a `chain-truncated` sentinel (`prevHash=''`, `kind='chain-truncated'`, payload records `droppedCount`/`firstDroppedSeq`/`lastDroppedSeq`/`reason`), retry put chained from sentinel. Drop-all (not drop-oldest-N) is correct because survivors' `prevHash` would reference deleted entries. `verifyAuditChain` relaxed for sentinel chain restarts; mid-chain gap detection preserved. New `auditLog.quota.test.ts` covers the path (3 cases).
+- [ ] **Three `Uncaught (in promise)` errors during upload flow.** Likely the same IDB-teardown rejections we swallow in tests (Wave 45-BE, Wave 46) but that hit user-visible console in dev. Confirm prod-quiet vs dev-loud. **Deferred from Wave 59** — needs a repro session, not a blind fix sprint.
+- [x] **CSP `frame-ancestors` via `<meta>` is a no-op.** Closed Wave 59 Slice 3 (PR #233). Removed the directive from `app/index.html` `<meta>` and added `Content-Security-Policy: frame-ancestors 'none'` to Vite `server.headers` + `preview.headers`. Other CSP directives still ship via meta and are effective there. **Production gap:** no host config exists in the repo (no netlify.toml/vercel.json/_headers/deploy workflow); requirement documented in new `docs/DEPLOY.md`. When a deploy target is chosen, the host header must match the Vite policy.
 
 ### Wave 47 / 48 / 49 deferrals (filed by Wave 49 backlog reconcile)
 
 **From `docs/audits/clarify-inventory-2026-04-29.md` (deferred from Wave 47 Slice 1):**
 
-- [ ] **VersionHistoryPanel destructive-confirm.** `aria-label="delete version {label}"` + plain "Delete" button at `VersionHistoryPanel.tsx:105-110` triggers irreversible delete with no confirm. Add Dialog confirm naming the version + edit count. Severity M.
-- [ ] **`MIN_PASSPHRASE_LEN` client-side validation.** Wave 47 added "16+ characters" helper text on passphrase fields; promoting to actual client-side `pattern` / disabled-submit-until-valid is the next step. Severity L.
+- [x] **VersionHistoryPanel destructive-confirm.** Closed Wave 59 Slice 1 (PR #234) — wrapped Delete in `ConfirmDialog`, message names version + edit count.
+- [x] **`MIN_PASSPHRASE_LEN` client-side validation.** Closed Wave 59 Slice 1 (PR #234) — new `app/src/security/passphrase.ts` exports canonical `MIN_PASSPHRASE_LEN = 16`; ShareReview/OpenReview/CounterSign/Delta panels now enforce `minLength` + disabled-submit-until-valid. SigningKeyPanel (uses `window.prompt`) and RedlinePanel (no passphrase field) deferred — would require restructure outside scope.
 - [x] **Wave 48 Slice 2 — audit-log + onboarding vocabulary normalization** (clarify-inventory). Shipped 2026-05-01: `AuditLogPanel.kindLabel()` adapter renders the 19 well-known kinds in plain English (unknown kinds fall through verbatim); `OnboardingTour` severity vocab corrected to "High/Medium/Low/Info"; `PackManagerPanel` badge label renamed "Community" → "Unsigned" (discriminant key kept as `community` for storage / wire compat).
 - [ ] **Wave 48 Slice 3 — empty states + helper text + jargon plain-readings** (clarify-inventory). 1H / 6M / 8L across ~10 panels (AnnotationsPanel, LibraryPanel, JurisdictionPickerPanel, StandardSuitePanel, HybridPrecisionPanel, ClauseSimilarityPanel, RedlinePanel, ShareReviewPanel, SideLetterPanel, CustomRuleBuilderPanel intro + preview labels). Polish-pass scope; lowest per-string ROI.
 
@@ -899,6 +899,13 @@ sessions know it's done.
 - [x] Wave 58b — vitest 1 → 4 major bump with coverage baseline reset
       to 96/90/92/96 (#228); v3 source-map mapper shifts attributions
       slightly under the new abstractions.
+- [x] Wave 59 — deferral closeout sweep across three slices: polish
+      (PR #232 — empty-home line + FileButton/Clear-data regression
+      pins), audit + CSP (PR #233 — IDB quota rotation policy with
+      `chain-truncated` sentinel + `frame-ancestors` to Vite headers,
+      prod host gap documented in `docs/DEPLOY.md`), and confirms +
+      passphrase (PR #234 — VersionHistoryPanel ConfirmDialog +
+      `MIN_PASSPHRASE_LEN=16` enforcement across 4 panels).
 
 ## Cross-cutting tech debt
 
