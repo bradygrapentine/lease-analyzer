@@ -100,7 +100,12 @@ export function SectionGroup({
         landmark-unique violation). aria-labelledby is retained so
         readers still announce the group title when focus enters.
       */}
-      <div id={panelId} aria-labelledby={headerId} hidden={!open} className={open ? bodyPad : ''}>
+      <div
+        id={panelId}
+        aria-labelledby={headerId}
+        hidden={!open}
+        className={open ? `${bodyPad} motion-rise-in` : ''}
+      >
         {open && children}
       </div>
     </Card>

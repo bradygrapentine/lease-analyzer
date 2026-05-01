@@ -108,7 +108,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-fg/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-fg/40 p-4 motion-dialog-backdrop"
       onClick={onBackdropClick}
     >
       <div
@@ -118,7 +118,7 @@ export function Dialog({
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         tabIndex={-1}
-        className={`bg-paper-raised border border-rule rounded-sm shadow-paper p-4 max-w-lg w-full focus-visible:focus-ring ${className}`}
+        className={`bg-paper-raised border border-rule rounded-sm shadow-paper p-4 max-w-lg w-full focus-visible:focus-ring motion-dialog-in ${className}`}
       >
         {children}
       </div>
