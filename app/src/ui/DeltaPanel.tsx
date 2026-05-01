@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge } from './system/Badge';
+import { StatusMessage } from './primitives/StatusMessage';
 
 interface VersionRow {
   id: string;
@@ -89,7 +90,7 @@ export function DeltaPanel({ versions, onGenerate }: DeltaPanelProps): JSX.Eleme
           <Badge variant="severity" severity="high">
             Error
           </Badge>{' '}
-          <p role="alert">{error}</p>
+          <StatusMessage tone="error">{error}</StatusMessage>
         </>
       )}
       <button

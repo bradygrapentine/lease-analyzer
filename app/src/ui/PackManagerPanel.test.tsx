@@ -223,6 +223,6 @@ describe('PackManagerPanel', () => {
     const input = document.querySelector<HTMLInputElement>('input[type="file"][accept*="lgpack"]')!;
     const file = new File(['junk'], 'bad.lgpack.json', { type: 'application/json' });
     await userEvent.upload(input, file);
-    expect(await screen.findByRole('status')).toHaveTextContent(/bad schema/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/bad schema/);
   });
 });

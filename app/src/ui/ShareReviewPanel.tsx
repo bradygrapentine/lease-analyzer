@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Badge } from './system/Badge';
+import { StatusMessage } from './primitives/StatusMessage';
 
 export interface ShareReviewPanelProps {
   lease: { id: string; name: string; signedPack: boolean } | null;
@@ -82,7 +83,7 @@ export function ShareReviewPanel({ lease, onGenerate }: ShareReviewPanelProps): 
           <Badge variant="severity" severity="high">
             Error
           </Badge>{' '}
-          <p role="alert">No lease selected.</p>
+          <StatusMessage tone="error">No lease selected.</StatusMessage>
         </>
       )}
       <input
@@ -105,9 +106,7 @@ export function ShareReviewPanel({ lease, onGenerate }: ShareReviewPanelProps): 
           <Badge variant="severity" severity="high">
             Error
           </Badge>{' '}
-          <p role="alert" className="error">
-            {error}
-          </p>
+          <StatusMessage tone="error">{error}</StatusMessage>
         </>
       )}
       <button type="submit" disabled={disabled}>

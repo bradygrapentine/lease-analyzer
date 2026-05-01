@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Section } from './system/Section';
 import { Button } from './system/Button';
 import { Badge } from './system/Badge';
+import { StatusMessage } from './primitives/StatusMessage';
 import { computeShortFingerprintFromBase64 } from '../security/fingerprint';
 import type { ClipboardWriteStatus } from '../App/useSigningKey';
 
@@ -190,9 +191,9 @@ export function SigningKeyPanel({
             Copy fingerprint
           </Button>
           {fingerprintStatus.kind === 'copied' && (
-            <p role="status" className="text-small text-fg-muted mt-1">
+            <StatusMessage tone="info" className="mt-1">
               Fingerprint copied to clipboard.
-            </p>
+            </StatusMessage>
           )}
           {fingerprintStatus.kind === 'denied' && (
             <p
@@ -244,9 +245,9 @@ export function SigningKeyPanel({
         )}
       </div>
       {exportStatus.kind === 'copied' && (
-        <p role="status" className="text-small text-fg-muted mt-1">
+        <StatusMessage tone="info" className="mt-1">
           Public key copied to clipboard.
-        </p>
+        </StatusMessage>
       )}
       {exportStatus.kind === 'denied' && (
         <p
