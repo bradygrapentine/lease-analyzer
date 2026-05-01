@@ -105,9 +105,9 @@ describe('LibraryPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('fires onRename with the new name when user confirms the prompt', async () => {
+  it('fires onRename with the new name when user confirms in the InputDialog', async () => {
     const onRename = vi.fn();
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Renamed.pdf');
+    const user = userEvent.setup();
     render(
       <LibraryPanel
         leases={[meta({ id: 'r', name: 'Old.pdf' })]}
@@ -118,14 +118,17 @@ describe('LibraryPanel', () => {
         onRename={onRename}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /rename old\.pdf/i }));
+    await user.click(screen.getByRole('button', { name: /rename old\.pdf/i }));
+    const input = screen.getByLabelText('New name');
+    await user.clear(input);
+    await user.type(input, 'Renamed.pdf');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(onRename).toHaveBeenCalledWith('r', 'Renamed.pdf');
-    promptSpy.mockRestore();
   });
 
-  it('does not fire onRename if user cancels the prompt', async () => {
+  it('does not fire onRename if user cancels the dialog', async () => {
     const onRename = vi.fn();
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(null);
+    const user = userEvent.setup();
     render(
       <LibraryPanel
         leases={[meta({ id: 'r', name: 'Old.pdf' })]}
@@ -136,9 +139,27 @@ describe('LibraryPanel', () => {
         onRename={onRename}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /rename old\.pdf/i }));
+    await user.click(screen.getByRole('button', { name: /rename old\.pdf/i }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onRename).not.toHaveBeenCalled();
-    promptSpy.mockRestore();
+  });
+
+  it('does not fire onRename when the user saves an unchanged name', async () => {
+    const onRename = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <LibraryPanel
+        leases={[meta({ id: 'r', name: 'Old.pdf' })]}
+        standardId={null}
+        onOpen={noop}
+        onDelete={noop}
+        onSetStandard={noop}
+        onRename={onRename}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /rename old\.pdf/i }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onRename).not.toHaveBeenCalled();
   });
 
   it('fires onSetStandard with the lease id', async () => {

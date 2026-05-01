@@ -267,16 +267,18 @@ describe('App', () => {
     fetchMock.mockRestore();
   });
 
-  it('renames a library entry via prompt', async () => {
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Renamed.pdf');
+  it('renames a library entry via the InputDialog', async () => {
     render(<App />);
     await uploadLease('Original.pdf');
     await gotoSettings();
     await userEvent.click(screen.getByRole('button', { name: /rename original\.pdf/i }));
+    const input = await screen.findByLabelText('New name');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Renamed.pdf');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /open renamed\.pdf/i })).toBeInTheDocument();
     });
-    promptSpy.mockRestore();
   });
 
   it('deletes a library entry', async () => {
