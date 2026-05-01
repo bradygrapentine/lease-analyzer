@@ -115,19 +115,23 @@ export default defineConfig({
         // Statements + lines step up 96 → 97 (floor of actual).
         // Branches + functions hold (under 2-pt margin to floor +1).
         //
-        // Reset 2026-05-01 (Wave 58b — vitest 1 → 4 bump).
-        // @vitest/coverage-v8 v4 ships an AST-based source-mapper that
+        // Reset 2026-05-01 (Wave 58b — vitest 1 → 3 bump).
+        // @vitest/coverage-v8 v3 ships an AST-based source-mapper that
         // replaces the v1 line-only mapper. The v1 numbers (97.47 /
         // 90.87 / 93.09 / 97.47) were inflated by the older mapper's
-        // coarse attribution; the v4 numbers (92.45 / 84.47 / 92.26 /
-        // 94.45) are the honest baseline. One-time floor reset to
+        // coarse attribution; the v3 numbers (96.36 / 90.79 / 93.03 /
+        // 96.36) are the honest baseline. One-time floor reset to
         // floor-of-actuals; Wave 58c will close the largest gaps
         // (App.tsx marketplace handlers L593-636, auditExport.ts,
         // useSigningKey.ts, UploadView.tsx) and re-ratchet up.
-        statements: 92,
-        branches: 84,
-        functions: 92,
-        lines: 94,
+        // Pinned at vitest 3.x (not 4) to keep Vite 5 peer alignment —
+        // vitest 4 peer-requires Vite ^6/^7/^8 and triggers a nested
+        // Vite 8 install alongside the app's Vite 5 build stack
+        // (Codex flagged this as test/build transform divergence).
+        statements: 96,
+        branches: 90,
+        functions: 93,
+        lines: 96,
       },
     },
   },
