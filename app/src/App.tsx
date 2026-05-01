@@ -380,7 +380,7 @@ function AppContent(): JSX.Element {
         hidden={view !== 'portfolio'}
       >
         {view === 'portfolio' && (
-          <>
+          <div className="motion-fade-in">
             <PortfolioPanel
               leases={library}
               findingsByLease={portfolioFindings}
@@ -399,7 +399,7 @@ function AppContent(): JSX.Element {
                 })();
               }}
             />
-          </>
+          </div>
         )}
       </div>
 
@@ -411,17 +411,19 @@ function AppContent(): JSX.Element {
       >
         {view === 'redline' && status.kind === 'analyzed' && (
           <Suspense fallback={null}>
-            <AppRedlinePane
-              doc={status.result.doc}
-              leaseName={status.fileName}
-              redline={redline}
-              versionHistory={versionHistory}
-              sideLetter={sideLetter}
-              findings={status.result.findings}
-              suggestedTextByRuleId={suggestedTextByRuleId}
-              sectionForParagraph={sectionForParagraph}
-              safeAudit={safeAudit}
-            />
+            <div className="motion-fade-in">
+              <AppRedlinePane
+                doc={status.result.doc}
+                leaseName={status.fileName}
+                redline={redline}
+                versionHistory={versionHistory}
+                sideLetter={sideLetter}
+                findings={status.result.findings}
+                suggestedTextByRuleId={suggestedTextByRuleId}
+                sectionForParagraph={sectionForParagraph}
+                safeAudit={safeAudit}
+              />
+            </div>
           </Suspense>
         )}
       </div>
@@ -452,50 +454,52 @@ function AppContent(): JSX.Element {
         )}
         {view === 'current' && status.kind === 'analyzed' && (
           <AnalyzedPaneBoundary>
-            <AppCurrentPane
-              status={status}
-              selected={selected}
-              selectedPage={selectedPage}
-              setSelected={setSelected}
-              setSelectedPage={setSelectedPage}
-              ocrState={ocrState}
-              ocrLanguage={ocrLanguage}
-              setOcrLanguage={setOcrLanguage}
-              ocrLanguages={ocrLanguages}
-              hasSigningKey={signingKey.publicKey !== null}
-              glossaryEntries={glossaryEntries}
-              templates={templates}
-              plainEnglishByRuleId={plainEnglishByRuleId}
-              suggestedTextByRuleId={suggestedTextByRuleId}
-              suggestedEditByRuleId={suggestedEditByRuleId}
-              redline={redline}
-              counters={counters}
-              annotationsApi={annotationsApi}
-              analyzedLeaseId={analyzedLeaseId}
-              onExportJson={onExportJson}
-              onExportSignedJson={() => void onExportSignedJson()}
-              onBuildIcs={onBuildIcs}
-              onAttemptOcr={() => {
-                setSelected(null);
-                void pipeline.ocr(ocrLanguage);
-              }}
-              onPromoteToStandard={(leaseId, paragraphIndex) => {
-                if (status.kind !== 'analyzed') return;
-                void (async (): Promise<void> => {
-                  const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
-                  const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
-                  await promoteToStandard({
-                    name,
-                    sourceLeaseId: leaseId,
-                    sourceParagraphIndex: paragraphIndex,
-                    normalizedText: text,
-                  });
-                  await refreshStandardSuite();
-                  void refreshAuditLog();
-                })();
-              }}
-              setView={setView}
-            />
+            <div className="motion-fade-in">
+              <AppCurrentPane
+                status={status}
+                selected={selected}
+                selectedPage={selectedPage}
+                setSelected={setSelected}
+                setSelectedPage={setSelectedPage}
+                ocrState={ocrState}
+                ocrLanguage={ocrLanguage}
+                setOcrLanguage={setOcrLanguage}
+                ocrLanguages={ocrLanguages}
+                hasSigningKey={signingKey.publicKey !== null}
+                glossaryEntries={glossaryEntries}
+                templates={templates}
+                plainEnglishByRuleId={plainEnglishByRuleId}
+                suggestedTextByRuleId={suggestedTextByRuleId}
+                suggestedEditByRuleId={suggestedEditByRuleId}
+                redline={redline}
+                counters={counters}
+                annotationsApi={annotationsApi}
+                analyzedLeaseId={analyzedLeaseId}
+                onExportJson={onExportJson}
+                onExportSignedJson={() => void onExportSignedJson()}
+                onBuildIcs={onBuildIcs}
+                onAttemptOcr={() => {
+                  setSelected(null);
+                  void pipeline.ocr(ocrLanguage);
+                }}
+                onPromoteToStandard={(leaseId, paragraphIndex) => {
+                  if (status.kind !== 'analyzed') return;
+                  void (async (): Promise<void> => {
+                    const text = status.result.doc.paragraphs[paragraphIndex]?.text ?? '';
+                    const name = text.slice(0, 60).trim() || `Clause from ${leaseId}`;
+                    await promoteToStandard({
+                      name,
+                      sourceLeaseId: leaseId,
+                      sourceParagraphIndex: paragraphIndex,
+                      normalizedText: text,
+                    });
+                    await refreshStandardSuite();
+                    void refreshAuditLog();
+                  })();
+                }}
+                setView={setView}
+              />
+            </div>
           </AnalyzedPaneBoundary>
         )}
       </div>
@@ -507,23 +511,25 @@ function AppContent(): JSX.Element {
         hidden={view !== 'audit'}
       >
         {view === 'audit' && (
-          <AppAuditPane
-            entries={auditEntries}
-            verification={auditVerification}
-            onRefresh={() => void refreshAuditLog()}
-            onVerify={() => {
-              void (async (): Promise<void> => {
-                setAuditVerification(await verifyAuditChain());
-              })();
-            }}
-            onDownload={(entries, verification) => {
-              const json = buildAuditLogJson(entries, verification);
-              downloadAuditLogBlob(
-                json,
-                `leaseguard-audit-${new Date().toISOString().slice(0, 10)}.json`,
-              );
-            }}
-          />
+          <div className="motion-fade-in">
+            <AppAuditPane
+              entries={auditEntries}
+              verification={auditVerification}
+              onRefresh={() => void refreshAuditLog()}
+              onVerify={() => {
+                void (async (): Promise<void> => {
+                  setAuditVerification(await verifyAuditChain());
+                })();
+              }}
+              onDownload={(entries, verification) => {
+                const json = buildAuditLogJson(entries, verification);
+                downloadAuditLogBlob(
+                  json,
+                  `leaseguard-audit-${new Date().toISOString().slice(0, 10)}.json`,
+                );
+              }}
+            />
+          </div>
         )}
       </div>
 
@@ -534,7 +540,7 @@ function AppContent(): JSX.Element {
         hidden={view !== 'settings'}
       >
         {view === 'settings' && (
-          <>
+          <div className="motion-fade-in">
             <AppSettingsPane
               onExportArchive={() => void exportEncryptedArchiveFlow()}
               onImportArchive={(e) => void onImportArchiveFile(e)}
@@ -629,7 +635,7 @@ function AppContent(): JSX.Element {
               }
               onDeleteTemplate={(id) => void deleteTemplate(id).then(refreshTemplates)}
             />
-          </>
+          </div>
         )}
       </div>
     </main>
