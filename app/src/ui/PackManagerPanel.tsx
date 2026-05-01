@@ -101,16 +101,13 @@ export function PackManagerPanel({
     <Section label="rule packs" className="space-y-3 px-4 py-4">
       <h2 className="text-heading uppercase text-fg-muted">Rule packs</h2>
       <ul className="space-y-2">
-        <li className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 text-body text-fg-muted">
+        <li className="list-row-raised px-3 py-2 text-body text-fg-muted">
           <strong className="text-fg-body">{builtInName}</strong> <em>(built-in)</em>
         </li>
         {installed.map((p) => {
           const sig: PackSignatureBadge = signatureStatusByPackId?.[p.id] ?? 'community';
           return (
-            <li
-              key={p.id}
-              className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 flex items-start gap-2"
-            >
+            <li key={p.id} className="list-row-raised px-3 py-2 flex items-start gap-2">
               <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
                 <input
                   type="checkbox"

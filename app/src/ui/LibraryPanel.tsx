@@ -47,10 +47,14 @@ export function LibraryPanel({
         {leases.map((l) => {
           const isStandard = standardId === l.id;
           return (
-            <li key={l.id} className="rounded-sm border border-rule bg-paper-raised shadow-paper px-3 py-2 flex flex-col gap-1">
+            <li key={l.id} className="list-row-raised px-3 py-2 flex flex-col gap-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <button type="button" onClick={() => onOpen(l.id)} aria-label={`Open ${l.name}`}
-                  className="text-body text-ink font-sans hover:underline text-left">
+                <button
+                  type="button"
+                  onClick={() => onOpen(l.id)}
+                  aria-label={`Open ${l.name}`}
+                  className="text-body text-ink font-sans hover:underline text-left"
+                >
                   {isStandard && <span aria-label="standard lease">★ </span>}
                   {l.name}
                 </button>

@@ -303,6 +303,21 @@ main:has(.results) > [id='viewmode-panel-current'] {
   margin-bottom: 0.5rem;
 }
 
+/* Wave 48 Slice 2 (closed) — `.list-row-raised`. Captures the identical
+   raised-card chrome used by LibraryPanel, TemplatesPanel, and the two
+   PackManagerPanel <li> rows so a future retune touches one place. The
+   broader `Card` density / surface API was rejected on inspection: only
+   4 of the 6 raised list-of-card callsites are uniform enough; the
+   other two (RedlinePanel uses border-rule-subtle and no shadow;
+   PortfolioPanel adds a hover state) carry tuned variants worth
+   preserving inline. See BACKLOG line ~683 for the closed row. */
+.list-row-raised {
+  border-radius: 0.125rem; /* matches Tailwind rounded-sm */
+  border: 1px solid var(--color-rule);
+  background-color: var(--color-paper-raised);
+  box-shadow: var(--shadow-paper);
+}
+
 /* Wave 56-A — motion. Quiet ease-out fades on tab switch, accordion
    reveal, and dialog mount. Honors `prefers-reduced-motion`. No layout
    properties animated; opacity + transform only. */
