@@ -47,7 +47,7 @@ export function AppHeader({
   const { t } = useI18n();
   const hasLease = Boolean(fileName);
   return (
-    <header className="bg-paper-raised border-b border-rule px-5 h-[52px] flex items-center gap-4">
+    <header className="bg-paper-raised border-b border-rule px-5 h-[52px] flex items-center gap-4 overflow-x-auto">
       <div className="flex items-center gap-2.5">
         <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" className="shrink-0">
           <rect
@@ -78,10 +78,10 @@ export function AppHeader({
 
       {hasLease && fileName && (
         <>
-          <span aria-hidden="true" className="h-[22px] w-px bg-rule" />
+          <span aria-hidden="true" className="hidden sm:inline-block h-[22px] w-px bg-rule" />
           <span
             aria-label="lease file name"
-            className="font-display italic text-small text-fg-muted truncate max-w-[36ch] min-w-0 flex-1"
+            className="hidden sm:inline-block font-display italic text-small text-fg-muted truncate max-w-[36ch] min-w-0 flex-1"
           >
             {fileName}
           </span>
